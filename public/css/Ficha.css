@@ -1,0 +1,2300 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap');
+
+/* ============================================
+   RESET
+   ============================================ */
+.ficha-card,
+.ficha-card *{
+    box-sizing: border-box;
+}
+
+/* ============================================
+   TOKENS
+   ============================================ */
+:root{
+    --bg-card-a: #2b1818;
+    --bg-card-b: #150c0c;
+
+    --tinta: #ececec;
+    --tinta-fraca: #9b8686;
+
+    --linha: #472020;
+
+    --sangue-1: #7a1515;
+    --sangue-2: #b62525;
+    --sangue-3: #d63c3c;
+    --sangue-4: #ff5a5a;
+
+    --aura-1: #241246;
+    --aura-2: #4b2fb0;
+    --aura-3: #7c5cff;
+    --aura-4: #b7a4ff;
+
+    --fonte-titulo: 'Cinzel', Georgia, serif;
+    --fonte-corpo: Georgia, serif;
+}
+
+/* ============================================
+   ESTRUTURA BASE
+   ============================================ */
+
+
+.container-topo{
+    justify-content: center;
+}
+
+.card{
+    background: radial-gradient(
+        circle at top,
+        var(--bg-card-a),
+        var(--bg-card-b) 70%
+    );
+    padding: 20px;
+    color: var(--tinta);
+    display:flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 20px;
+    border: 1px solid var(--linha);
+    box-shadow:
+        0 20px 45px rgba(0,0,0,.45),
+        inset 0 0 60px rgba(120,20,20,.08);
+}
+
+.ficha-card{
+    width: 100%;
+    max-width: 750px;
+    padding: 40px 45px 45px;
+}
+
+.menu-botoes{
+    display:flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+.menu-links{
+    background: #311818;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction:row;
+    gap: 10px;
+    padding: 15px;
+    border-radius: 20px;
+    transition: .3s;
+}
+
+.menu-links:hover{
+    background: #271313;
+    transform: translateY(-3px);
+}
+
+/* ============================================
+   CABEÇALHO DA FICHA
+   ============================================ */
+.ficha-header{
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.selo{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, var(--sangue-3), var(--sangue-1) 75%);
+    box-shadow:
+        0 0 0 3px rgba(182,37,37,.15),
+        0 6px 16px rgba(0,0,0,.5);
+    color: #fff0e8;
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+}
+
+.ficha-header h1{
+    font-family: var(--fonte-titulo);
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.ficha-subtitulo{
+    margin: 0;
+    font-size: .8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+/* ============================================
+   DADOS PESSOAIS
+   ============================================ */
+.dados-pessoais{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+}
+
+.campo{
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.campo label{
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.campo input,
+.campo textarea{
+    width: 100%;
+}
+
+.campo-descricao{
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+.campo-descricao label{
+    padding-top: 0;
+}
+
+.campo-descricao textarea{
+    width: 100%;
+    resize: vertical;
+    min-height: 160px;
+}
+
+/* ============================================
+   BARRAS DE STATUS (VIDA / AURA)
+   ============================================ */
+.barras{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.barra-grupo{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.barra-topo{
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.barra-nome{
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.barra-valor{
+    font-size: .8rem;
+    color: var(--tinta-fraca);
+}
+
+.barra-fundo{
+    display: block !important;
+    width: 100% !important;
+    height: 16px;
+    min-height: 16px;
+    border-radius: 999px;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    overflow: hidden;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
+}
+
+.barra-preenchimento{
+    display: block !important;
+    height: 100%;
+    min-width: 4px;
+    border-radius: 999px;
+    transition: width .4s ease;
+    position: relative;
+}
+
+.barra-preenchimento::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: linear-gradient(
+        120deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,.25) 45%,
+        rgba(255,255,255,0) 60%
+    );
+    animation: brilho-barra 2.8s ease-in-out infinite;
+}
+
+.barra-vida{
+    background: linear-gradient(90deg, var(--sangue-1), var(--sangue-3) 60%, var(--sangue-4));
+    box-shadow: 0 0 12px rgba(214,60,60,.55);
+}
+
+.barra-aura{
+    background: linear-gradient(90deg, var(--aura-1), var(--aura-3) 60%, var(--aura-4));
+    box-shadow: 0 0 12px rgba(124,92,255,.55);
+}
+
+.barra-sanidade{
+    background: linear-gradient(
+        90deg,
+        #14532d,
+        #22c55e 60%,
+        #86efac
+    );
+    box-shadow: 0 0 12px rgba(34, 197, 94, .55);
+}
+
+@media (prefers-reduced-motion: reduce){
+    .barra-preenchimento::after{
+        animation: none;
+    }
+}
+
+/* ============================================
+   ATRIBUTOS
+   ============================================ */
+.atributos{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.secao-titulo{
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    text-align: center;
+}
+
+.atributos-grid{
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    width: 100%;
+    gap: 12px;
+}
+
+.nome-padrao{
+    color: var(--tinta-fraca);
+}
+
+.atributo-card{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    padding: 14px 10px;
+    gap: 8px;
+    min-width: 0;
+    transition: .3s;
+}
+
+@keyframes tremer {
+
+    0%   { transform: translateX(0); }
+
+    20%  { transform: translateX(-6px); }
+
+    40%  { transform: translateX(6px); }
+
+    60%  { transform: translateX(-6px); }
+
+    80%  { transform: translateX(6px); }
+
+    100% { transform: translateX(0); }
+
+}
+
+.erro-atributo{
+
+    animation: tremer .35s;
+
+    border: 2px solid #ff4d4d;
+
+    box-shadow: 0 0 18px rgba(255,0,0,.45);
+
+}
+
+.popup{
+    position: fixed;
+    inset: 0;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    background: rgba(0,0,0,.6);
+
+    opacity: 0;
+    visibility: hidden;
+
+    transition: .3s;
+}
+
+.popup.ativo{
+    opacity: 1;
+    visibility: visible;
+}
+
+.popup-conteudo{
+    width: 340px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    background: radial-gradient(circle at top,#2b1818,#150c0c 70%);
+    border: 1px solid #472020;
+    border-radius: 20px;
+
+    padding: 25px;
+
+    color: white;
+    text-align: center;
+
+    transform: scale(.8);
+    transition: .3s;
+}
+
+.popup.ativo .popup-conteudo{
+    transform: scale(1);
+}
+
+.popup button{
+    margin-top:20px;
+
+    border:none;
+    border-radius:10px;
+
+    padding:10px 25px;
+
+    cursor:pointer;
+
+    background:#9f2222;
+    color:white;
+
+    transition:.3s;
+}
+
+.popup button:hover{
+    background:#c92e2e;
+}
+
+.atributo-card:hover{
+    background: #271515;
+    border-color: var(--sangue-2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0,0,0,.4);
+}
+
+.atributo-card.usado {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    filter: grayscale(70%);
+    border-color: #333;
+}
+
+.atributo-nome{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    text-align: center;
+}
+
+.atributo-valor{
+    width: 100%;
+    max-width: 64px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--fonte-titulo);
+    font-size: 1.1rem;
+    padding: 6px 4px;
+}
+
+.mod{
+    width: 100%;
+    max-width: 64px;
+    margin: 0 auto;
+    text-align: center;
+    font-family: var(--fonte-titulo);
+    font-size: 1.1rem;
+    padding: 1.5px;
+}
+
+.aumentar-vida{
+    width: 40%;
+    max-width: 30px;
+
+    border:none;
+    border-radius:20px;
+
+    background:linear-gradient(180deg,#9f2222,#661111);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    white-space:nowrap;
+    color:white;
+    font-family:'Cinzel', Georgia, serif;
+    font-size:.9rem;
+    letter-spacing:1px;
+    font-weight:bold;
+
+    cursor:pointer;
+    transition:.3s;
+}
+
+.aumentar-vida:hover, .rolagem:hover{
+    transform:translateY(-3px);
+ 
+    background:linear-gradient(180deg,#c92e2e,#821818);
+ 
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.5),
+        0 0 15px rgba(182,37,37,.35);
+}
+ 
+.aumentar-vida:active, .rolagem:active{
+    transform:translateY(0);
+ 
+    background:linear-gradient(180deg,#551010,#2b0808);
+}
+
+.rolagem{
+    width: 10%;
+    padding: 5px;
+
+    border:none;
+    border-radius:50%;
+
+    background:linear-gradient(180deg,#9f2222,#661111);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    white-space:nowrap;
+    color:white;
+    font-family:'Cinzel', Georgia, serif;
+    font-size:.9rem;
+    letter-spacing:1px;
+    font-weight:bold;
+
+    cursor:pointer;
+    transition:.3s;
+}
+
+.card-rolagem{
+    position: fixed;
+    right: 40px;
+    top: 120px;
+    width: 300px;
+    min-height: 500px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-20px) scale(.95);
+
+    transition:
+        opacity .35s ease,
+        transform .35s ease,
+        visibility .35s;
+}
+
+.card-talentos{
+    left: 40px;
+    right: 0px;
+}
+
+.card-rolagem.ativo{
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.card-rolagem:hover{
+    transform: translateY(-10px);
+}
+
+.titulo-rolagem{
+    width: 100%;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.semi-botao {
+    cursor: pointer;
+    transition: .3s;
+    opacity: 1;
+}
+
+.semi-botao:hover {
+    background: #271515;
+    border-color: var(--sangue-2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0,0,0,.4);
+}
+
+/* Botão depois de ser utilizado */
+.semi-botao.usado {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    filter: grayscale(70%);
+    border-color: #333;
+}
+
+.botoes-grid{
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.botao-fechar{
+    top:15px;
+    right:15px;
+
+    width:35px;
+    height:35px;
+    min-width:35px;
+    padding:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:none;
+    border-radius:50%;
+
+    background:linear-gradient(180deg,#9f2222,#661111);
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.botao-fechar:hover{
+    background:linear-gradient(180deg,#c92e2e,#821818);
+    transform:scale(1.1);
+}
+
+@media (max-width: 600px){
+    .atributos-grid{
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .campo{
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .campo-descricao label{
+        padding-top: 0;
+    }
+}
+
+/* ============================================
+   HABILIDADES
+   ============================================ */
+.habilidades{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.habilidades-lista{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+#conteudo-habilidades-fisicas,
+#conteudo-habilidades-intelectuais,
+#conteudo-habilidades-introspectivas{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.habilidade-linha{
+    display: grid;
+    grid-template-columns: 1fr 70px;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+
+    background: linear-gradient(
+        135deg,
+        #1f1212,
+        #180d0d 70%
+    );
+    border: 1px solid var(--linha);
+    border-radius: 12px;
+    padding: 12px 18px;
+
+    position: relative;
+    overflow: hidden;
+
+    transition: .3s;
+}
+
+/* Linha de brilho sutil na borda esquerda, no estilo "selo de sangue" */
+.habilidade-linha::before{
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--sangue-2), var(--sangue-1));
+    opacity: .6;
+    transition: .3s;
+}
+
+.habilidade-linha:hover{
+    background: linear-gradient(
+        135deg,
+        #271515,
+        #1c0f0f 70%
+    );
+    border-color: var(--sangue-2);
+    transform: translateX(4px);
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.45),
+        0 0 12px rgba(182,37,37,.15);
+}
+
+.habilidade-linha:hover::before{
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(214,60,60,.6);
+}
+
+.habilidade-nome{
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    text-align: left;
+    transition: .3s;
+}
+
+.habilidade-linha:hover .habilidade-nome{
+    color: var(--tinta);
+}
+
+.habilidade-valor{
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+
+    font-family: var(--fonte-titulo);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--tinta);
+
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 6px 4px;
+
+    transition: .3s;
+}
+
+.habilidade-linha:hover .habilidade-valor{
+    border-color: var(--sangue-2);
+}
+
+/* Variante para destacar bônus positivo/negativo */
+.habilidade-valor.positivo{
+    color: var(--sangue-4);
+    border-color: var(--sangue-2);
+    text-shadow: 0 0 8px rgba(214,60,60,.4);
+}
+
+.habilidade-valor.negativo{
+    color: var(--tinta-fraca);
+    opacity: .8;
+}
+
+/* Estado de erro, igual ao dos atributos */
+.habilidade-linha.erro-atributo{
+    animation: tremer .35s;
+    border: 2px solid #ff4d4d;
+    box-shadow: 0 0 18px rgba(255,0,0,.45);
+}
+
+@media (max-width: 600px){
+    #conteudo-habilidades-fisicas,
+    #conteudo-habilidades-intelectuais,
+    #conteudo-habilidades-introspectivas{
+        grid-template-columns: 1fr;
+    }
+
+    .habilidade-linha{
+        grid-template-columns: 1fr 56px 40px;
+        padding: 10px 14px;
+    }
+
+    .habilidade-nome{
+        font-size: .72rem;
+    }
+
+    .habilidade-valor{
+        font-size: .95rem;
+    }
+}
+
+
+/* ============================================
+   CABEÇALHO COLAPSÁVEL + BOTÃO DISCRETO
+   ============================================ */
+.ficha-header.colapsavel{
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.ficha-header.colapsavel h1{
+    margin: 0;
+}
+
+.botao-ocultar{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+
+    border: 1px solid var(--linha);
+    border-radius: 50%;
+    background: #1f1212;
+
+    color: var(--tinta);
+    font-size: .8rem;
+    line-height: 1;
+
+    cursor: pointer;
+    opacity: 1;
+    transition: .3s;
+}
+
+.botao-ocultar:hover{
+    color: var(--sangue-3);
+    border-color: var(--sangue-2);
+    background: rgba(182, 37, 37, .18);
+    transform: scale(1.1);
+}
+
+.botao-ocultar:active{
+    transform: scale(.9);
+}
+
+.botao-ocultar svg,
+.botao-ocultar .seta{
+    transition: transform .3s;
+}
+
+.botao-ocultar.ocultado{
+    color: var(--sangue-3);
+    border-color: var(--sangue-2);
+}
+
+.botao-ocultar.ocultado .seta{
+    transform: rotate(-90deg);
+}
+
+.botao-ocultar.ocultado .seta{
+    transform: rotate(-90deg);
+}
+
+/* Conteúdo que será escondido/mostrado */
+.secao-conteudo{
+    overflow: hidden;
+    max-height: 2000px;
+    opacity: 1;
+    transition: max-height .35s ease, opacity .25s ease, margin .35s ease;
+}
+
+.secao-conteudo.oculto{
+    max-height: 0;
+    opacity: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.oculto{
+    display: none !important;
+}
+
+.dados-pessoais,
+.secao-conteudo{
+    overflow: hidden;
+    max-height: 1000px;
+    opacity: 1;
+    transition: max-height .45s ease, opacity .35s ease, margin .45s ease;
+}
+
+.oculto{
+    max-height: 0 !important;
+    opacity: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    pointer-events: none;
+}
+
+.titulo-colapsavel{
+    color: var(--tinta);
+    font-size: 1rem;
+    opacity: 1;
+    transform: scale(1);
+    transform-origin: center;
+    transition: color .4s ease, font-size .4s ease, opacity .4s ease, transform .4s ease;
+}
+
+.titulo-colapsavel.oculto{
+    color: var(--tinta-fraca) !important;
+    opacity: .4 !important;
+    font-size: .7em !important;
+    transform: scale(.9);
+}
+
+.habilidade-linha{
+    grid-template-columns: 1fr 60px 44px 30px;
+}
+
+.habilidade-mod{
+    width: 100%;
+    text-align: center;
+
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--tinta-fraca);
+
+    background: #150c0c;
+    border: 1px dashed var(--linha);
+    border-radius: 8px;
+    padding: 6px 2px;
+
+    transition: .3s;
+}
+
+.habilidade-linha:hover .habilidade-mod{
+    border-color: var(--sangue-2);
+    color: var(--tinta);
+}
+
+@media (max-width: 600px){
+    .habilidade-linha{
+        grid-template-columns: 1fr 50px 36px 26px;
+        padding: 10px 14px;
+    }
+
+    .habilidade-nome{
+        font-size: .72rem;
+    }
+
+    .habilidade-valor{
+        font-size: .95rem;
+    }
+
+    .habilidade-mod{
+        font-size: .75rem;
+        padding: 4px 2px;
+    }
+
+    .botao-rolar-habilidade{
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        font-size: 11px;
+    }
+}
+.botao-rolar-habilidade {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self:center;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 50%;
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    color: var(--tinta-fraca, #999);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .25s ease;
+    user-select: none;
+}
+
+.botao-rolar-habilidade::before {
+    content: "⚄";
+}
+
+.botao-rolar-habilidade:hover {
+    background: rgba(189, 3, 3, 0.15);
+    border-color: rgba(189, 3, 3, 0.658);
+    color: rgba(189, 3, 3, 0.658);
+    transform: scale(1.1);
+}
+
+.botao-rolar-habilidade:active {
+    transform: scale(0.9) rotate(15deg);
+    background: rgba(189, 3, 3, 0.35);
+}
+
+.botao-rolar-habilidade.rolando {
+    animation: girar-dado 0.4s ease;
+}
+
+@keyframes girar-dado {
+    0%   { transform: rotate(0deg); }
+    50%  { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   POPUP DE ROLAGEM DE HABILIDADE
+   ============================================ */
+.rolagem-habilidade-info{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin: 10px 0 5px;
+}
+
+.rolagem-habilidade-valores{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.rolagem-habilidade-card{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    flex: 1;
+    min-width: 0;
+
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    padding: 14px 10px;
+
+    transition: .3s;
+}
+
+.rolagem-habilidade-card:hover{
+    background: #271515;
+    border-color: var(--sangue-2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0,0,0,.4);
+}
+
+.rolagem-habilidade-card .rotulo{
+    font-family: var(--fonte-titulo);
+    font-size: .7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.rolagem-habilidade-card .valor{
+    font-family: var(--fonte-titulo);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--tinta);
+}
+
+.rolagem-habilidade-card.mod .valor{
+    color: var(--sangue-3);
+    text-shadow: 0 0 8px rgba(214,60,60,.35);
+}
+
+/* resultado final de baixo, se quiser destacar mais que o resto do texto */
+#rolagem-habilidade #resultado-habilidade{
+    font-family: var(--fonte-titulo);
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--sangue-4);
+    margin-top: 8px;
+    text-shadow: 0 0 10px rgba(255,90,90,.4);
+}
+
+/* ============================================
+   RESULTADO DA ROLAGEM DE HABILIDADE
+   ============================================ */
+.resultado-habilidade{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--linha);
+}
+
+.resultado-habilidade-linha{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 8px 16px;
+}
+
+.resultado-habilidade-linha .rotulo{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.resultado-habilidade-linha .numero{
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tinta);
+}
+
+/* linha do dado natural (d100 puro) */
+.resultado-habilidade-linha.natural .numero{
+    color: var(--tinta-fraca);
+}
+
+/* linha da redução aplicada, sempre em tom "sangue" */
+.resultado-habilidade-linha.reducao .numero{
+    color: var(--sangue-3);
+}
+
+.resultado-habilidade-linha.reducao .numero::before{
+    content: "− ";
+}
+
+/* resultado final, destacado e maior que o resto */
+.resultado-habilidade-final{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    background: linear-gradient(135deg, #2b1414, #180d0d 70%);
+    border: 1px solid var(--sangue-2);
+    border-radius: 14px;
+    padding: 14px 20px;
+
+    box-shadow: 0 0 18px rgba(182,37,37,.25);
+}
+
+.resultado-habilidade-final .rotulo{
+    font-family: var(--fonte-titulo);
+    font-size: .75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.resultado-habilidade-final .numero{
+    font-family: var(--fonte-titulo);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--sangue-4);
+    text-shadow: 0 0 12px rgba(255,90,90,.5);
+}
+
+/* variação opcional: sucesso / falha, caso queira usar depois */
+.resultado-habilidade-final.sucesso{
+    border-color: #22c55e;
+    box-shadow: 0 0 18px rgba(34,197,94,.25);
+}
+.resultado-habilidade-final.sucesso .numero{
+    color: #86efac;
+    text-shadow: 0 0 12px rgba(34,197,94,.5);
+}
+
+.resultado-habilidade-final.falha{
+    border-color: var(--sangue-1);
+}
+
+/* ============================================
+   VANTAGENS EXTRAS (POPUP DE HABILIDADE)
+   ============================================ */
+.vantagem-extra-campo{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.vantagem-extra-campo label{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    text-align: left;
+}
+
+.vantagem-extra-linha{
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+}
+
+.vantagem-extra-linha input{
+    flex: 1;
+    min-width: 0;
+
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 8px 10px;
+
+    font-family: var(--fonte-corpo);
+    font-size: .9rem;
+    color: var(--tinta);
+
+    transition: .3s;
+}
+
+.vantagem-extra-linha input:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.35);
+}
+
+.vantagem-extra-linha input::placeholder{
+    color: var(--tinta-fraca);
+    opacity: .6;
+}
+
+.vantagem-extra-linha button{
+    flex-shrink: 0;
+
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+
+    background: linear-gradient(180deg, #9f2222, #661111);
+    color: white;
+
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1px;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: .3s;
+}
+
+.vantagem-extra-linha button:hover{
+    background: linear-gradient(180deg, #c92e2e, #821818);
+    transform: translateY(-2px);
+}
+
+.vantagem-extra-linha button:active{
+    transform: translateY(0);
+}
+
+/* lista de vantagens já adicionadas */
+.vantagem-extra-lista{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+}
+
+.vantagem-extra-item{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 999px;
+    padding: 4px 10px;
+
+    font-family: var(--fonte-titulo);
+    font-size: .75rem;
+    color: var(--tinta);
+
+    transition: .3s;
+}
+
+.vantagem-extra-item:hover{
+    border-color: var(--sangue-2);
+}
+
+.vantagem-extra-item .remover{
+    cursor: pointer;
+    color: var(--tinta-fraca);
+    font-weight: bold;
+    transition: .2s;
+}
+
+.vantagem-extra-item .remover:hover{
+    color: var(--sangue-4);
+}
+
+/* ============================================
+   ALINHAMENTO DE LARGURA - POPUP HABILIDADE
+   ============================================ */
+.rolagem-habilidade-info,
+.vantagem-extra-campo,
+.resultado-habilidade{
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* garante que filhos internos não estourem a largura do pai */
+.rolagem-habilidade-valores,
+.vantagem-extra-linha,
+.vantagem-extra-lista,
+.resultado-habilidade-linha,
+.resultado-habilidade-final{
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* o input não deve ter uma largura mínima que force o pai a crescer */
+.vantagem-extra-linha input{
+    min-width: 0;
+}
+
+/* ============================================
+   BOTÃO ROLAR (POPUP HABILIDADE)
+   ============================================ */
+.botao-rolar-dado-habilidade{
+    width: 60%;
+    margin-top: 16px;
+
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+
+    background: linear-gradient(180deg, #9f2222, #661111);
+    color: white;
+
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .3s;
+
+    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
+
+.botao-rolar-dado-habilidade:hover{
+    background: linear-gradient(180deg, #c92e2e, #821818);
+    transform: translateY(-3px);
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.5),
+        0 0 15px rgba(182,37,37,.35);
+}
+
+.botao-rolar-dado-habilidade:active{
+    transform: translateY(0);
+    background: linear-gradient(180deg, #551010, #2b0808);
+}
+
+/* ============================================
+   BOTÃO ADICIONAR TALENTO
+   ============================================ */
+
+.botao-adicionar-talento{
+    width: 100%;
+    min-height: 48px;
+
+    border: 1px solid var(--sangue-1);
+    border-radius: 10px;
+
+    background: linear-gradient(
+        180deg,
+        #9f2222,
+        #661111
+    );
+
+    color: white;
+
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .3s;
+
+    box-shadow:
+        0 6px 15px rgba(0,0,0,.35);
+}
+
+.botao-adicionar-talento:hover{
+    transform: translateY(-3px);
+
+    background: linear-gradient(
+        180deg,
+        #c92e2e,
+        #821818
+    );
+
+    border-color: var(--sangue-3);
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.5),
+        0 0 15px rgba(182,37,37,.35);
+}
+
+.botao-adicionar-talento:active{
+    transform: translateY(0);
+
+    background: linear-gradient(
+        180deg,
+        #551010,
+        #2b0808
+    );
+}
+
+/* ============================================
+   TALENTO ADICIONADO
+   ============================================ */
+
+.talento-card{
+    position: relative;
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    gap: 10px;
+
+    padding: 40px 16px 16px;
+
+    background: linear-gradient(
+        135deg,
+        #1f1212,
+        #180d0d 70%
+    );
+
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+
+    transition: .3s;
+
+    margin-bottom: 10px;
+
+}
+
+.talento-card .botao-fechar{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    font-size: .75rem;
+}
+
+.talento-card .button{
+    align-self: center;
+    width: 60%;
+}
+
+.talento-card:hover{
+    background: linear-gradient(
+        135deg,
+        #271515,
+        #1c0f0f 70%
+    );
+
+    border-color: var(--sangue-2);
+
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 8px 20px rgba(0,0,0,.45),
+        0 0 12px rgba(182,37,37,.15);
+}
+
+.talento-titulo,
+.talento-descricao{
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 10px 12px;
+
+    font-family: var(--fonte-corpo);
+    font-size: .9rem;
+    line-height: 1.5;
+    color: var(--tinta);
+
+    transition: .3s;
+}
+
+.talento-titulo{
+    font-family: var(--fonte-titulo);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sangue-4);
+}
+
+.talento-titulo:focus,
+.talento-descricao:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.3);
+}
+
+.talento-titulo::placeholder,
+.talento-descricao::placeholder{
+    color: var(--tinta-fraca);
+    opacity: .6;
+    text-transform: none;
+    letter-spacing: normal;
+    font-family: var(--fonte-corpo);
+}
+
+.lista-talentos{
+    width: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top: 15px;
+}
+
+/* ============================================
+   ITENS E AÇÕES — LINHA DE DANO
+   ============================================ */
+.campo-dano{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 100%;
+    margin: 4px 0 8px;
+}
+
+.campo-dano-item{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 140px;
+    min-width: 120px;
+}
+
+.campo-dano-item label{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.campo-dano-item input,
+.campo-dano-item select{
+    width: 100%;
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--tinta);
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+    transition: .3s;
+}
+
+.campo-dano-item input:focus,
+.campo-dano-item select:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.3);
+}
+
+.campo-dano-item input::placeholder{
+    color: var(--tinta-fraca);
+    opacity: .6;
+}
+
+@media (max-width: 600px){
+    .campo-dano{
+        flex-direction: column;
+    }
+    .campo-dano-item{
+        flex: 1 1 auto;
+    }
+}
+
+
+/* ============================================
+   ROLADOR DE DADOS DIVERSOS
+   ============================================ */
+.rolador-dados{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+
+    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    border: 1px solid var(--linha);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin: 14px 0;
+
+    transition: .3s;
+}
+
+.rolador-dados:hover{
+    border-color: var(--sangue-2);
+    box-shadow: 0 8px 20px rgba(0,0,0,.4);
+}
+
+.rolador-dados .secao-titulo{
+    margin: 0 0 4px;
+}
+
+.rolador-dados-linha{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+}
+
+.rolador-dados-campo{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 90px;
+}
+
+.rolador-dados-campo label{
+    font-family: var(--fonte-titulo);
+    font-size: .7rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    text-align: center;
+}
+
+.rolador-dados-campo input,
+.rolador-dados-campo select{
+    width: 100%;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: var(--tinta);
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+    text-align: center;
+    transition: .3s;
+}
+
+.rolador-dados-campo input:focus,
+.rolador-dados-campo select:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.3);
+}
+
+.rolador-dados #rolar-dado-diverso{
+    height: 40px;
+    padding: 0 22px;
+}
+
+#resultado-dado-diverso{
+    color: var(--sangue-4);
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    letter-spacing: .5px;
+    text-shadow: 0 0 8px rgba(255,90,90,.35);
+    min-height: 1.2em;
+    text-align: center;
+}
+
+@media (max-width: 600px){
+    .rolador-dados-linha{
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .rolador-dados-campo,
+    .rolador-dados #rolar-dado-diverso{
+        width: 100%;
+    }
+}
+
+/* ============================================
+   RESULTADO DESTACADO — ROLADOR DE DADOS
+   ============================================ */
+.rolador-resultado-card{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    width: 100%;
+    max-width: 260px;
+
+    background: linear-gradient(135deg, #2b1414, #180d0d 70%);
+    border: 1px solid var(--sangue-2);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-top: 4px;
+
+    box-shadow: 0 0 18px rgba(182,37,37,.2);
+}
+
+.rolador-resultado-card .rotulo{
+    font-family: var(--fonte-titulo);
+    font-size: .7rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.rolador-resultado-card .numero{
+    font-family: var(--fonte-titulo);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--sangue-4);
+    text-shadow: 0 0 12px rgba(255,90,90,.5);
+    line-height: 1.2;
+}
+
+.rolador-resultado-card .detalhe{
+    font-family: var(--fonte-corpo);
+    font-size: .75rem;
+    color: var(--tinta-fraca);
+    min-height: 1em;
+}
+
+/* ============================================
+   BOTÕES DE ITENS E AÇÕES (Adicionar + Rolar preview)
+   ============================================ */
+.itens-botoes{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+}
+
+.itens-botoes .botao-adicionar-talento{
+    flex: 1 1 60%;
+    min-width: 180px;
+}
+
+.botao-rolar-preview{
+    flex: 1 1 35%;
+    min-width: 140px;
+    min-height: 48px;
+
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+
+    background: #1f1212;
+    color: var(--tinta);
+
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .3s;
+    white-space: nowrap;
+}
+
+.botao-rolar-preview:hover{
+    background: rgba(189, 3, 3, 0.15);
+    border-color: var(--sangue-2);
+    transform: translateY(-2px);
+}
+
+.botao-rolar-preview:active{
+    transform: translateY(0);
+}
+
+.rolar-preview-resultado{
+    width: 100%;
+    text-align: center;
+
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    color: var(--sangue-4);
+    text-shadow: 0 0 8px rgba(255,90,90,.35);
+
+    min-height: 1.4em;
+    margin: 0;
+}
+
+@media (max-width: 600px){
+    .itens-botoes .botao-adicionar-talento,
+    .botao-rolar-preview{
+        flex: 1 1 100%;
+    }
+}
+
+@keyframes piscar-resultado {
+    0%   { box-shadow: 0 0 30px rgba(255,90,90,.7); transform: scale(1.05); }
+    100% { box-shadow: 0 0 18px rgba(182,37,37,.2); transform: scale(1); }
+}
+
+.rolador-resultado-card.piscar{
+    animation: piscar-resultado .4s ease;
+}
+
+.botao-remover-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    background: rgba(159, 34, 34, 0.25);
+    border: 1px solid var(--sangue-2);
+    border-radius: 8px;
+    padding: 4px 10px;
+
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: .3s;
+    flex-shrink: 0;
+}
+
+.botao-remover-item::before{
+    content: "🗑";
+    font-size: .8rem;
+}
+
+.botao-remover-item:hover {
+    background: rgba(189, 3, 3, 0.4);
+    border-color: var(--sangue-3);
+    transform: translateY(-1px);
+}
+
+.botao-remover-item:active{
+    transform: translateY(0);
+}
+
+/* ============================================
+   FORMULÁRIO DE ITEM EM LINHA ÚNICA
+   ============================================ */
+.item-form-linha{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    width: 100%;
+    align-items: flex-end;
+    margin-bottom: 4px;
+}
+
+.item-form-campo{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.item-form-campo label{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.item-form-campo input,
+.item-form-campo select{
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--tinta);
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+    transition: .3s;
+}
+
+.item-form-campo input:focus,
+.item-form-campo select:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.3);
+}
+
+.item-form-nome{ flex: 2 1 220px; }
+.item-form-categoria{ flex: 1.5 1 180px; }
+.item-form-qtd{ flex: 0.7 1 100px; }
+.item-form-dado{ flex: 0.8 1 110px; }
+.item-form-valor-fixo{ flex: 0.8 1 110px; }
+
+@media (max-width: 900px){
+    .item-form-linha{
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .item-form-nome,
+    .item-form-categoria,
+    .item-form-qtd,
+    .item-form-dado,
+    .item-form-valor-fixo{
+        flex: 1 1 auto;
+    }
+}
+
+/* ============================================
+   ESPAÇO PARA A LISTA DE ITENS ADICIONADOS
+   ============================================ */
+.itens-adicionados-titulo{
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--linha);
+}
+
+.itens-adicionados-titulo .secao-titulo{
+    text-align: left;
+    margin: 0 0 8px;
+}
+
+.lista-itens{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 8px;
+}
+
+/* ============================================
+   ESTILO BASE PARA TODOS OS INPUTS/SELECTS/TEXTAREAS
+   (evita fundo branco do navegador e do autofill)
+   ============================================ */
+.campo input,
+.campo select,
+.campo textarea,
+.campo-descricao textarea{
+    background: #1f1212;
+    color: var(--tinta);
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+    transition: .3s;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+    box-shadow: 0 0 8px rgba(182,37,37,.3);
+}
+
+.campo input::placeholder,
+.campo textarea::placeholder{
+    color: var(--tinta-fraca);
+    opacity: .6;
+}
+
+/* ============================================
+   NEUTRALIZA O AUTOFILL DO CHROME/EDGE/SAFARI
+   ============================================ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus{
+    -webkit-text-fill-color: var(--tinta) !important;
+    -webkit-box-shadow: 0 0 0px 1000px #1f1212 inset !important;
+    box-shadow: 0 0 0px 1000px #1f1212 inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: var(--tinta);
+}
+
+/* ============================================
+   TEXTAREAS MENORES — DESCRIÇÃO E MODIFICAÇÕES DO ITEM
+   ============================================ */
+#item-descricao,
+#item-modificacoes{
+    min-height: 70px;
+}
+
+/* ============================================
+   BOTÃO ROLAR (dentro do card de item adicionado)
+   ============================================ */
+.botao-rolar-item{
+    align-self: flex-start;
+
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 8px 18px;
+
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: .3s;
+}
+
+.botao-rolar-item:hover:not(:disabled){
+    background: rgba(189, 3, 3, 0.2);
+    border-color: var(--sangue-2);
+    transform: translateY(-2px);
+}
+
+.botao-rolar-item:active:not(:disabled){
+    transform: translateY(0);
+}
+
+.botao-rolar-item:disabled{
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.item-card-resultado{
+    color: var(--sangue-4);
+    font-family: var(--fonte-titulo);
+    font-size: .9rem;
+    text-shadow: 0 0 6px rgba(255,90,90,.35);
+}
+
+.item-card-rodape{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+/* ============================================
+   LISTA DE FICHAS SALVAS
+   ============================================ */
+.lista-fichas-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 18px;
+    width: 100%;
+}
+
+.personagem-card-link{
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.personagem-card{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    border: 1px solid var(--linha);
+    border-radius: 16px;
+    padding: 22px 20px;
+
+    transition: .3s;
+}
+
+.personagem-card:hover{
+    border-color: var(--sangue-2);
+    transform: translateY(-4px);
+    box-shadow:
+        0 10px 25px rgba(0,0,0,.45),
+        0 0 14px rgba(182,37,37,.2);
+}
+
+.personagem-card-nome{
+    font-family: var(--fonte-titulo);
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+    color: var(--tinta);
+    margin: 0;
+}
+
+.personagem-card-info{
+    font-size: .78rem;
+    color: var(--tinta-fraca);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+}
+
+.personagem-card-tag{
+    align-self: flex-start;
+    background: rgba(189,3,3,.15);
+    border: 1px solid var(--sangue-2);
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sangue-4);
+}
+
+.lista-vazia{
+    text-align: center;
+    color: var(--tinta-fraca);
+    font-family: var(--fonte-corpo);
+    padding: 30px 0;
+    width: 100%;
+}
+
+/* ============================================
+   FICHA — VISUALIZAÇÃO (SOMENTE LEITURA)
+   ============================================ */
+.ficha-subinfo{
+    color: var(--tinta-fraca);
+    font-size: .85rem;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.info-tecnica-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    width: 100%;
+}
+
+.info-tecnica-card{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+}
+
+.info-tecnica-card .rotulo{
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.info-tecnica-card .valor{
+    font-family: var(--fonte-titulo);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--tinta);
+}
+
+.atributo-valor-display{
+    font-family: var(--fonte-titulo);
+    font-size: 1.15rem;
+    color: var(--tinta);
+    text-align: center;
+}
+
+.atributo-mod-display{
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    color: var(--sangue-4);
+    text-align: center;
+}
+
+.habilidades-categoria-titulo{
+    font-family: var(--fonte-titulo);
+    font-size: .82rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+    margin: 18px 0 10px;
+    text-align: left;
+    width: 100%;
+}
+
+.habilidades-grid-leitura{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+.habilidade-linha.somente-leitura{
+    grid-template-columns: 1fr 60px 44px;
+}
+
+.item-mostrar-card{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    border: 1px solid var(--linha);
+    border-radius: 14px;
+    padding: 16px 18px;
+
+    transition: .3s;
+}
+
+.item-mostrar-card:hover{
+    border-color: var(--sangue-2);
+    box-shadow: 0 8px 18px rgba(0,0,0,.35);
+}
+
+.item-mostrar-topo{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.item-mostrar-nome{
+    font-family: var(--fonte-titulo);
+    font-size: .95rem;
+    color: var(--tinta);
+    margin: 0;
+}
+
+.item-mostrar-texto{
+    color: var(--tinta-fraca);
+    font-size: .85rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.descricao-texto{
+    width: 100%;
+    color: var(--tinta);
+    line-height: 1.7;
+    white-space: pre-line;
+}
+
+.botao-voltar{
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+
+    background: #1f1212;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    padding: 8px 16px;
+
+    color: var(--tinta);
+    text-decoration: none;
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    transition: .3s;
+}
+
+.botao-voltar:hover{
+    border-color: var(--sangue-2);
+    color: var(--sangue-4);
+    transform: translateX(-3px);
+}
+
+@media (max-width: 600px){
+    .habilidades-grid-leitura{
+        grid-template-columns: 1fr;
+    }
+}

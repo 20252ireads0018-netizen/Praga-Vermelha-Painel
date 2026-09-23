@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap');
+ 
+body{
+    background: radial-gradient(circle at top, #1a0c0c 0%, #0d0a0a 70%);
+    color: #ececec;
+    font-family: Georgia, serif;
+    margin: 0;
+}
+ 
+h1, h3, h5, p{
+    color: #f3f3f3;
+    transition: .3s;
+}
+ 
+h1, h3, h5{
+    font-family: 'Cinzel', Georgia, serif;
+}
+ 
+h1:hover,
+h3:hover,
+h5:hover,
+p:hover{
+    text-shadow: 0 0 12px rgba(255,255,255,.6);
+}
+
+/* ============================================
+   SELECT
+   ============================================ */
+
+select{
+    width: 100%;
+    padding: 12px 40px 12px 14px;
+
+    background: #1f1212;
+    color: var(--tinta);
+
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+
+    cursor: pointer;
+
+    appearance: none;
+
+    transition: .3s;
+
+    /* Seta personalizada */
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--sangue-3) 50%),
+        linear-gradient(135deg, var(--sangue-3) 50%, transparent 50%);
+    
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 12px) 50%;
+
+    background-size:
+        6px 6px,
+        6px 6px;
+
+    background-repeat: no-repeat;
+}
+
+select:hover{
+    background-color: #271515;
+    border-color: var(--sangue-2);
+
+    box-shadow:
+        0 0 10px rgba(182,37,37,.25);
+}
+
+select:focus{
+    outline: none;
+
+    border-color: var(--sangue-3);
+
+    box-shadow:
+        0 0 0 2px rgba(182,37,37,.15),
+        0 0 15px rgba(182,37,37,.25);
+}
+
+select option{
+    background: #1f1212;
+    color: var(--tinta);
+
+    padding: 10px;
+}
+
+select option:hover{
+    background: #2b1818;
+}
+ 
+/* HEADER */
+ 
+header{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:15px;
+    padding:25px 0;
+}
+ 
+/* FOOTER */
+ 
+footer{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    margin-top:40px;
+    padding:20px;
+    border-top:2px solid #7a1515;
+}
+ 
+/* LINKS */
+ 
+a{
+    color:#b83030;
+    text-decoration:none;
+    transition:.3s;
+}
+ 
+a:hover{
+    color:#ff5a5a;
+    text-shadow:0 0 10px rgba(255,255,255,.5);
+}
+ 
+/* INPUTS */
+ 
+input,
+textarea{
+    background:#241515;
+ 
+    color:#ececec;
+    font-family: Georgia, serif;
+ 
+    border:1px solid #472020;
+    border-radius:12px;
+ 
+    padding:10px 14px;
+ 
+    transition:.3s;
+}
+ 
+input::placeholder,
+textarea::placeholder{
+    color:#9b8686;
+}
+ 
+input:hover,
+textarea:hover{
+    background:#2b1717;
+}
+ 
+input:focus,
+textarea:focus{
+    outline:none;
+ 
+    border-color:#b62525;
+ 
+    box-shadow:0 0 12px rgba(182,37,37,.4);
+}
+ 
+/* SCROLL */
+ 
+textarea::-webkit-scrollbar{
+    width:10px;
+}
+ 
+textarea::-webkit-scrollbar-track{
+    background:#1b0d0d;
+    border-radius:10px;
+}
+ 
+textarea::-webkit-scrollbar-thumb{
+    background:#8f1b1b;
+    border-radius:10px;
+    border:2px solid #1b0d0d;
+}
+ 
+textarea::-webkit-scrollbar-thumb:hover{
+    background:#c42b2b;
+}
+ 
+/* LINHA */
+ 
+hr{
+    width:90%;
+    height:2px;
+ 
+    border:none;
+ 
+    background:linear-gradient(
+        to right,
+        transparent,
+        #a51e1e,
+        #d63c3c,
+        #a51e1e,
+        transparent
+    );
+ 
+    transition:.3s;
+}
+ 
+hr:hover{
+    width:82%;
+}
