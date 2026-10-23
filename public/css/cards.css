@@ -11,18 +11,14 @@
 }
 
 .card{
-    background: radial-gradient(
-    circle at top,
-    #2b1818,
-    #150c0c 70%
-    );
+    background: #1b1010;
     padding:20px;
     color: #ececec;
     display:flex;
     justify-content: center;
     flex-direction: column;
     align-items: center;
-    border-radius: 20px;
+    border-radius: 12px;
 }
 
 .menu-botoes{
@@ -33,28 +29,26 @@
 }
 
 .menu-links{
-    background: #311818;
+    background: #2a1717;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction:row;
     gap: 10px;
     padding: 15px;
-    border-radius: 20px;
-    transition: .3s;
+    border-radius: 10px;
+    transition: background .15s;
 }
 
 .menu-links:hover{
-    background: #271313;
-    transform: translateY(-3px);
+    background: #351d1d;
 }
 
 .dados-pessoais{
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
+    gap: 20px;
 }
 
 .dados-pessoais h3{
@@ -70,13 +64,6 @@
     width: 100%;
     max-width: 750px;
     padding: 30px;
-}
-
-.dados-pessoais{
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 100%;
 }
 
 .campo{
@@ -104,13 +91,13 @@
 .button{
     width:auto;
     min-width:170px;
-    height:48px;
+    height:46px;
     padding:0 16px;
 
     border:none;
-    border-radius:10px;
+    border-radius:8px;
 
-    background:linear-gradient(180deg,#9f2222,#661111);
+    background:#7a1818;
 
     display:flex;
     align-items:center;
@@ -120,29 +107,19 @@
     color:white;
     font-family:'Cinzel', Georgia, serif;
     font-size:.9rem;
-    letter-spacing:1px;
+    letter-spacing:.5px;
     font-weight:bold;
 
     cursor:pointer;
-    transition:.3s;
+    transition:background .15s;
+}
 
-    box-shadow:0 6px 15px rgba(0,0,0,.35);
-}
- 
 .button:hover{
-    transform:translateY(-3px);
- 
-    background:linear-gradient(180deg,#c92e2e,#821818);
- 
-    box-shadow:
-        0 10px 25px rgba(0,0,0,.5),
-        0 0 15px rgba(182,37,37,.35);
+    background:#942020;
 }
- 
+
 .button:active{
-    transform:translateY(0);
- 
-    background:linear-gradient(180deg,#551010,#2b0808);
+    background:#5c1111;
 }
 
 ::-webkit-scrollbar {
@@ -160,5 +137,5 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #9e3030;
+    background: #8f3030;
 }

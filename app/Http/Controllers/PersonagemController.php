@@ -7,15 +7,17 @@ use App\Models\Personagem;
 
 class PersonagemController extends Controller
 {
-    public function home(){
-            return view('dashboard.home');
+    public function home()
+    {
+        return view('dashboard.home');
     }
 
-    public function fichas(){
+    public function fichas()
+    {
         return view('personagem.form');
     }
 
-        public function fichafeita(Request $request)
+    public function fichafeita(Request $request)
     {
         $dados = $this->validarFicha($request);
         $personagem = Personagem::create($dados);
@@ -35,6 +37,16 @@ class PersonagemController extends Controller
 
     private function validarFicha(Request $request): array
     {
+        // Decodifica o JSON do campo oculto ANTES de validar
+        $request->merge([
+            'vitais_extras' => json_decode($request->input('vitais_extras') ?: '[]', true) ?: [],
+        ]);
+
+        // Decodifica o JSON das anotações ANTES de validar
+        $request->merge([
+            'anotacoes' => json_decode($request->input('anotacoes') ?: '[]', true) ?: [],
+        ]);
+
         $dados = $request->validate([
             'nome' => 'required|string|max:255',
             'raca' => 'required|string',
@@ -60,6 +72,18 @@ class PersonagemController extends Controller
             'sanidade_maxima' => 'nullable|integer',
             'aura_atual' => 'nullable|integer',
             'aura_maxima' => 'nullable|integer',
+
+            // Vitais extras
+            'vitais_extras' => 'nullable|array',
+            'vitais_extras.*.nome' => 'required|string|max:60',
+            'vitais_extras.*.cor' => 'nullable|string|max:7',
+            'vitais_extras.*.atual' => 'nullable|integer',
+            'vitais_extras.*.max' => 'nullable|integer|min:0',
+
+            // Anotações (cada uma é um "arquivo de texto" com título e conteúdo)
+            'anotacoes' => 'nullable|array|max:100',
+            'anotacoes.*.titulo' => 'required|string|max:100',
+            'anotacoes.*.texto' => 'nullable|string|max:20000',
         ]);
 
         $nomesHabilidades = [
@@ -134,6 +158,5 @@ class PersonagemController extends Controller
         $personagem->delete();
 
         return redirect()->route('personagens.index')->with('sucesso', 'Ficha excluida com sucesso!');
-        
     }
 }

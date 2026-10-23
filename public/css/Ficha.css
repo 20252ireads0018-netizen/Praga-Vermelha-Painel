@@ -12,8 +12,8 @@
    TOKENS
    ============================================ */
 :root{
-    --bg-card-a: #2b1818;
-    --bg-card-b: #150c0c;
+    --bg-card-a: #231414;
+    --bg-card-b: #170d0d;
 
     --tinta: #ececec;
     --tinta-fraca: #9b8686;
@@ -38,28 +38,20 @@
    ESTRUTURA BASE
    ============================================ */
 
-
 .container-topo{
     justify-content: center;
 }
 
 .card{
-    background: radial-gradient(
-        circle at top,
-        var(--bg-card-a),
-        var(--bg-card-b) 70%
-    );
+    background: var(--bg-card-b);
     padding: 20px;
     color: var(--tinta);
     display:flex;
     justify-content: center;
     flex-direction: column;
     align-items: center;
-    border-radius: 20px;
+    border-radius: 12px;
     border: 1px solid var(--linha);
-    box-shadow:
-        0 20px 45px rgba(0,0,0,.45),
-        inset 0 0 60px rgba(120,20,20,.08);
 }
 
 .ficha-card{
@@ -76,20 +68,19 @@
 }
 
 .menu-links{
-    background: #311818;
+    background: #2a1717;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-direction:row;
     gap: 10px;
     padding: 15px;
-    border-radius: 20px;
-    transition: .3s;
+    border-radius: 10px;
+    transition: background .15s;
 }
 
 .menu-links:hover{
-    background: #271313;
-    transform: translateY(-3px);
+    background: #351d1d;
 }
 
 /* ============================================
@@ -110,10 +101,7 @@
     width: 46px;
     height: 46px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, var(--sangue-3), var(--sangue-1) 75%);
-    box-shadow:
-        0 0 0 3px rgba(182,37,37,.15),
-        0 6px 16px rgba(0,0,0,.5);
+    background: var(--sangue-1);
     color: #fff0e8;
     font-size: 1.1rem;
     margin-bottom: 6px;
@@ -121,14 +109,14 @@
 
 .ficha-header h1{
     font-family: var(--fonte-titulo);
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     margin: 0;
 }
 
 .ficha-subtitulo{
     margin: 0;
     font-size: .8rem;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -155,7 +143,7 @@
     color: var(--tinta);
     font-family: var(--fonte-titulo);
     font-size: .8rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 600;
 }
@@ -210,7 +198,7 @@
 .barra-nome{
     font-family: var(--fonte-titulo);
     font-size: .85rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
 }
 
@@ -222,13 +210,12 @@
 .barra-fundo{
     display: block !important;
     width: 100% !important;
-    height: 16px;
-    min-height: 16px;
+    height: 14px;
+    min-height: 14px;
     border-radius: 999px;
     background: #1c1010;
     border: 1px solid var(--linha);
     overflow: hidden;
-    box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
 }
 
 .barra-preenchimento{
@@ -237,46 +224,18 @@
     min-width: 4px;
     border-radius: 999px;
     transition: width .4s ease;
-    position: relative;
-}
-
-.barra-preenchimento::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background: linear-gradient(
-        120deg,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,.25) 45%,
-        rgba(255,255,255,0) 60%
-    );
-    animation: brilho-barra 2.8s ease-in-out infinite;
 }
 
 .barra-vida{
-    background: linear-gradient(90deg, var(--sangue-1), var(--sangue-3) 60%, var(--sangue-4));
-    box-shadow: 0 0 12px rgba(214,60,60,.55);
+    background: var(--sangue-2);
 }
 
 .barra-aura{
-    background: linear-gradient(90deg, var(--aura-1), var(--aura-3) 60%, var(--aura-4));
-    box-shadow: 0 0 12px rgba(124,92,255,.55);
+    background: var(--aura-3);
 }
 
 .barra-sanidade{
-    background: linear-gradient(
-        90deg,
-        #14532d,
-        #22c55e 60%,
-        #86efac
-    );
-    box-shadow: 0 0 12px rgba(34, 197, 94, .55);
-}
-
-@media (prefers-reduced-motion: reduce){
-    .barra-preenchimento::after{
-        animation: none;
-    }
+    background: #22a55a;
 }
 
 /* ============================================
@@ -293,7 +252,7 @@
     margin: 0;
     font-family: var(--fonte-titulo);
     font-size: .85rem;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
     text-align: center;
@@ -318,37 +277,25 @@
     text-align: center;
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 14px 10px;
     gap: 8px;
     min-width: 0;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 @keyframes tremer {
-
     0%   { transform: translateX(0); }
-
-    20%  { transform: translateX(-6px); }
-
-    40%  { transform: translateX(6px); }
-
-    60%  { transform: translateX(-6px); }
-
-    80%  { transform: translateX(6px); }
-
+    20%  { transform: translateX(-5px); }
+    40%  { transform: translateX(5px); }
+    60%  { transform: translateX(-5px); }
+    80%  { transform: translateX(5px); }
     100% { transform: translateX(0); }
-
 }
 
 .erro-atributo{
-
     animation: tremer .35s;
-
-    border: 2px solid #ff4d4d;
-
-    box-shadow: 0 0 18px rgba(255,0,0,.45);
-
+    border: 1px solid #ff4d4d;
 }
 
 .popup{
@@ -365,7 +312,7 @@
     opacity: 0;
     visibility: hidden;
 
-    transition: .3s;
+    transition: opacity .2s, visibility .2s;
 }
 
 .popup.ativo{
@@ -381,55 +328,44 @@
     align-items: center;
     justify-content: center;
 
-    background: radial-gradient(circle at top,#2b1818,#150c0c 70%);
-    border: 1px solid #472020;
-    border-radius: 20px;
+    background: var(--bg-card-b);
+    border: 1px solid var(--linha);
+    border-radius: 12px;
 
     padding: 25px;
 
     color: white;
     text-align: center;
-
-    transform: scale(.8);
-    transition: .3s;
-}
-
-.popup.ativo .popup-conteudo{
-    transform: scale(1);
 }
 
 .popup button{
     margin-top:20px;
 
     border:none;
-    border-radius:10px;
+    border-radius:8px;
 
     padding:10px 25px;
 
     cursor:pointer;
 
-    background:#9f2222;
+    background:#8a1c1c;
     color:white;
 
-    transition:.3s;
+    transition:background .15s;
 }
 
 .popup button:hover{
-    background:#c92e2e;
+    background:#a42424;
 }
 
 .atributo-card:hover{
-    background: #271515;
     border-color: var(--sangue-2);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 18px rgba(0,0,0,.4);
 }
 
 .atributo-card.usado {
     opacity: 0.35;
     cursor: not-allowed;
     pointer-events: none;
-    transform: none;
     filter: grayscale(70%);
     border-color: #333;
 }
@@ -470,7 +406,7 @@
     border:none;
     border-radius:20px;
 
-    background:linear-gradient(180deg,#9f2222,#661111);
+    background:#8a1c1c;
 
     display:flex;
     align-items:center;
@@ -480,27 +416,19 @@
     color:white;
     font-family:'Cinzel', Georgia, serif;
     font-size:.9rem;
-    letter-spacing:1px;
+    letter-spacing:.5px;
     font-weight:bold;
 
     cursor:pointer;
-    transition:.3s;
+    transition:background .15s;
 }
 
 .aumentar-vida:hover, .rolagem:hover{
-    transform:translateY(-3px);
- 
-    background:linear-gradient(180deg,#c92e2e,#821818);
- 
-    box-shadow:
-        0 10px 25px rgba(0,0,0,.5),
-        0 0 15px rgba(182,37,37,.35);
+    background:#a42424;
 }
- 
+
 .aumentar-vida:active, .rolagem:active{
-    transform:translateY(0);
- 
-    background:linear-gradient(180deg,#551010,#2b0808);
+    background:#5c1111;
 }
 
 .rolagem{
@@ -510,7 +438,7 @@
     border:none;
     border-radius:50%;
 
-    background:linear-gradient(180deg,#9f2222,#661111);
+    background:#8a1c1c;
 
     display:flex;
     align-items:center;
@@ -520,11 +448,11 @@
     color:white;
     font-family:'Cinzel', Georgia, serif;
     font-size:.9rem;
-    letter-spacing:1px;
+    letter-spacing:.5px;
     font-weight:bold;
 
     cursor:pointer;
-    transition:.3s;
+    transition:background .15s;
 }
 
 .card-rolagem{
@@ -541,12 +469,12 @@
 
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-20px) scale(.95);
+    transform: translateY(-10px);
 
     transition:
-        opacity .35s ease,
-        transform .35s ease,
-        visibility .35s;
+        opacity .2s ease,
+        transform .2s ease,
+        visibility .2s;
 }
 
 .card-talentos{
@@ -557,11 +485,7 @@
 .card-rolagem.ativo{
     opacity: 1;
     visibility: visible;
-    transform: translateY(0) scale(1);
-}
-
-.card-rolagem:hover{
-    transform: translateY(-10px);
+    transform: translateY(0);
 }
 
 .titulo-rolagem{
@@ -572,15 +496,13 @@
 
 .semi-botao {
     cursor: pointer;
-    transition: .3s;
+    transition: border-color .15s, background .15s;
     opacity: 1;
 }
 
 .semi-botao:hover {
     background: #271515;
     border-color: var(--sangue-2);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 18px rgba(0,0,0,.4);
 }
 
 /* Botão depois de ser utilizado */
@@ -588,7 +510,6 @@
     opacity: 0.35;
     cursor: not-allowed;
     pointer-events: none;
-    transform: none;
     filter: grayscale(70%);
     border-color: #333;
 }
@@ -615,16 +536,15 @@
     border:none;
     border-radius:50%;
 
-    background:linear-gradient(180deg,#9f2222,#661111);
+    background:#8a1c1c;
     color:white;
     font-weight:bold;
     cursor:pointer;
-    transition:.3s;
+    transition:background .15s;
 }
 
 .botao-fechar:hover{
-    background:linear-gradient(180deg,#c92e2e,#821818);
-    transform:scale(1.1);
+    background:#a42424;
 }
 
 @media (max-width: 600px){
@@ -672,60 +592,31 @@
     gap: 12px;
     min-width: 0;
 
-    background: linear-gradient(
-        135deg,
-        #1f1212,
-        #180d0d 70%
-    );
+    background: #1c1010;
     border: 1px solid var(--linha);
-    border-radius: 12px;
+    border-left: 3px solid var(--sangue-1);
+    border-radius: 8px;
     padding: 12px 18px;
 
     position: relative;
     overflow: hidden;
 
-    transition: .3s;
-}
-
-/* Linha de brilho sutil na borda esquerda, no estilo "selo de sangue" */
-.habilidade-linha::before{
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, var(--sangue-2), var(--sangue-1));
-    opacity: .6;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .habilidade-linha:hover{
-    background: linear-gradient(
-        135deg,
-        #271515,
-        #1c0f0f 70%
-    );
     border-color: var(--sangue-2);
-    transform: translateX(4px);
-    box-shadow:
-        0 8px 20px rgba(0,0,0,.45),
-        0 0 12px rgba(182,37,37,.15);
-}
-
-.habilidade-linha:hover::before{
-    opacity: 1;
-    box-shadow: 0 0 10px rgba(214,60,60,.6);
+    border-left-color: var(--sangue-2);
 }
 
 .habilidade-nome{
     font-family: var(--fonte-titulo);
     font-size: .8rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
     text-align: left;
-    transition: .3s;
+    transition: color .15s;
 }
 
 .habilidade-linha:hover .habilidade-nome{
@@ -744,21 +635,14 @@
 
     background: #150c0c;
     border: 1px solid var(--linha);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 6px 4px;
-
-    transition: .3s;
-}
-
-.habilidade-linha:hover .habilidade-valor{
-    border-color: var(--sangue-2);
 }
 
 /* Variante para destacar bônus positivo/negativo */
 .habilidade-valor.positivo{
     color: var(--sangue-4);
     border-color: var(--sangue-2);
-    text-shadow: 0 0 8px rgba(214,60,60,.4);
 }
 
 .habilidade-valor.negativo{
@@ -769,8 +653,7 @@
 /* Estado de erro, igual ao dos atributos */
 .habilidade-linha.erro-atributo{
     animation: tremer .35s;
-    border: 2px solid #ff4d4d;
-    box-shadow: 0 0 18px rgba(255,0,0,.45);
+    border: 1px solid #ff4d4d;
 }
 
 @media (max-width: 600px){
@@ -827,33 +710,22 @@
     line-height: 1;
 
     cursor: pointer;
-    opacity: 1;
-    transition: .3s;
+    transition: border-color .15s, color .15s;
 }
 
 .botao-ocultar:hover{
     color: var(--sangue-3);
     border-color: var(--sangue-2);
-    background: rgba(182, 37, 37, .18);
-    transform: scale(1.1);
-}
-
-.botao-ocultar:active{
-    transform: scale(.9);
 }
 
 .botao-ocultar svg,
 .botao-ocultar .seta{
-    transition: transform .3s;
+    transition: transform .2s;
 }
 
 .botao-ocultar.ocultado{
     color: var(--sangue-3);
     border-color: var(--sangue-2);
-}
-
-.botao-ocultar.ocultado .seta{
-    transform: rotate(-90deg);
 }
 
 .botao-ocultar.ocultado .seta{
@@ -899,16 +771,13 @@
     color: var(--tinta);
     font-size: 1rem;
     opacity: 1;
-    transform: scale(1);
-    transform-origin: center;
-    transition: color .4s ease, font-size .4s ease, opacity .4s ease, transform .4s ease;
+    transition: color .3s ease, font-size .3s ease, opacity .3s ease;
 }
 
 .titulo-colapsavel.oculto{
     color: var(--tinta-fraca) !important;
     opacity: .4 !important;
     font-size: .7em !important;
-    transform: scale(.9);
 }
 
 .habilidade-linha{
@@ -926,14 +795,11 @@
 
     background: #150c0c;
     border: 1px dashed var(--linha);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 6px 2px;
-
-    transition: .3s;
 }
 
 .habilidade-linha:hover .habilidade-mod{
-    border-color: var(--sangue-2);
     color: var(--tinta);
 }
 
@@ -963,6 +829,7 @@
         font-size: 11px;
     }
 }
+
 .botao-rolar-habilidade {
     display: flex;
     align-items: center;
@@ -977,7 +844,7 @@
     color: var(--tinta-fraca, #999);
     font-size: 13px;
     cursor: pointer;
-    transition: all .25s ease;
+    transition: background .15s, border-color .15s, color .15s;
     user-select: none;
 }
 
@@ -986,24 +853,21 @@
 }
 
 .botao-rolar-habilidade:hover {
-    background: rgba(189, 3, 3, 0.15);
-    border-color: rgba(189, 3, 3, 0.658);
-    color: rgba(189, 3, 3, 0.658);
-    transform: scale(1.1);
+    background: rgba(182, 37, 37, .15);
+    border-color: var(--sangue-2);
+    color: var(--sangue-3);
 }
 
 .botao-rolar-habilidade:active {
-    transform: scale(0.9) rotate(15deg);
-    background: rgba(189, 3, 3, 0.35);
+    background: rgba(182, 37, 37, .3);
 }
 
 .botao-rolar-habilidade.rolando {
-    animation: girar-dado 0.4s ease;
+    animation: girar-dado .4s ease;
 }
 
 @keyframes girar-dado {
     0%   { transform: rotate(0deg); }
-    50%  { transform: rotate(180deg) scale(1.2); }
     100% { transform: rotate(360deg); }
 }
 
@@ -1039,23 +903,14 @@
 
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 14px 10px;
-
-    transition: .3s;
-}
-
-.rolagem-habilidade-card:hover{
-    background: #271515;
-    border-color: var(--sangue-2);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0,0,0,.4);
 }
 
 .rolagem-habilidade-card .rotulo{
     font-family: var(--fonte-titulo);
     font-size: .7rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1069,17 +924,15 @@
 
 .rolagem-habilidade-card.mod .valor{
     color: var(--sangue-3);
-    text-shadow: 0 0 8px rgba(214,60,60,.35);
 }
 
-/* resultado final de baixo, se quiser destacar mais que o resto do texto */
+/* resultado final de baixo */
 #rolagem-habilidade #resultado-habilidade{
     font-family: var(--fonte-titulo);
     font-size: 1.1rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     color: var(--sangue-4);
     margin-top: 8px;
-    text-shadow: 0 0 10px rgba(255,90,90,.4);
 }
 
 /* ============================================
@@ -1105,14 +958,14 @@
 
     background: #1c1010;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 16px;
 }
 
 .resultado-habilidade-linha .rotulo{
     font-family: var(--fonte-titulo);
     font-size: .72rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1129,7 +982,7 @@
     color: var(--tinta-fraca);
 }
 
-/* linha da redução aplicada, sempre em tom "sangue" */
+/* linha da redução aplicada */
 .resultado-habilidade-linha.reducao .numero{
     color: var(--sangue-3);
 }
@@ -1138,25 +991,23 @@
     content: "− ";
 }
 
-/* resultado final, destacado e maior que o resto */
+/* resultado final */
 .resultado-habilidade-final{
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
 
-    background: linear-gradient(135deg, #2b1414, #180d0d 70%);
+    background: #1c1010;
     border: 1px solid var(--sangue-2);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 14px 20px;
-
-    box-shadow: 0 0 18px rgba(182,37,37,.25);
 }
 
 .resultado-habilidade-final .rotulo{
     font-family: var(--fonte-titulo);
     font-size: .75rem;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1166,17 +1017,14 @@
     font-size: 2rem;
     font-weight: 700;
     color: var(--sangue-4);
-    text-shadow: 0 0 12px rgba(255,90,90,.5);
 }
 
-/* variação opcional: sucesso / falha, caso queira usar depois */
+/* variação opcional: sucesso / falha */
 .resultado-habilidade-final.sucesso{
-    border-color: #22c55e;
-    box-shadow: 0 0 18px rgba(34,197,94,.25);
+    border-color: #22a55a;
 }
 .resultado-habilidade-final.sucesso .numero{
     color: #86efac;
-    text-shadow: 0 0 12px rgba(34,197,94,.5);
 }
 
 .resultado-habilidade-final.falha{
@@ -1197,7 +1045,7 @@
 .vantagem-extra-campo label{
     font-family: var(--fonte-titulo);
     font-size: .72rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
     text-align: left;
@@ -1216,20 +1064,19 @@
 
     background: #150c0c;
     border: 1px solid var(--linha);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 8px 10px;
 
     font-family: var(--fonte-corpo);
     font-size: .9rem;
     color: var(--tinta);
 
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .vantagem-extra-linha input:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.35);
 }
 
 .vantagem-extra-linha input::placeholder{
@@ -1241,28 +1088,27 @@
     flex-shrink: 0;
 
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 8px 16px;
 
-    background: linear-gradient(180deg, #9f2222, #661111);
+    background: #8a1c1c;
     color: white;
 
     font-family: var(--fonte-titulo);
     font-size: .8rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     font-weight: 600;
 
     cursor: pointer;
-    transition: .3s;
+    transition: background .15s;
 }
 
 .vantagem-extra-linha button:hover{
-    background: linear-gradient(180deg, #c92e2e, #821818);
-    transform: translateY(-2px);
+    background: #a42424;
 }
 
 .vantagem-extra-linha button:active{
-    transform: translateY(0);
+    background: #5c1111;
 }
 
 /* lista de vantagens já adicionadas */
@@ -1286,19 +1132,13 @@
     font-family: var(--fonte-titulo);
     font-size: .75rem;
     color: var(--tinta);
-
-    transition: .3s;
-}
-
-.vantagem-extra-item:hover{
-    border-color: var(--sangue-2);
 }
 
 .vantagem-extra-item .remover{
     cursor: pointer;
     color: var(--tinta-fraca);
     font-weight: bold;
-    transition: .2s;
+    transition: color .15s;
 }
 
 .vantagem-extra-item .remover:hover{
@@ -1316,7 +1156,6 @@
     box-sizing: border-box;
 }
 
-/* garante que filhos internos não estourem a largura do pai */
 .rolagem-habilidade-valores,
 .vantagem-extra-linha,
 .vantagem-extra-lista,
@@ -1326,7 +1165,6 @@
     box-sizing: border-box;
 }
 
-/* o input não deve ter uma largura mínima que force o pai a crescer */
 .vantagem-extra-linha input{
     min-width: 0;
 }
@@ -1339,35 +1177,28 @@
     margin-top: 16px;
 
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 12px 20px;
 
-    background: linear-gradient(180deg, #9f2222, #661111);
+    background: #8a1c1c;
     color: white;
 
     font-family: var(--fonte-titulo);
     font-size: 1rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 700;
 
     cursor: pointer;
-    transition: .3s;
-
-    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+    transition: background .15s;
 }
 
 .botao-rolar-dado-habilidade:hover{
-    background: linear-gradient(180deg, #c92e2e, #821818);
-    transform: translateY(-3px);
-    box-shadow:
-        0 10px 25px rgba(0,0,0,.5),
-        0 0 15px rgba(182,37,37,.35);
+    background: #a42424;
 }
 
 .botao-rolar-dado-habilidade:active{
-    transform: translateY(0);
-    background: linear-gradient(180deg, #551010, #2b0808);
+    background: #5c1111;
 }
 
 /* ============================================
@@ -1379,53 +1210,28 @@
     min-height: 48px;
 
     border: 1px solid var(--sangue-1);
-    border-radius: 10px;
+    border-radius: 8px;
 
-    background: linear-gradient(
-        180deg,
-        #9f2222,
-        #661111
-    );
+    background: #8a1c1c;
 
     color: white;
 
     font-family: var(--fonte-titulo);
     font-size: .85rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 700;
 
     cursor: pointer;
-    transition: .3s;
-
-    box-shadow:
-        0 6px 15px rgba(0,0,0,.35);
+    transition: background .15s;
 }
 
 .botao-adicionar-talento:hover{
-    transform: translateY(-3px);
-
-    background: linear-gradient(
-        180deg,
-        #c92e2e,
-        #821818
-    );
-
-    border-color: var(--sangue-3);
-
-    box-shadow:
-        0 10px 25px rgba(0,0,0,.5),
-        0 0 15px rgba(182,37,37,.35);
+    background: #a42424;
 }
 
 .botao-adicionar-talento:active{
-    transform: translateY(0);
-
-    background: linear-gradient(
-        180deg,
-        #551010,
-        #2b0808
-    );
+    background: #5c1111;
 }
 
 /* ============================================
@@ -1444,19 +1250,14 @@
 
     padding: 40px 16px 16px;
 
-    background: linear-gradient(
-        135deg,
-        #1f1212,
-        #180d0d 70%
-    );
+    background: #1c1010;
 
     border: 1px solid var(--linha);
-    border-radius: 14px;
+    border-radius: 10px;
 
-    transition: .3s;
+    transition: border-color .15s;
 
     margin-bottom: 10px;
-
 }
 
 .talento-card .botao-fechar{
@@ -1475,19 +1276,7 @@
 }
 
 .talento-card:hover{
-    background: linear-gradient(
-        135deg,
-        #271515,
-        #1c0f0f 70%
-    );
-
     border-color: var(--sangue-2);
-
-    transform: translateY(-3px);
-
-    box-shadow:
-        0 8px 20px rgba(0,0,0,.45),
-        0 0 12px rgba(182,37,37,.15);
 }
 
 .talento-titulo,
@@ -1498,7 +1287,7 @@
 
     background: #150c0c;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px 12px;
 
     font-family: var(--fonte-corpo);
@@ -1506,12 +1295,12 @@
     line-height: 1.5;
     color: var(--tinta);
 
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .talento-titulo{
     font-family: var(--fonte-titulo);
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     text-transform: uppercase;
     color: var(--sangue-4);
 }
@@ -1520,7 +1309,6 @@
 .talento-descricao:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.3);
 }
 
 .talento-titulo::placeholder,
@@ -1567,7 +1355,7 @@
 .campo-dano-item label{
     font-family: var(--fonte-titulo);
     font-size: .72rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1577,19 +1365,18 @@
     width: 100%;
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px 12px;
     color: var(--tinta);
     font-family: var(--fonte-corpo);
     font-size: .95rem;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .campo-dano-item input:focus,
 .campo-dano-item select:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.3);
 }
 
 .campo-dano-item input::placeholder{
@@ -1617,18 +1404,11 @@
     align-items: center;
     gap: 12px;
 
-    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    background: #1c1010;
     border: 1px solid var(--linha);
-    border-radius: 16px;
+    border-radius: 10px;
     padding: 18px 20px;
     margin: 14px 0;
-
-    transition: .3s;
-}
-
-.rolador-dados:hover{
-    border-color: var(--sangue-2);
-    box-shadow: 0 8px 20px rgba(0,0,0,.4);
 }
 
 .rolador-dados .secao-titulo{
@@ -1654,7 +1434,7 @@
 .rolador-dados-campo label{
     font-family: var(--fonte-titulo);
     font-size: .7rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
     text-align: center;
@@ -1665,20 +1445,19 @@
     width: 100%;
     background: #150c0c;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 10px;
     color: var(--tinta);
     font-family: var(--fonte-corpo);
     font-size: .95rem;
     text-align: center;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .rolador-dados-campo input:focus,
 .rolador-dados-campo select:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.3);
 }
 
 .rolador-dados #rolar-dado-diverso{
@@ -1691,7 +1470,6 @@
     font-family: var(--fonte-titulo);
     font-size: 1rem;
     letter-spacing: .5px;
-    text-shadow: 0 0 8px rgba(255,90,90,.35);
     min-height: 1.2em;
     text-align: center;
 }
@@ -1719,19 +1497,17 @@
     width: 100%;
     max-width: 260px;
 
-    background: linear-gradient(135deg, #2b1414, #180d0d 70%);
+    background: #1c1010;
     border: 1px solid var(--sangue-2);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 12px 18px;
     margin-top: 4px;
-
-    box-shadow: 0 0 18px rgba(182,37,37,.2);
 }
 
 .rolador-resultado-card .rotulo{
     font-family: var(--fonte-titulo);
     font-size: .7rem;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1741,7 +1517,6 @@
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--sangue-4);
-    text-shadow: 0 0 12px rgba(255,90,90,.5);
     line-height: 1.2;
 }
 
@@ -1773,7 +1548,7 @@
     min-height: 48px;
 
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
 
     background: #1f1212;
     color: var(--tinta);
@@ -1785,18 +1560,13 @@
     font-weight: 700;
 
     cursor: pointer;
-    transition: .3s;
+    transition: background .15s, border-color .15s;
     white-space: nowrap;
 }
 
 .botao-rolar-preview:hover{
-    background: rgba(189, 3, 3, 0.15);
+    background: rgba(182, 37, 37, .15);
     border-color: var(--sangue-2);
-    transform: translateY(-2px);
-}
-
-.botao-rolar-preview:active{
-    transform: translateY(0);
 }
 
 .rolar-preview-resultado{
@@ -1806,7 +1576,6 @@
     font-family: var(--fonte-titulo);
     font-size: 1rem;
     color: var(--sangue-4);
-    text-shadow: 0 0 8px rgba(255,90,90,.35);
 
     min-height: 1.4em;
     margin: 0;
@@ -1820,8 +1589,8 @@
 }
 
 @keyframes piscar-resultado {
-    0%   { box-shadow: 0 0 30px rgba(255,90,90,.7); transform: scale(1.05); }
-    100% { box-shadow: 0 0 18px rgba(182,37,37,.2); transform: scale(1); }
+    0%   { border-color: var(--sangue-4); }
+    100% { border-color: var(--sangue-2); }
 }
 
 .rolador-resultado-card.piscar{
@@ -1833,9 +1602,9 @@
     align-items: center;
     gap: 4px;
 
-    background: rgba(159, 34, 34, 0.25);
+    background: rgba(138, 28, 28, .25);
     border: 1px solid var(--sangue-2);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 4px 10px;
 
     color: var(--tinta);
@@ -1846,7 +1615,7 @@
     font-weight: 600;
 
     cursor: pointer;
-    transition: .3s;
+    transition: background .15s;
     flex-shrink: 0;
 }
 
@@ -1856,13 +1625,7 @@
 }
 
 .botao-remover-item:hover {
-    background: rgba(189, 3, 3, 0.4);
-    border-color: var(--sangue-3);
-    transform: translateY(-1px);
-}
-
-.botao-remover-item:active{
-    transform: translateY(0);
+    background: rgba(182, 37, 37, .4);
 }
 
 /* ============================================
@@ -1886,7 +1649,7 @@
 .item-form-campo label{
     font-family: var(--fonte-titulo);
     font-size: .72rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -1895,19 +1658,18 @@
 .item-form-campo select{
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px 12px;
     color: var(--tinta);
     font-family: var(--fonte-corpo);
     font-size: .95rem;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .item-form-campo input:focus,
 .item-form-campo select:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.3);
 }
 
 .item-form-nome{ flex: 2 1 220px; }
@@ -1962,11 +1724,11 @@
     background: #1f1212;
     color: var(--tinta);
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 10px 12px;
     font-family: var(--fonte-corpo);
     font-size: .95rem;
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .campo input:focus,
@@ -1974,7 +1736,6 @@
 .campo textarea:focus{
     outline: none;
     border-color: var(--sangue-2);
-    box-shadow: 0 0 8px rgba(182,37,37,.3);
 }
 
 .campo input::placeholder,
@@ -2019,28 +1780,23 @@ select:-webkit-autofill:focus{
 
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 8px;
+    border-radius: 6px;
     padding: 8px 18px;
 
     color: var(--tinta);
     font-family: var(--fonte-titulo);
     font-size: .8rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     text-transform: uppercase;
     font-weight: 700;
 
     cursor: pointer;
-    transition: .3s;
+    transition: background .15s, border-color .15s;
 }
 
 .botao-rolar-item:hover:not(:disabled){
-    background: rgba(189, 3, 3, 0.2);
+    background: rgba(182, 37, 37, .2);
     border-color: var(--sangue-2);
-    transform: translateY(-2px);
-}
-
-.botao-rolar-item:active:not(:disabled){
-    transform: translateY(0);
 }
 
 .botao-rolar-item:disabled{
@@ -2052,7 +1808,6 @@ select:-webkit-autofill:focus{
     color: var(--sangue-4);
     font-family: var(--fonte-titulo);
     font-size: .9rem;
-    text-shadow: 0 0 6px rgba(255,90,90,.35);
 }
 
 .item-card-rodape{
@@ -2084,26 +1839,22 @@ select:-webkit-autofill:focus{
     flex-direction: column;
     gap: 10px;
 
-    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    background: #1c1010;
     border: 1px solid var(--linha);
-    border-radius: 16px;
+    border-radius: 10px;
     padding: 22px 20px;
 
-    transition: .3s;
+    transition: border-color .15s;
 }
 
 .personagem-card:hover{
     border-color: var(--sangue-2);
-    transform: translateY(-4px);
-    box-shadow:
-        0 10px 25px rgba(0,0,0,.45),
-        0 0 14px rgba(182,37,37,.2);
 }
 
 .personagem-card-nome{
     font-family: var(--fonte-titulo);
     font-size: 1.05rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     color: var(--tinta);
     margin: 0;
 }
@@ -2118,7 +1869,7 @@ select:-webkit-autofill:focus{
 
 .personagem-card-tag{
     align-self: flex-start;
-    background: rgba(189,3,3,.15);
+    background: rgba(182,37,37,.12);
     border: 1px solid var(--sangue-2);
     border-radius: 999px;
     padding: 3px 12px;
@@ -2143,7 +1894,7 @@ select:-webkit-autofill:focus{
 .ficha-subinfo{
     color: var(--tinta-fraca);
     font-size: .85rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     margin: 0;
 }
 
@@ -2162,7 +1913,7 @@ select:-webkit-autofill:focus{
 
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 14px 10px;
     text-align: center;
 }
@@ -2170,7 +1921,7 @@ select:-webkit-autofill:focus{
 .info-tecnica-card .rotulo{
     font-family: var(--fonte-titulo);
     font-size: .68rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
 }
@@ -2199,7 +1950,7 @@ select:-webkit-autofill:focus{
 .habilidades-categoria-titulo{
     font-family: var(--fonte-titulo);
     font-size: .82rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--tinta-fraca);
     margin: 18px 0 10px;
@@ -2224,17 +1975,10 @@ select:-webkit-autofill:focus{
     flex-direction: column;
     gap: 6px;
 
-    background: linear-gradient(135deg, #1f1212, #180d0d 70%);
+    background: #1c1010;
     border: 1px solid var(--linha);
-    border-radius: 14px;
+    border-radius: 10px;
     padding: 16px 18px;
-
-    transition: .3s;
-}
-
-.item-mostrar-card:hover{
-    border-color: var(--sangue-2);
-    box-shadow: 0 8px 18px rgba(0,0,0,.35);
 }
 
 .item-mostrar-topo{
@@ -2274,27 +2018,439 @@ select:-webkit-autofill:focus{
 
     background: #1f1212;
     border: 1px solid var(--linha);
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 8px 16px;
 
     color: var(--tinta);
     text-decoration: none;
     font-family: var(--fonte-titulo);
     font-size: .8rem;
-    letter-spacing: 1px;
+    letter-spacing: .5px;
     text-transform: uppercase;
 
-    transition: .3s;
+    transition: border-color .15s, color .15s;
 }
 
 .botao-voltar:hover{
     border-color: var(--sangue-2);
     color: var(--sangue-4);
-    transform: translateX(-3px);
 }
 
 @media (max-width: 600px){
     .habilidades-grid-leitura{
         grid-template-columns: 1fr;
     }
+}
+
+/* ============================================
+   CARD DE MALDIÇÕES (catálogo)
+   ============================================ */
+
+/* popups sempre acima dos cards flutuantes */
+.popup{ z-index: 1000; }
+
+.card-maldicoes{
+    left: 40px;
+    right: auto;
+    top: 100px;
+    width: min(640px, calc(100vw - 80px));
+    min-height: 0;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    align-items: stretch;
+    z-index: 900;
+}
+
+.card-maldicoes .botao-fechar{ align-self: flex-start; flex-shrink: 0; }
+
+.maldicao-config{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.maldicao-config .campo{ grid-template-columns: 170px 1fr; }
+.maldicao-config .campo input{ max-width: 120px; }
+
+.maldicao-seletor{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin: 14px 0 6px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--linha);
+}
+
+.maldicao-seletor .campo{ grid-template-columns: 170px 1fr; }
+.maldicao-seletor .campo select{ width: 100%; }
+
+.maldicao-previa{
+    margin: 0;
+    min-height: 1.2em;
+    font-size: .8rem;
+    line-height: 1.5;
+    color: var(--tinta-fraca);
+    text-align: center;
+}
+
+.maldicao-custom{ display: none; }
+.maldicao-custom.visivel{ display: block; }
+.maldicao-custom .campo{ grid-template-columns: 170px 1fr; }
+
+.lista-maldicoes-ficha{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    margin-top: 16px;
+}
+
+/* ---------- bloco da maldição ---------- */
+.maldicao-bloco-form{
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color .15s;
+}
+
+.maldicao-bloco-form:hover{ border-color: var(--sangue-2); }
+
+.maldicao-bloco-form > summary{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.maldicao-bloco-form > summary::-webkit-details-marker{ display: none; }
+
+.maldicao-bloco-form > summary::before{
+    content: "▾";
+    color: var(--tinta-fraca);
+    transition: transform .2s;
+}
+
+.maldicao-bloco-form:not([open]) > summary::before{ transform: rotate(-90deg); }
+
+.maldicao-bloco-nome{
+    flex: 1;
+    min-width: 0;
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    letter-spacing: .5px;
+    color: var(--tinta);
+}
+
+.maldicao-bloco-corpo{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 16px 16px;
+    border-top: 1px solid var(--linha);
+}
+
+.maldicao-bloco-config{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.maldicao-bloco-config label{
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.maldicao-ameaca-input{
+    width: 80px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    text-align: center;
+}
+
+.maldicao-ameaca-input:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+}
+
+.maldicao-descricao{
+    margin: 0;
+    font-size: .85rem;
+    line-height: 1.6;
+    color: var(--tinta);
+}
+
+.maldicao-secao{
+    margin: 6px 0 0;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--linha);
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.maldicao-subtitulo{
+    margin: 12px 0 6px;
+    font-family: var(--fonte-titulo);
+    font-size: .7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sangue-4);
+}
+
+/* ---------- ameaças ---------- */
+.maldicao-ameacas,
+.maldicao-tecnicas{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.maldicao-ameaca{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.maldicao-ameaca-topo{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.maldicao-dado{
+    font-family: var(--fonte-titulo);
+    font-size: .8rem;
+    color: var(--sangue-4);
+}
+
+.maldicao-regra,
+.maldicao-penalidade,
+.maldicao-nota,
+.maldicao-efeito p{
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.55;
+    color: var(--tinta);
+}
+
+.maldicao-efeito{
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    background: #150c0c;
+    border-left: 3px solid var(--sangue-2);
+    border-radius: 6px;
+}
+
+.maldicao-efeito strong{
+    display: block;
+    margin-bottom: 2px;
+    font-family: var(--fonte-titulo);
+    font-size: .75rem;
+    letter-spacing: .5px;
+    color: var(--sangue-4);
+}
+
+.maldicao-marca{
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #8a1c1c;
+    font-family: var(--fonte-titulo);
+    font-size: .75rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.maldicao-penalidade{
+    padding-top: 8px;
+    border-top: 1px dashed var(--linha);
+    color: var(--tinta-fraca);
+}
+
+.maldicao-penalidade strong{ color: var(--sangue-3); }
+
+.maldicao-bloqueada-aviso{
+    margin: 0;
+    font-size: .78rem;
+    color: var(--tinta-fraca);
+    text-align: center;
+}
+
+/* ---------- técnicas ---------- */
+.maldicao-tecnica{
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    transition: border-color .15s;
+}
+
+.maldicao-tecnica:hover{ border-color: var(--sangue-2); }
+
+.maldicao-tecnica > summary{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.maldicao-tecnica > summary::-webkit-details-marker{ display: none; }
+
+.maldicao-tecnica > summary::before{
+    content: "▸";
+    color: var(--tinta-fraca);
+    transition: transform .2s;
+}
+
+.maldicao-tecnica[open] > summary::before{ transform: rotate(90deg); }
+
+.maldicao-tecnica-nome{
+    flex: 1;
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+    letter-spacing: .5px;
+    color: var(--tinta);
+}
+
+.maldicao-tecnica-meta{
+    font-size: .72rem;
+    color: var(--sangue-4);
+    white-space: nowrap;
+}
+
+.maldicao-trava{ display: none; font-size: .8rem; }
+
+.maldicao-tecnica.bloqueada{ opacity: .6; }
+.maldicao-tecnica.bloqueada .maldicao-trava{ display: inline; }
+.maldicao-tecnica.bloqueada .maldicao-tecnica-nome{ color: var(--tinta-fraca); }
+
+.maldicao-tecnica-corpo{
+    padding: 4px 14px 14px;
+    border-top: 1px dashed var(--linha);
+}
+
+.maldicao-tecnica-desc{
+    margin: 10px 0;
+    font-size: .83rem;
+    line-height: 1.55;
+    color: var(--tinta);
+    font-style: italic;
+}
+
+.maldicao-tecnica-dados{
+    margin: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.maldicao-tecnica-dados > div{
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.maldicao-tecnica-dados dt{
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.maldicao-tecnica-dados dd{
+    margin: 0;
+    font-size: .82rem;
+    line-height: 1.5;
+    color: var(--tinta);
+}
+
+.maldicao-tecnica-corpo p{
+    font-size: .82rem;
+    line-height: 1.55;
+    color: var(--tinta);
+    margin: 0 0 6px;
+}
+
+.maldicao-tecnica-corpo ul{
+    margin: 0 0 6px;
+    padding-left: 18px;
+    font-size: .8rem;
+    line-height: 1.55;
+    color: var(--tinta);
+}
+
+.maldicao-nota{
+    padding: 8px 10px;
+    border-left: 3px solid var(--linha);
+    color: var(--tinta-fraca) !important;
+}
+
+.maldicao-aprimoramentos{ list-style: none; padding-left: 0 !important; display: grid; gap: 6px; }
+
+.maldicao-aprimoramentos li{
+    padding: 8px 10px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 6px;
+}
+
+.maldicao-custo{
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(182,37,37,.12);
+    border: 1px solid var(--sangue-2);
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    color: var(--sangue-4);
+}
+
+.maldicao-requisito{
+    display: block;
+    margin-top: 4px;
+    font-size: .74rem;
+    color: var(--tinta-fraca);
+}
+
+@media (max-width: 700px){
+    .card-maldicoes{
+        left: 12px;
+        top: 70px;
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 90px);
+    }
+    .maldicao-config .campo,
+    .maldicao-seletor .campo,
+    .maldicao-custom .campo{ grid-template-columns: 1fr; gap: 6px; }
+    .maldicao-tecnica-dados > div{ grid-template-columns: 1fr; gap: 2px; }
 }

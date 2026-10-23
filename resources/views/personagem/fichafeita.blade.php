@@ -30,6 +30,32 @@
         'conhecimento' => 'Conhecimento', 'carisma' => 'Carisma', 'percepcao' => 'Percepção',
         'alma' => 'Alma',
     ];
+
+    // Maldições do personagem. O campo "maldicoes" guarda texto no formato:
+    //   "Maldição do Justiceiro (Ameaça 2); Outra Maldição (Ameaça 0)"
+    // (separadores aceitos: ; , ou quebra de linha). Se o nome bater com uma maldição do catálogo
+    // (config/maldicoes.php) ela é exibida completa, liberando as ameaças até o nível escolhido.
+    $catalogoMaldicoes = config('maldicoes', []);
+    $maldicoesEscolhidas = collect(preg_split('/[;,\n]+/', (string) ($personagem->maldicoes ?? '')))
+        ->map(fn ($n) => trim($n))
+        ->filter(fn ($n) => $n !== '' && mb_strtolower($n) !== 'nenhuma')
+        ->map(function ($entrada) use ($catalogoMaldicoes) {
+            $nome = $entrada;
+            $ameaca = 0;
+            if (preg_match('/^(.*?)\s*\(\s*Amea[çc]a\s*(\d+)\s*\)$/iu', $entrada, $m)) {
+                $nome = trim($m[1]);
+                $ameaca = (int) $m[2];
+            }
+            $slug = \Illuminate\Support\Str::slug($nome);
+            return [
+                'nome' => $nome,
+                'slug' => $slug,
+                'ameaca' => $ameaca,
+                'maldicao' => $catalogoMaldicoes[$slug] ?? null,
+            ];
+        })
+        ->values();
+    $maldicoesComFicha = $maldicoesEscolhidas->filter(fn ($m) => $m['maldicao'] !== null)->values();
 @endphp
 
 <div class="container">
@@ -73,9 +99,39 @@
             </div>
             <div class="info-tecnica-card">
                 <span class="rotulo">Maldições</span>
-                <span class="valor">{{ $personagem->maldicoes ?? 'Nenhuma' }}</span>
+                @if($maldicoesEscolhidas->isEmpty())
+                    <span class="valor">Nenhuma</span>
+                @else
+                    <div class="maldicao-links">
+                        @foreach($maldicoesEscolhidas as $m)
+                            @if($m['maldicao'])
+                                <a href="{{ route('maldicoes.show', $m['slug']) }}" class="maldicao-link" title="Ver página completa da maldição">{{ $m['nome'] }} · Ameaça {{ $m['ameaca'] }}</a>
+                            @else
+                                <span class="maldicao-link sem-ficha">{{ $m['nome'] }}</span>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
             </div>
         </div>
+
+        @if($maldicoesComFicha->isNotEmpty())
+            <hr style="width:100%">
+
+            <div class="ficha-header colapsavel">
+                <h1>Maldições</h1>
+            </div>
+            <div class="maldicao-escolhidas">
+                @foreach($maldicoesComFicha as $m)
+                    @include('partials.maldicao-bloco', [
+                        'maldicao' => $m['maldicao'],
+                        'slug' => $m['slug'],
+                        'ameacaMax' => $m['ameaca'],
+                        'aberto' => $maldicoesComFicha->count() === 1,
+                    ])
+                @endforeach
+            </div>
+        @endif
 
         <hr style="width:100%">
 

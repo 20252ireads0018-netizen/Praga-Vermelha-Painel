@@ -7,6 +7,12 @@
     $pontosGastosAtributos = ($personagem->forca ?? 0) + ($personagem->constituicao ?? 0) + ($personagem->destreza ?? 0)
         + ($personagem->conhecimento ?? 0) + ($personagem->carisma ?? 0) + ($personagem->percepcao ?? 0) + ($personagem->alma ?? 0);
     $pontosRestantesIniciais = $editando ? (300 - $pontosGastosAtributos) : 300;
+    
+
+    $vitaisExtrasSalvos = $personagem->vitais_extras ?? [];
+    if (is_string($vitaisExtrasSalvos)) {
+        $vitaisExtrasSalvos = json_decode($vitaisExtrasSalvos, true) ?: [];
+    }
 @endphp
 <style>
     /* Cards de Talentos Mundanos e Maldições precisam caber textos grandes */
@@ -51,6 +57,134 @@
     .talento-descricao[readonly] {
         background: rgba(255, 255, 255, 0.03);
     }
+    /* ===== Atributos vitais: controles de ajuste ===== */
+.vital-ajuste {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px 18px;
+    margin-top: 10px;
+}
+
+.vital-ajuste-campo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .85rem;
+    color: var(--tinta-fraca, #aaa);
+}
+
+.vital-ajuste-campo > span,
+.vital-ajuste-campo > label {
+    white-space: nowrap;
+}
+
+.vital-ajuste-campo input[type="number"],
+.vital-ajuste-campo input[type="text"] {
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    min-width: 0;
+    text-align: center;
+}
+
+/* tira as setinhas do navegador, que cortavam o número */
+.vital-ajuste-campo input[type="number"] {
+    width: 96px;
+}
+
+.vital-ajuste-campo input[type="color"] {
+    width: 44px;
+    height: 36px;
+    padding: 3px;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--linha, #444);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+.vital-ajuste-campo input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.vital-ajuste-campo input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+
+.vital-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 8px;
+    background: #1f1212;
+    color: #fff;
+    border: 1px solid var(--linha, #444);
+    transition: .2s;
+}
+.vital-btn:hover { filter: brightness(1.4); }
+
+.vital-extra { margin-top: 18px; }
+.vital-extra .barra-preenchimento { transition: width .25s ease; }
+
+/* ===== Formulário "Novo atributo vital" ===== */
+.vital-novo {
+    max-width: 620px;
+    margin: 24px auto 0;
+    padding: 18px 20px 20px;
+    border: 1px dashed var(--linha, #444);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    box-sizing: border-box;
+}
+
+.vital-novo h4 {
+    margin: 0 0 16px 0;
+    text-align: center;
+    font-size: 1rem;
+    letter-spacing: .5px;
+}
+
+.vital-novo .vital-ajuste {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    align-items: end;
+}
+
+/* rótulo em cima, campo embaixo, ocupando a coluna toda */
+.vital-novo .vital-ajuste-campo {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+    text-align: left;
+}
+.vital-novo .vital-ajuste-campo input[type="number"],
+.vital-novo .vital-ajuste-campo input[type="text"],
+.vital-novo .vital-ajuste-campo input[type="color"] {
+    width: 100%;
+}
+.vital-novo .vital-ajuste-campo input[type="text"] { text-align: left; }
+
+/* Nome ocupa 3 colunas; Cor, Atual e Máx ocupam 1 cada */
+.vital-novo .vital-ajuste-campo:nth-child(1) { grid-column: span 3; }
+.vital-novo .vital-ajuste-campo:nth-child(2),
+.vital-novo .vital-ajuste-campo:nth-child(3),
+.vital-novo .vital-ajuste-campo:nth-child(4) { grid-column: span 1; }
+
+/* botão centralizado, embaixo */
+.vital-novo .vital-ajuste > .button {
+    grid-column: 1 / -1;
+    justify-self: center;
+    margin-top: 4px;
+}
+
+@media (max-width: 560px) {
+    .vital-novo .vital-ajuste { grid-template-columns: repeat(3, 1fr); }
+    .vital-novo .vital-ajuste-campo:nth-child(1) { grid-column: 1 / -1; }
+}
 </style>
 <div class="container">
     <div class="card ficha-card">
@@ -68,6 +202,8 @@
         @if($editando)
             @method('PUT')
         @endif
+
+        @include('partials.anotacoes')
         
             <div class="ficha-header colapsavel">
                 <h1 id="titulo-info-pessoais">Informações Pessoais</h1>
@@ -84,10 +220,7 @@
                     <label for="idade">Raça</label>
                     <input id="raca" name="raca" type="text" value="{{ old('raca', $personagem->raca ?? '') }}" placeholder="Digite a raça do agente">
                 </div>
-                <div class="campo">
-                    <label for="idade">Maldições</label>
-                    <input id="maldicoes" name="maldicoes" type="text" value="{{ old('maldicoes', $personagem->maldicoes ?? '') }}" placeholder="Digite as maldições do agente">
-                </div>
+                @include('partials.maldicoes-campo')
                 <div class="campo">
                     <label for="idade">Idade</label>
                     <input id="idade" name="idade" type="number" style="width:40%" value="{{ old('idade', $personagem->idade ?? '') }}" placeholder="Digite a idade do agente">
@@ -154,7 +287,8 @@
                     </button>
             </div>
             <div class="barras" id="barras-atributos-vitais">
-                                <div class="barra-grupo">
+ 
+                <div class="barra-grupo">
                     <div class="barra-topo">
                         <span class="barra-nome">Vida</span>
                         <span class="barra-valor" id="vida" style="color:white">{{ $personagem->vida_atual ?? '?' }} / {{ $personagem->vida_maxima ?? '?' }}</span>
@@ -162,10 +296,11 @@
                     <div class="barra-fundo">
                         <div class="barra-preenchimento barra-vida" style="width: 100%;"></div>
                     </div>
+                    <div class="vital-ajuste" data-vital="vida"></div>
                 </div>
                 <input type="hidden" id="vida_atual" name="vida_atual" value="{{ $personagem->vida_atual ?? '' }}">
                 <input type="hidden" id="vida_maxima" name="vida_maxima" value="{{ $personagem->vida_maxima ?? '' }}">
-
+            
                 <div class="barra-grupo">
                     <div class="barra-topo">
                         <span class="barra-nome">Sanidade</span>
@@ -174,10 +309,11 @@
                     <div class="barra-fundo">
                         <div class="barra-preenchimento barra-sanidade" style="width: 100%;"></div>
                     </div>
+                    <div class="vital-ajuste" data-vital="sanidade"></div>
                 </div>
                 <input type="hidden" id="sanidade_atual" name="sanidade_atual" value="{{ $personagem->sanidade_atual ?? '' }}">
                 <input type="hidden" id="sanidade_maxima" name="sanidade_maxima" value="{{ $personagem->sanidade_maxima ?? '' }}">
-
+            
                 <div class="barra-grupo">
                     <div class="barra-topo">
                         <span class="barra-nome">Aura</span>
@@ -186,9 +322,38 @@
                     <div class="barra-fundo">
                         <div class="barra-preenchimento barra-aura" style="width: 100%;"></div>
                     </div>
+                    <div class="vital-ajuste" data-vital="aura"></div>
                 </div>
                 <input type="hidden" id="aura_atual" name="aura_atual" value="{{ $personagem->aura_atual ?? '' }}">
                 <input type="hidden" id="aura_maxima" name="aura_maxima" value="{{ $personagem->aura_maxima ?? '' }}">
+            
+                {{-- Atributos vitais personalizados --}}
+                <div id="vitais-extras-lista"></div>
+            
+                <div class="vital-novo">
+                    <h4>Novo atributo vital</h4>
+                    <div class="vital-ajuste">
+                        <div class="vital-ajuste-campo">
+                            <label for="vital-novo-nome">Nome</label>
+                            <input id="vital-novo-nome" type="text" placeholder="Ex: Fome, Energia...">
+                        </div>
+                        <div class="vital-ajuste-campo">
+                            <label for="vital-novo-cor">Cor</label>
+                            <input id="vital-novo-cor" type="color" value="#3b82f6">
+                        </div>
+                        <div class="vital-ajuste-campo">
+                            <label for="vital-novo-atual">Atual</label>
+                            <input id="vital-novo-atual" type="number" placeholder="0">
+                        </div>
+                        <div class="vital-ajuste-campo">
+                            <label for="vital-novo-max">Máx</label>
+                            <input id="vital-novo-max" type="number" min="0" placeholder="0">
+                        </div>
+                        <button type="button" class="button" id="vital-novo-adicionar">+ Adicionar</button>
+                    </div>
+                </div>
+            
+                <input type="hidden" id="vitais_extras" name="vitais_extras" value="">
             </div>
 
             <hr>
@@ -279,6 +444,9 @@
             <div class="ficha-header" id="acessos-div">
                 <button class="button" style="margin-top:8px;" id="talentos-mundanos">
                     Talentos Mundanos
+                </button>
+                <button type="button" class="button" style="margin-top:8px;" id="anotacoes-abrir">
+                    Anotações
                 </button>
             </div>
 
@@ -992,28 +1160,45 @@
                 </div>
         </div>
 
-        <div class="card card-rolagem card-talentos" id="maldicao-card" style="max-height: 50%; overflow-y:auto;">
-            <button class="botao-fechar" id="fechar-maldicao-card">X</button>
+        <div class="card card-rolagem card-talentos card-maldicoes" id="maldicao-card">
+    <button type="button" class="botao-fechar" id="fechar-maldicao-card">X</button>
 
-            <div class="botoes-grid" style="text-align:center">
-                <h1>Maldições</h1>
-            </div>
+    <div class="botoes-grid" style="text-align:center">
+        <h1>Maldições</h1>
+    </div>
 
+    <div class="maldicao-config">
+        <div class="campo">
+            <label for="nivel-hexomante">Nível de Hexomante</label>
+            <input id="nivel-hexomante" name="nivel_hexomante" type="number" min="0" placeholder="Nível">
+        </div>
+        <div class="campo">
+            <label for="ameaca">Ameaça de Maldição</label>
+            <input id="ameaca" name="ameaca" type="number" min="0" placeholder="Ameaça">
+        </div>
+    </div>
+
+        <div class="maldicao-seletor">
             <div class="campo">
-                <label for="idade">Nível de Hexomante</label>
-                <input id="nivel-hexomante" name="nivel_hexomante" type="number" style="width:60%" placeholder="Digite o nível de Hexomante do agente">
+                <label for="maldicao-catalogo">Maldição</label>
+                <select id="maldicao-catalogo"></select>
             </div>
-            <div class="campo" style="margin-top:10px;">
-                    <label for="idade">Ameaça de Maldição</label>
-                    <input id="ameaca" name="ameaca" type="number" style="width:60%" placeholder="Digite a ameaça das maldições do agente">
+            <p class="maldicao-previa" id="maldicao-previa"></p>
+
+            <div class="maldicao-custom" id="maldicao-custom">
+                <div class="campo">
+                    <label for="maldicao-nome-custom">Nome</label>
+                    <input id="maldicao-nome-custom" type="text" placeholder="Nome da maldição personalizada">
+                </div>
             </div>
 
-            <div class="lista-talentos" style="justify-content:center;" id="lista-maldicoes"></div>
-
-            <button class="botao-adicionar-talento" id="adicionar-maldicao">
+            <button class="botao-adicionar-talento" type="button" id="adicionar-maldicao">
                 + Adicionar Maldição
             </button>
         </div>
+
+        <div class="lista-maldicoes-ficha" id="lista-maldicoes"></div>
+    </div>
 
     
     </div>
@@ -1021,6 +1206,9 @@
     
     </form>
 </div>
+
+<script>window.VITAIS_EXTRAS = @json($vitaisExtrasSalvos);</script>
+<script src="{{ asset('js/vitais.js') }}"></script>
 @endsection
 
 @section('script')
@@ -2719,13 +2907,25 @@
         }
     });
 
-    //Maldições
+        //Maldições
+
+    const CATALOGO_MALDICOES = @json(config('maldicoes', []));
+    const CUSTOM_MALDICAO = "__custom__";
 
     const cardMaldicao = document.getElementById("maldicao-card");
     const fecharMaldicaoCard = document.getElementById("fechar-maldicao-card");
     const listaMaldicoes = document.getElementById("lista-maldicoes");
     const adicionarMaldicao = document.getElementById("adicionar-maldicao");
     const maldicao = document.getElementById("maldicao-adicao");
+    const catalogoSelect = document.getElementById("maldicao-catalogo");
+    const maldicaoPrevia = document.getElementById("maldicao-previa");
+    const maldicaoCustom = document.getElementById("maldicao-custom");
+    const maldicaoNomeCustom = document.getElementById("maldicao-nome-custom");
+    const ameacaInput = document.getElementById("ameaca");
+    const nivelHexomanteInput = document.getElementById("nivel-hexomante");
+
+    let maldicoesAdicionadas = [];
+    let proximoIdMaldicao = 1;
 
     maldicao.addEventListener("click", function(){
         cardMaldicao.classList.add("ativo");
@@ -2735,44 +2935,293 @@
         cardMaldicao.classList.remove("ativo");
     });
 
-    adicionarMaldicao.addEventListener("click", function(){
-        listaMaldicoes.innerHTML+=`
-            <div class="talento-card">
-                <button class="botao-fechar" style="max-width:20%">X</button>
-                <h4 class="talento-titulo-exibido" style="display:none;"></h4>
-                <input class="talento-titulo" placeholder="Nome da Maldição">
-                <textarea class="talento-descricao" placeholder="Descrição da Maldição"></textarea>
-                <button class="button" type="button">Adicionar</button>
-            </div>
-        `;
+    // ---------- helpers ----------
+    function esc(t){
+        return String(t === null || t === undefined ? "" : t)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function paragrafos(t){
+        return esc(t).split("\n").join("<br>");
+    }
+
+    function normalizar(s){
+        return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    }
+
+    function acharSlugPorNome(nome){
+        const alvo = normalizar(nome);
+        for(const slug in CATALOGO_MALDICOES){
+            if(normalizar(slug) === alvo || normalizar(CATALOGO_MALDICOES[slug].nome) === alvo){
+                return slug;
+            }
+        }
+        return null;
+    }
+
+    function linhaDado(rotulo, valor){
+        if(!valor) return "";
+        return "<div><dt>" + esc(rotulo) + "</dt><dd>" + paragrafos(valor) + "</dd></div>";
+    }
+
+    function htmlEfeitos(ef){
+        if(!ef) return "";
+        if(typeof ef === "string") return "<p>" + paragrafos(ef) + "</p>";
+        let h = "";
+        if(ef.texto) h += "<p>" + paragrafos(ef.texto) + "</p>";
+        if(ef.lista && ef.lista.length){
+            h += "<ul>" + ef.lista.map(i => "<li>" + esc(i) + "</li>").join("") + "</ul>";
+        }
+        if(ef.nota) h += '<p class="maldicao-nota">' + paragrafos(ef.nota) + "</p>";
+        return h;
+    }
+
+    function htmlAprimoramentos(lista){
+        if(!lista || !lista.length) return "";
+        return '<h5 class="maldicao-subtitulo">Aprimoramentos</h5><ul class="maldicao-aprimoramentos">' +
+            lista.map(a =>
+                "<li>" +
+                '<span class="maldicao-custo">' + esc(a.custo) + "</span> " +
+                esc(a.texto) +
+                (a.requisito ? ' <em class="maldicao-requisito">Requisito: ' + esc(a.requisito) + "</em>" : "") +
+                "</li>"
+            ).join("") + "</ul>";
+    }
+
+    function htmlTecnica(t){
+        const req = parseInt(t.nivel, 10);
+        return '<details class="maldicao-tecnica" data-nivel-req="' + (isNaN(req) ? "" : req) + '">' +
+            "<summary>" +
+                '<span class="maldicao-tecnica-nome">' + esc(t.nome) + "</span>" +
+                '<span class="maldicao-trava" title="Nível de Hexomante insuficiente">🔒</span>' +
+                '<span class="maldicao-tecnica-meta">' + esc(t.custo || "") + "</span>" +
+            "</summary>" +
+            '<div class="maldicao-tecnica-corpo">' +
+                (t.descricao ? '<p class="maldicao-tecnica-desc">' + paragrafos(t.descricao) + "</p>" : "") +
+                '<dl class="maldicao-tecnica-dados">' +
+                    linhaDado("Custo", t.custo) +
+                    linhaDado("Lógica", t.logica) +
+                    linhaDado("Nível", t.nivel) +
+                    linhaDado("Materiais", t.materiais) +
+                    linhaDado("Processo", t.processo) +
+                "</dl>" +
+                (t.efeitos ? '<h5 class="maldicao-subtitulo">Efeitos</h5>' + htmlEfeitos(t.efeitos) : "") +
+                htmlAprimoramentos(t.aprimoramentos) +
+            "</div>" +
+        "</details>";
+    }
+
+    function htmlAmeacas(cat, max){
+        const todas = cat.ameacas || [];
+        const liberadas = todas.filter(a => Number(a.nivel) <= max);
+        const bloqueadas = todas.length - liberadas.length;
+
+        let h = liberadas.map(a => {
+            const efeitos = (a.efeitos || []).map(e =>
+                '<div class="maldicao-efeito">' +
+                    (e.marca ? '<span class="maldicao-marca">' + esc(e.marca) + "</span>" : "") +
+                    "<div>" +
+                        (e.rotulo ? "<strong>" + esc(e.rotulo) + "</strong>" : "") +
+                        "<p>" + paragrafos(e.texto) + "</p>" +
+                    "</div>" +
+                "</div>"
+            ).join("");
+
+            return '<div class="maldicao-ameaca">' +
+                '<div class="maldicao-ameaca-topo">' +
+                    '<span class="personagem-card-tag">Ameaça ' + esc(a.nivel) + "</span>" +
+                    (a.dado ? '<span class="maldicao-dado">🎲 ' + esc(a.dado) + "</span>" : "") +
+                "</div>" +
+                (a.regra ? '<p class="maldicao-regra">' + a.regra + "</p>" : "") + // HTML confiável vindo do config
+                efeitos +
+                (a.penalidade ? '<p class="maldicao-penalidade"><strong>Penalidade:</strong> ' + esc(a.penalidade) + "</p>" : "") +
+            "</div>";
+        }).join("");
+
+        if(bloqueadas > 0){
+            h += '<p class="maldicao-bloqueada-aviso">🔒 ' + bloqueadas + " ameaça(s) ainda não liberada(s) neste nível.</p>";
+        }
+        return h;
+    }
+
+    // ---------- estado -> campo da ficha ----------
+    function sincronizarCampoMaldicoes(){
+        const campo = document.getElementById("maldicoes");
+        if(!campo) return;
+        campo.value = maldicoesAdicionadas
+            .map(m => m.nome + " (Ameaça " + m.ameaca + ")")
+            .join("; ");
+    }
+
+    function atualizarTravasTecnicas(){
+        const nivel = Number(nivelHexomanteInput.value || 0);
+        document.querySelectorAll(".maldicao-tecnica").forEach(function(d){
+            const req = d.dataset.nivelReq;
+            d.classList.toggle("bloqueada", req !== "" && nivel < Number(req));
+        });
+    }
+
+    // ---------- bloco de cada maldição adicionada ----------
+    function criarBlocoMaldicao(entry){
+        const cat = entry.slug ? CATALOGO_MALDICOES[entry.slug] : null;
+        const el = document.createElement("details");
+        el.className = "maldicao-bloco-form";
+        el.dataset.id = entry.id;
+        el.open = true;
+
+        let corpo = "";
+        if(cat){
+            corpo =
+                (cat.descricao ? '<p class="maldicao-descricao">' + paragrafos(cat.descricao) + "</p>" : "") +
+                '<h4 class="maldicao-secao">Ameaças</h4>' +
+                '<div class="maldicao-ameacas">' + htmlAmeacas(cat, entry.ameaca) + "</div>" +
+                ((cat.tecnicas && cat.tecnicas.length)
+                    ? '<h4 class="maldicao-secao">Técnicas</h4><div class="maldicao-tecnicas">' +
+                      cat.tecnicas.map(htmlTecnica).join("") + "</div>"
+                    : "");
+        } else {
+            corpo = '<p class="maldicao-bloqueada-aviso">Maldição fora do catálogo: apenas o nome e a ameaça vão para a ficha.</p>';
+        }
+
+        el.innerHTML =
+            "<summary>" +
+                '<span class="maldicao-bloco-nome">' + esc(entry.nome) + "</span>" +
+                (cat ? '<span class="personagem-card-tag">' + esc(cat.raridade) + "</span>" : "") +
+                '<button type="button" class="botao-remover-item botao-remover-maldicao" title="Remover maldição">Remover</button>' +
+            "</summary>" +
+            '<div class="maldicao-bloco-corpo">' +
+                '<div class="maldicao-bloco-config">' +
+                    "<label>Ameaça</label>" +
+                    '<input type="number" min="0" class="maldicao-ameaca-input" value="' + esc(entry.ameaca) + '">' +
+                "</div>" +
+                corpo +
+            "</div>";
+
+        return el;
+    }
+
+    function adicionarEntrada(entry){
+        entry.id = proximoIdMaldicao++;
+        maldicoesAdicionadas.push(entry);
+        listaMaldicoes.appendChild(criarBlocoMaldicao(entry));
+        sincronizarCampoMaldicoes();
+        atualizarTravasTecnicas();
+    }
+
+    // ---------- seletor ----------
+    function montarSeletorCatalogo(){
+        let opcoes = '<option value="">Selecione uma maldição</option>';
+        for(const slug in CATALOGO_MALDICOES){
+            const c = CATALOGO_MALDICOES[slug];
+            opcoes += '<option value="' + esc(slug) + '">' + esc(c.nome) + " (" + esc(c.raridade) + ")</option>";
+        }
+        opcoes += '<option value="' + CUSTOM_MALDICAO + '">Outra (personalizada)</option>';
+        catalogoSelect.innerHTML = opcoes;
+    }
+
+    catalogoSelect.addEventListener("change", function(){
+        const v = catalogoSelect.value;
+        maldicaoCustom.classList.toggle("visivel", v === CUSTOM_MALDICAO);
+
+        if(v && v !== CUSTOM_MALDICAO){
+            const c = CATALOGO_MALDICOES[v];
+            const n = (c.tecnicas || []).length;
+            maldicaoPrevia.textContent = c.raridade + " · " + (c.ameacas || []).length +
+                " nível(is) de ameaça · " + n + " técnica(s)";
+        } else {
+            maldicaoPrevia.textContent = "";
+        }
     });
 
-    listaMaldicoes.addEventListener("click", function(e){
-        if(e.target.classList.contains("botao-fechar")){
-            e.target.closest(".talento-card").remove();
+    adicionarMaldicao.addEventListener("click", function(){
+        const escolha = catalogoSelect.value;
+        const ameaca = Math.max(0, parseInt(ameacaInput.value, 10) || 0);
+
+        if(!escolha){
+            mostrarPopup("Escolha uma maldição antes de adicionar.");
             return;
         }
-        if(e.target.classList.contains("button")){
-            const card = e.target.closest(".talento-card");
-            const adicionar = card.querySelector(".button");
-            const titulo = card.querySelector(".talento-titulo");
-            const descricao = card.querySelector(".talento-descricao");
-            const tituloExibido = card.querySelector(".talento-titulo-exibido");
 
-            if(titulo.value.trim() === ""){
+        if(escolha === CUSTOM_MALDICAO){
+            const nome = maldicaoNomeCustom.value.trim();
+            if(nome === ""){
                 mostrarPopup("Digite um nome para a maldição antes de adicionar.");
                 return;
             }
+            adicionarEntrada({ slug: null, nome: nome, ameaca: ameaca });
+            maldicaoNomeCustom.value = "";
+        } else {
+            if(maldicoesAdicionadas.some(m => m.slug === escolha)){
+                mostrarPopup("Essa maldição já foi adicionada.");
+                return;
+            }
+            adicionarEntrada({ slug: escolha, nome: CATALOGO_MALDICOES[escolha].nome, ameaca: ameaca });
+        }
 
-            // O input do título some e o texto digitado vira o cabeçalho do card
-            tituloExibido.textContent = titulo.value.trim();
-            tituloExibido.style.display = "block";
-            titulo.style.display = "none";
+        catalogoSelect.value = "";
+        catalogoSelect.dispatchEvent(new Event("change"));
+    });
 
-            descricao.readOnly = true;
-            adicionar.style.display = "none";
+    // ---------- remover / mudar ameaça de um bloco ----------
+    listaMaldicoes.addEventListener("click", function(e){
+        if(e.target.classList.contains("botao-remover-maldicao")){
+            e.preventDefault();
+            e.stopPropagation();
+            const bloco = e.target.closest(".maldicao-bloco-form");
+            maldicoesAdicionadas = maldicoesAdicionadas.filter(m => String(m.id) !== bloco.dataset.id);
+            bloco.remove();
+            sincronizarCampoMaldicoes();
         }
     });
+
+    listaMaldicoes.addEventListener("input", function(e){
+        if(!e.target.classList.contains("maldicao-ameaca-input")) return;
+
+        const bloco = e.target.closest(".maldicao-bloco-form");
+        const entry = maldicoesAdicionadas.find(m => String(m.id) === bloco.dataset.id);
+        if(!entry) return;
+
+        entry.ameaca = Math.max(0, parseInt(e.target.value, 10) || 0);
+
+        const cat = entry.slug ? CATALOGO_MALDICOES[entry.slug] : null;
+        if(cat){
+            bloco.querySelector(".maldicao-ameacas").innerHTML = htmlAmeacas(cat, entry.ameaca);
+        }
+        sincronizarCampoMaldicoes();
+    });
+
+    nivelHexomanteInput.addEventListener("input", atualizarTravasTecnicas);
+
+    // ---------- ao abrir uma ficha salva, reconstrói a partir do campo "maldicoes" ----------
+    function carregarMaldicoesSalvas(){
+        const campo = document.getElementById("maldicoes");
+        if(!campo || campo.value.trim() === "") return;
+
+        campo.value.split(/[;,\n]+/)
+            .map(s => s.trim())
+            .filter(s => s !== "" && s.toLowerCase() !== "nenhuma")
+            .forEach(function(entrada){
+                let nome = entrada;
+                let ameaca = 0;
+                const m = entrada.match(/^(.*?)\s*\(\s*Amea[çc]a\s*(\d+)\s*\)$/i);
+                if(m){
+                    nome = m[1].trim();
+                    ameaca = parseInt(m[2], 10);
+                }
+                const slug = acharSlugPorNome(nome);
+                adicionarEntrada({
+                    slug: slug,
+                    nome: slug ? CATALOGO_MALDICOES[slug].nome : nome,
+                    ameaca: ameaca
+                });
+            });
+    }
+
+    montarSeletorCatalogo();
+    carregarMaldicoesSalvas();
 
 
     // ==================== Itens e Ações ====================

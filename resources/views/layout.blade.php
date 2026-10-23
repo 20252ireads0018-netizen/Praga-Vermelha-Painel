@@ -3,39 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Praga Vermelha')</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/cards.css') }}">
     <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tabletop.css') }}">
+
+    <style>
+        /* Dropdown da conta (Entrar / Criar conta / Sair) */
+        .pv-nav__item--conta .pv-dropdown { left: auto; right: 0; min-width: 220px; }
+        .pv-nav__item--conta .pv-dropdown__link { display: block; width: 100%; box-sizing: border-box; text-align: left; }
+        .pv-conta__icone { display: inline-block; margin-right: 6px; opacity: .85; }
+        .pv-conta__nome { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+        .pv-dropdown__form { margin: 0; }
+        .pv-dropdown__form button.pv-dropdown__link {
+            background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
+        }
+        .pv-dropdown__sep { height: 1px; margin: 6px 12px; background: rgba(255,255,255,.08); }
+        @media (max-width: 900px) {
+            .pv-nav__item--conta .pv-dropdown { right: auto; min-width: 0; }
+        }
+    </style>
 </head>
-<body>
+<body class="pv-body">
 
-    <header>
-        <h1>Praga Vermelha RPG</h1>
+    <header class="pv-header">
+        <div class="pv-container pv-header__inner">
 
-        <nav>
-            <div class="container">
-                <div class="menu-links">
-                    <h3><a href="/">Dashboard</a></h3>
-                    <h3><a href="/fichas">Criar Ficha</a></h3>
-                    <h3><a href="{{ route('personagens.index') }}">Fichas</a></h3>
-                </div>
-            </div>
-        </nav>
-        <hr>
+            <a href="/" class="pv-brand">
+                <span class="pv-brand__mark">✠</span>
+                <span class="pv-brand__text">
+                    <span class="pv-brand__title">Praga Vermelha</span>
+                    <span class="pv-brand__sub">RPG</span>
+                </span>
+            </a>
+
+            <input type="checkbox" id="pv-menu-toggle" class="pv-menu-toggle">
+            <label for="pv-menu-toggle" class="pv-menu-button" aria-label="Abrir menu">
+                <span></span><span></span><span></span>
+            </label>
+
+            <nav class="pv-nav" aria-label="Navegação principal">
+                <ul class="pv-nav__list">
+
+                    <li class="pv-nav__item">
+                        <a href="/" class="pv-nav__link">Início</a>
+                    </li>
+
+                    <li class="pv-nav__item pv-has-dropdown">
+                        <a href="#" class="pv-nav__link">Praga Vermelha RPG <span class="pv-caret">▾</span></a>
+                        <div class="pv-dropdown">
+                            <a href="{{ route('livro.index') }}" class="pv-dropdown__link">
+                                <strong>Livro do sistema</strong>
+                                <small>Leia as regras e o cenário</small>
+                            </a>
+                            <a href="{{ route('fichas.create') }}" class="pv-dropdown__link">
+                                <strong>Criar ficha</strong>
+                                <small>Monte um novo personagem</small>
+                            </a>
+                            <a href="{{ route('personagens.index') }}" class="pv-dropdown__link">
+                                <strong>Minhas fichas</strong>
+                                <small>Veja seus personagens criados</small>
+                            </a>
+                            <a href="{{ route('maldicoes.index') }}" class="pv-dropdown__link">
+                                <strong>Maldições</strong>
+                                <small>Consulte as maldições e suas ameaças</small>
+                            </a>
+                            <a href="{{ route('tabletop.index') }}" class="pv-dropdown__link">
+                                <strong>Tabletop</strong>
+                                <small>Mesa virtual para jogar</small>
+                            </a>
+                        </div>
+                    </li>
+
+                    <li class="pv-nav__item pv-has-dropdown">
+                        <a href="#" class="pv-nav__link">Histórias <span class="pv-caret">▾</span></a>
+                        <div class="pv-dropdown">
+                            <a href="{{ route('historias.ler', 'o-cavaleiro-negro') }}" class="pv-dropdown__link">
+                                <strong>O Cavaleiro Negro</strong>
+                                <small>Livro</small>
+                            </a>
+                            <a href="{{ route('historias.ler', 'o-mundo-de-carne') }}" class="pv-dropdown__link">
+                                <strong>O Mundo de Carne</strong>
+                                <small>Livro</small>
+                            </a>
+                            <a href="#" class="pv-dropdown__link">
+                                <strong>Contos da Ruína</strong>
+                                <small>Coletânea de contos</small>
+                            </a>
+                        </div>
+                    </li>
+
+                    {{-- Conta: Entrar / Criar conta (visitante) ou nome + Sair (logado) --}}
+                    @auth
+                        <li class="pv-nav__item pv-has-dropdown pv-nav__item--conta">
+                            <a href="#" class="pv-nav__link">
+                                <span class="pv-conta__icone">☗</span><span class="pv-conta__nome">{{ auth()->user()->name }}</span>
+                                <span class="pv-caret">▾</span>
+                            </a>
+                            <div class="pv-dropdown">
+                                <a href="{{ route('personagens.index') }}" class="pv-dropdown__link">
+                                    <strong>Minhas fichas</strong>
+                                    <small>Seus personagens</small>
+                                </a>
+                                <a href="{{ route('tabletop.index') }}" class="pv-dropdown__link">
+                                    <strong>Minhas mesas</strong>
+                                    <small>Mesas virtuais salvas</small>
+                                </a>
+                                <div class="pv-dropdown__sep"></div>
+                                <form action="{{ route('logout') }}" method="POST" class="pv-dropdown__form">
+                                    @csrf
+                                    <button type="submit" class="pv-dropdown__link">
+                                        <strong>Sair</strong>
+                                        <small>Encerrar a sessão</small>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                    @else
+                        <li class="pv-nav__item pv-has-dropdown pv-nav__item--conta">
+                            <a href="#" class="pv-nav__link">
+                                <span class="pv-conta__icone">☗</span>Conta <span class="pv-caret">▾</span>
+                            </a>
+                            <div class="pv-dropdown">
+                                <a href="{{ route('login') }}" class="pv-dropdown__link">
+                                    <strong>Entrar</strong>
+                                </a>
+                                <a href="{{ route('register') }}" class="pv-dropdown__link">
+                                    <strong>Criar conta</strong>
+                                </a>
+                            </div>
+                        </li>
+                    @endauth
+
+                </ul>
+            </nav>
+        </div>
     </header>
 
-    <main>
+    <main class="pv-main">
         @yield('conteudo')
 
         <script src="{{ asset('js/script.js') }}"></script>
         @yield('script')
     </main>
 
-    <hr>
-    <footer>
-        <p>&copy; {{ date('Y') }} João Victor Barreto Pimentel</p>
+    <footer class="pv-footer">
+        <div class="pv-container pv-footer__inner">
+            <div class="pv-footer__brand">
+                <span class="pv-brand__mark">✠</span>
+                <span>Praga Vermelha RPG</span>
+            </div>
+            <p>&copy; {{ date('Y') }} João Victor Barreto Pimentel. Todos os direitos reservados.</p>
+        </div>
     </footer>
 
 </body>

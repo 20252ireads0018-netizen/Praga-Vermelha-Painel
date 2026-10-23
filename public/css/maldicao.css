@@ -1,0 +1,894 @@
+/* ============================================
+   MALDIÇÕES — Praga Vermelha RPG
+   Usa os tokens de cards.css
+   (--sangue-*, --linha, --tinta, --tinta-fraca)
+   ============================================ */
+
+/* ---------- Estrutura da página ---------- */
+.maldicao-card{
+    width: 100%;
+    max-width: 860px;
+    padding: 40px 45px 45px;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.maldicao-card hr{
+    width: 100%;
+    border: none;
+    border-top: 1px solid var(--linha);
+    margin: 24px 0;
+}
+
+/* ---------- Navegação ---------- */
+.maldicao-navegacao{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* ---------- Cabeçalho ---------- */
+.maldicao-header{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+}
+
+.maldicao-selo{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #1f1212;
+    border: 1px solid var(--sangue-1);
+    color: var(--tinta-fraca);
+    font-size: 1.1rem;
+}
+
+.maldicao-titulo{
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    letter-spacing: .5px;
+    text-align: center;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+.maldicao-etiquetas{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.maldicao-raridade,
+.maldicao-etiqueta{
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--linha);
+    background: #1f1212;
+    color: var(--tinta-fraca);
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* ---------- Títulos de seção ---------- */
+.maldicao-secao{
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.maldicao-secao-titulo{
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--linha);
+    font-family: var(--fonte-titulo);
+    font-size: .95rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta);
+}
+
+/* ---------- Descrição ---------- */
+.maldicao-descricao{
+    width: 100%;
+    padding: 18px 22px;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--sangue-1);
+    border-radius: 8px;
+}
+
+.maldicao-descricao p{
+    margin: 0 0 12px;
+    color: var(--tinta);
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+}
+
+.maldicao-descricao p:last-child{
+    margin-bottom: 0;
+}
+
+/* ---------- Ameaças / Conceitos primitivos ---------- */
+.ameaca-lista{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.ameaca-card{
+    width: 100%;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ameaca-topo{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--linha);
+}
+
+.ameaca-nivel{
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--sangue-4);
+}
+
+.ameaca-nivel small{
+    font-size: .68rem;
+    letter-spacing: 1px;
+    color: var(--tinta-fraca);
+}
+
+.ameaca-dado{
+    padding: 2px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--linha);
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .75rem;
+    letter-spacing: 1px;
+}
+
+.ameaca-corpo{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 20px 20px;
+}
+
+.ameaca-regra{
+    margin: 0;
+    color: var(--tinta-fraca);
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+.ameaca-regra strong{
+    color: var(--tinta);
+}
+
+/* Efeitos numerados */
+.efeito-lista{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.efeito-item{
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 12px 14px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+}
+
+.efeito-marca{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--sangue-1);
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .85rem;
+}
+
+.efeito-conteudo{
+    min-width: 0;
+}
+
+.efeito-rotulo{
+    margin: 0 0 4px;
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.efeito-texto{
+    margin: 0;
+    color: var(--tinta);
+    font-size: .92rem;
+    line-height: 1.65;
+    overflow-wrap: break-word;
+}
+
+/* Penalidade */
+.ameaca-penalidade{
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--sangue-2);
+    border-radius: 8px;
+}
+
+.ameaca-penalidade-icone{
+    flex-shrink: 0;
+    line-height: 1.4;
+    color: var(--sangue-3);
+}
+
+.ameaca-penalidade-titulo{
+    margin: 0 0 4px;
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sangue-4);
+}
+
+.ameaca-penalidade p{
+    margin: 0;
+    color: var(--tinta);
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+/* ---------- Técnicas ---------- */
+.tecnica-grid{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.tecnica-card{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 22px;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--sangue-1);
+    border-radius: 8px;
+}
+
+.tecnica-topo{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tecnica-nome{
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    font-size: 1.05rem;
+    letter-spacing: .5px;
+    color: var(--tinta);
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+
+.tecnica-tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tecnica-tag{
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--linha);
+    background: #150c0c;
+    color: var(--tinta-fraca);
+    font-family: var(--fonte-titulo);
+    font-size: .64rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.tecnica-tag.custo{
+    border-color: var(--sangue-1);
+    color: var(--sangue-4);
+}
+
+.tecnica-resumo{
+    margin: 0;
+    color: var(--tinta-fraca);
+    font-style: italic;
+    font-size: .9rem;
+    line-height: 1.6;
+}
+
+.tecnica-dados{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0;
+}
+
+.tecnica-dado{
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-width: 0;
+}
+
+.tecnica-dado.largo{
+    grid-column: 1 / -1;
+}
+
+.tecnica-dado dt{
+    margin: 0 0 3px;
+    font-family: var(--fonte-titulo);
+    font-size: .64rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.tecnica-dado dd{
+    margin: 0;
+    color: var(--tinta);
+    font-size: .88rem;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.tecnica-subtitulo{
+    margin: 0 0 8px;
+    font-family: var(--fonte-titulo);
+    font-size: .74rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.tecnica-efeitos{
+    padding: 12px 16px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+}
+
+.tecnica-efeitos p{
+    margin: 0 0 10px;
+    color: var(--tinta);
+    font-size: .9rem;
+    line-height: 1.65;
+    overflow-wrap: break-word;
+}
+
+.tecnica-efeitos p:last-child{
+    margin-bottom: 0;
+}
+
+.tecnica-efeitos ul{
+    margin: 0 0 10px;
+    padding-left: 20px;
+    color: var(--tinta);
+    font-size: .88rem;
+    line-height: 1.6;
+}
+
+.tecnica-efeitos li{
+    margin-bottom: 6px;
+}
+
+.tecnica-efeitos .nota{
+    color: var(--tinta-fraca);
+    font-style: italic;
+}
+
+.aprimoramento-lista{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aprimoramento-item{
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 10px 14px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+}
+
+.aprimoramento-custo{
+    padding: 2px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--sangue-1);
+    color: var(--sangue-4);
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: .5px;
+    white-space: nowrap;
+}
+
+.aprimoramento-texto{
+    margin: 0;
+    color: var(--tinta);
+    font-size: .88rem;
+    line-height: 1.55;
+}
+
+.aprimoramento-requisito{
+    margin: 6px 0 0;
+    color: var(--tinta-fraca);
+    font-size: .8rem;
+}
+
+.aprimoramento-requisito strong{
+    color: var(--tinta);
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.aprimoramento-nenhum{
+    margin: 0;
+    color: var(--tinta-fraca);
+    font-size: .85rem;
+    font-style: italic;
+}
+
+.tecnica-vazia{
+    width: 100%;
+    padding: 24px 20px;
+    text-align: center;
+    border: 1px dashed var(--linha);
+    border-radius: 8px;
+    color: var(--tinta-fraca);
+    font-style: italic;
+}
+
+/* ---------- Índice de maldições ---------- */
+.maldicao-indice{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.maldicao-indice-card{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    transition: border-color .15s;
+}
+
+.maldicao-indice-card:hover{
+    border-color: var(--sangue-2);
+}
+
+.maldicao-indice-nome{
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    font-size: 1.05rem;
+    letter-spacing: .5px;
+    color: var(--tinta);
+}
+
+.maldicao-indice-resumo{
+    margin: 0;
+    color: var(--tinta-fraca);
+    font-size: .85rem;
+    line-height: 1.55;
+}
+
+.maldicao-indice-rodape{
+    margin-top: auto;
+    font-family: var(--fonte-titulo);
+    font-size: .68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+/* ---------- Links de maldição dentro da ficha ---------- */
+.maldicao-links{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+.maldicao-link{
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--sangue-1);
+    color: var(--sangue-4);
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: .5px;
+    text-decoration: none;
+    transition: border-color .15s;
+}
+
+.maldicao-link:hover{
+    border-color: var(--sangue-3);
+}
+
+.maldicao-link.sem-ficha{
+    border-color: var(--linha);
+    color: var(--tinta-fraca);
+    pointer-events: none;
+}
+
+/* ============================================
+   BLOCO DE MALDIÇÃO (ficha pronta + formulário)
+   ============================================ */
+[hidden]{
+    display: none !important;
+}
+
+.popup{
+    z-index: 100;
+}
+
+.maldicao-escolhidas{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.maldicao-bloco{
+    width: 100%;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-left: 3px solid var(--sangue-1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.maldicao-bloco[open]{
+    border-color: var(--sangue-1);
+}
+
+.maldicao-bloco-resumo{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.maldicao-bloco-resumo::-webkit-details-marker{
+    display: none;
+}
+
+.maldicao-bloco-selo{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--sangue-1);
+    color: var(--tinta-fraca);
+    font-size: .8rem;
+}
+
+.maldicao-bloco-titulo{
+    flex: 1 1 180px;
+    min-width: 0;
+    font-family: var(--fonte-titulo);
+    font-size: 1rem;
+    color: var(--tinta);
+    overflow-wrap: break-word;
+}
+
+.maldicao-bloco-ameaca{
+    padding: 2px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--sangue-1);
+    color: var(--sangue-4);
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: .5px;
+}
+
+.maldicao-bloco-ameaca:empty{
+    display: none;
+}
+
+.maldicao-bloco-seta{
+    color: var(--tinta-fraca);
+    transition: transform .2s;
+}
+
+.maldicao-bloco[open] .maldicao-bloco-seta{
+    transform: rotate(180deg);
+}
+
+.maldicao-bloco-corpo{
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 18px 18px 20px;
+    border-top: 1px solid var(--linha);
+}
+
+.maldicao-bloco .maldicao-secao-titulo{
+    font-size: .78rem;
+}
+
+.maldicao-bloco .maldicao-descricao{
+    padding: 14px 18px;
+}
+
+.maldicao-bloco-pagina{
+    align-self: flex-end;
+    color: var(--tinta-fraca);
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color .15s;
+}
+
+.maldicao-bloco-pagina:hover{
+    color: var(--tinta);
+}
+
+/* ============================================
+   FORMULÁRIO — PAINEL DE ESCOLHA DE MALDIÇÕES
+   ============================================ */
+.card.card-maldicoes-painel{
+    top: 4vh;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: min(920px, 94vw);
+    max-height: 92vh;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
+    gap: 16px;
+    padding: 28px 30px 30px;
+    z-index: 60;
+}
+
+.card.card-maldicoes-painel .botao-fechar{
+    align-self: flex-end;
+}
+
+.maldicao-painel-topo{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.maldicao-painel-topo h1{
+    margin: 0;
+    font-family: var(--fonte-titulo);
+    letter-spacing: .5px;
+}
+
+.maldicao-seletor{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    background: #1c1010;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+}
+
+.maldicao-seletor-campo{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.maldicao-seletor-campo.grande{
+    flex: 1 1 260px;
+}
+
+.maldicao-seletor-campo.pequeno{
+    flex: 0 0 110px;
+}
+
+.maldicao-seletor-campo label{
+    font-family: var(--fonte-titulo);
+    font-size: .7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.maldicao-seletor-campo select,
+.maldicao-seletor-campo input,
+.maldicao-ameaca-input{
+    width: 100%;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--tinta);
+    font-family: var(--fonte-corpo);
+    font-size: .95rem;
+}
+
+.maldicao-seletor-campo select:focus,
+.maldicao-seletor-campo input:focus,
+.maldicao-ameaca-input:focus{
+    outline: none;
+    border-color: var(--sangue-2);
+}
+
+.maldicao-seletor .botao-adicionar-talento{
+    width: auto;
+    flex: 0 0 auto;
+    padding: 0 22px;
+}
+
+.maldicao-escolhida{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.maldicao-escolhida-controles{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    background: #150c0c;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+}
+
+.maldicao-escolhida-controles label{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--fonte-titulo);
+    font-size: .72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--tinta-fraca);
+}
+
+.maldicao-ameaca-input{
+    width: 80px;
+    padding: 6px 10px;
+    text-align: center;
+}
+
+.maldicao-dica{
+    margin: 0;
+    text-align: center;
+    color: var(--tinta-fraca);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.maldicao-resumo-ficha{
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 0;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 700px){
+    .maldicao-card{
+        padding: 28px 18px 32px;
+    }
+    .ameaca-topo,
+    .ameaca-corpo{
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+    .efeito-item{
+        grid-template-columns: 26px 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+    .efeito-marca{
+        width: 26px;
+        height: 26px;
+        font-size: .78rem;
+    }
+    .tecnica-card{
+        padding: 16px;
+    }
+    .tecnica-dados{
+        grid-template-columns: 1fr;
+    }
+    .aprimoramento-item{
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .aprimoramento-custo{
+        justify-self: start;
+    }
+    .maldicao-descricao{
+        padding: 16px;
+    }
+}
