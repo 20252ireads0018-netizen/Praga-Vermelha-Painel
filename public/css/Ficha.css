@@ -2140,8 +2140,11 @@ select:-webkit-autofill:focus{
 .maldicao-bloco-form:not([open]) > summary::before{ transform: rotate(-90deg); }
 
 .maldicao-bloco-nome{
-    flex: 1;
+    /* base no tamanho do texto: nomes longos (ex.: Demonização) empurram o selo para a linha de baixo
+       em vez de encolher e passar por baixo dele */
+    flex: 1 1 auto;
     min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--fonte-titulo);
     font-size: 1rem;
     letter-spacing: .5px;

@@ -12,7 +12,8 @@
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/cards.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}">
+    {{-- ?v= com a data do arquivo: cada atualização do CSS da ficha chega sem cache antigo --}}
+    <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}?v={{ @filemtime(public_path('css/Ficha.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tabletop.css') }}">
 
