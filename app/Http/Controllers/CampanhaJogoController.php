@@ -6,6 +6,7 @@ use App\Jogos\Gladio;
 use App\Jogos\PelaDama;
 use App\Models\Campanha;
 use App\Models\GladioCarta;
+use App\Models\GladioImagem;
 use App\Models\JogoCarteira;
 use App\Models\JogoPartida;
 use App\Models\PelaDamaPeca;
@@ -13,6 +14,9 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -39,6 +43,7 @@ class CampanhaJogoController extends Controller
             'membros'   => $this->membros($campanha),
             'cartas'    => GladioCarta::where('campanha_id', $campanha->id)->orderBy('tipo')->orderBy('custo')->orderBy('nome')->get(),
             'pecas'     => PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get(),
+            'imagens'   => $this->listaImagens($campanha),
             'lobby'     => $this->dadosLobby($campanha),
         ]);
     }
@@ -178,6 +183,67 @@ class CampanhaJogoController extends Controller
         $peca->fill(['nome' => trim($d['nome']), 'simbolo' => $simbolo, 'regras' => $regras])->save();
 
         return response()->json(['ok' => true, 'peca' => $this->pecaJson($peca)]);
+    }
+
+    /* ---------- Galeria de imagens das cartas (o mestre envia; todos os membros veem) ---------- */
+
+    /** Envia uma ou várias imagens (o navegador já reduz e converte para JPEG). */
+    public function enviarImagens(Request $request, Campanha $campanha): JsonResponse
+    {
+        $this->exigirMestre($campanha);
+        if (!Schema::hasTable('gladio_imagens')) {
+            return $this->erro('A galeria ainda não existe no banco: rode o SQL da migração 2026_10_28_000012.');
+        }
+        $d = $request->validate([
+            'imagens'   => ['required', 'array', 'max:40'],
+            'imagens.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'nomes'     => ['nullable', 'array'],
+            'nomes.*'   => ['nullable', 'string', 'max:120'],
+            'pasta'     => ['nullable', 'string', 'max:60'],
+        ], [
+            'imagens.*.mimes' => 'Um dos arquivos não é uma imagem válida.',
+            'imagens.*.max'   => 'Cada imagem pode ter no máximo 4 MB.',
+        ]);
+        $pasta = trim((string) ($d['pasta'] ?? '')) ?: null;
+
+        $novas = [];
+        foreach ($request->file('imagens') as $i => $arq) {
+            $nome = trim((string) ($d['nomes'][$i] ?? '')) ?: pathinfo($arq->getClientOriginalName(), PATHINFO_FILENAME);
+            $novas[] = GladioImagem::create([
+                'campanha_id' => $campanha->id,
+                'pasta'       => $pasta,
+                'nome'        => Str::limit($nome ?: 'Imagem', 120, ''),
+                'caminho'     => $arq->store("campanhas/{$campanha->id}/galeria", 'local'), // fora do public
+            ])->paraLista();
+        }
+
+        return response()->json(['ok' => true, 'imagens' => $novas]);
+    }
+
+    public function verImagem(Campanha $campanha, GladioImagem $imagem)
+    {
+        $this->exigirMembro($campanha);
+        abort_unless((int) $imagem->campanha_id === (int) $campanha->id, 404);
+        $caminho = Storage::disk('local')->path($imagem->caminho);
+        abort_unless(is_file($caminho), 404);
+
+        return response()->file($caminho, [
+            'Cache-Control'          => 'private, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function excluirImagem(Campanha $campanha, GladioImagem $imagem): JsonResponse
+    {
+        $this->exigirMestre($campanha);
+        abort_unless((int) $imagem->campanha_id === (int) $campanha->id, 404);
+        // cartas já criadas guardam a própria cópia da imagem; o arquivo só sai se nenhuma outra entrada da galeria usa
+        if (!GladioImagem::where('caminho', $imagem->caminho)->whereKeyNot($imagem->id)->exists()) {
+            Storage::disk('local')->delete($imagem->caminho);
+        }
+        $imagem->delete();
+
+        return response()->json(['ok' => true]);
     }
 
     public function excluirPeca(Campanha $campanha, PelaDamaPeca $peca): JsonResponse
@@ -492,6 +558,17 @@ class CampanhaJogoController extends Controller
         }
 
         return $tipos;
+    }
+
+    /** Galeria da campanha (vazia enquanto a tabela não existir no banco). */
+    private function listaImagens(Campanha $campanha): array
+    {
+        if (!Schema::hasTable('gladio_imagens')) {
+            return [];
+        }
+
+        return GladioImagem::where('campanha_id', $campanha->id)->orderBy('pasta')->orderBy('id')->get()
+            ->map(fn (GladioImagem $i) => $i->paraLista())->all();
     }
 
     private function cartaJson(GladioCarta $c): array

@@ -49,7 +49,27 @@
 .jg-criador-campos label[hidden] { display: none; }
 .jg-criador-campos input, .jg-criador-campos select, .jg-criador-campos textarea { width: 100%; box-sizing: border-box; }
 .jg-larga { grid-column: 1 / -1; }
-.jg-img-linha { display: flex; gap: .5rem; }
+.jg-img-linha { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+/* galeria de imagens das cartas */
+.jg-galeria-envio { display: flex; gap: .6rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: .6rem; }
+.jg-galeria-envio > label:first-child { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; flex: 1 1 200px; }
+.jg-galeria-barra { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+.jg-galeria-barra select { flex: 1 1 auto; min-width: 0; }
+.jg-galeria { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .4rem; max-height: 420px; overflow-y: auto; padding-right: .2rem; }
+.jg-galeria > .camp-vazio { grid-column: 1 / -1; }
+.jg-galeria-item { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--camp-borda); border-radius: 4px; background: #0d0707; }
+.jg-galeria-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.jg-escolher .jg-galeria-item { cursor: pointer; }
+.jg-escolher .jg-galeria-item:hover { outline: 2px solid var(--pv-gold, #c9a45c); outline-offset: -2px; }
+.jg-galeria-item.jg-carregando { opacity: .45; }
+.jg-galeria-x { position: absolute; top: 3px; right: 3px; width: 1.5rem; height: 1.5rem; border: 0; border-radius: 50%; font: inherit; line-height: 1; cursor: pointer; color: #fff; background: rgba(0, 0, 0, .7); opacity: 0; transition: opacity .15s; }
+.jg-galeria-item:hover .jg-galeria-x, .jg-galeria-x:focus-visible { opacity: 1; }
+.jg-galeria-x:hover { background: #9b2226; }
+@media (hover: none) { .jg-galeria-x { opacity: 1; } }
+.jg-escolher { padding: .5rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .25); }
+.jg-escolher[hidden] { display: none; }
+.jg-escolher .jg-galeria { max-height: 260px; }
 .jg-criador-previa { flex: 0 0 auto; display: flex; justify-content: center; }
 
 /* ---------- carta de Gladio ---------- */

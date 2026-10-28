@@ -23,6 +23,7 @@
     let lobby = D.lobby;
     let cartas = D.cartas;
     let pecas = D.pecas;
+    let imagens = D.imagens || []; // galeria da campanha: { id, pasta, nome, url }
 
     function msg(t, erro) {
         const el = $('#jg-msg');
@@ -179,11 +180,37 @@
             try { imagem = await reduzir(e.target.files[0], 360); semImagem = false; previa(); } catch (err) { falhou(err); }
             e.target.value = '';
         });
-        fc.addEventListener('click', e => {
+        // escolher a arte na galeria da campanha
+        const escolher = $('#jg-escolher');
+        const escolherPasta = $('#jg-escolher-pasta');
+        const renderEscolher = () => { $('#jg-escolher-grade').innerHTML = htmlGaleria(escolherPasta.value, false); };
+        escolherPasta.addEventListener('change', renderEscolher);
+        fc.addEventListener('click', async e => {
+            const item = e.target.closest('[data-img]');
+            if (item && escolher.contains(item)) {
+                const g = imagens.find(i => i.id === +item.dataset.img);
+                if (!g) return;
+                item.classList.add('jg-carregando');
+                try {
+                    const blob = await (await fetch(g.url, { credentials: 'same-origin' })).blob();
+                    imagem = await reduzir(new File([blob], g.nome + '.jpg', { type: blob.type || 'image/jpeg' }), 360);
+                    semImagem = false;
+                    escolher.hidden = true;
+                    previa();
+                } catch (err) { falhou(err); } finally { item.classList.remove('jg-carregando'); }
+                return;
+            }
             const a = e.target.closest('[data-acao]');
             if (!a) return;
-            if (a.dataset.acao === 'cancelar') fc.hidden = true;
+            if (a.dataset.acao === 'cancelar') { fc.hidden = true; escolher.hidden = true; }
             if (a.dataset.acao === 'tirar-img') { imagem = null; semImagem = true; previa(); }
+            if (a.dataset.acao === 'fechar-galeria') escolher.hidden = true;
+            if (a.dataset.acao === 'galeria') {
+                if (!imagens.length) return msg('A galeria está vazia. Envie imagens na "Galeria de imagens", logo abaixo.', true);
+                filtroPastas(escolherPasta);
+                escolher.hidden = !escolher.hidden;
+                renderEscolher();
+            }
         });
         fc.addEventListener('submit', async e => {
             e.preventDefault();
@@ -246,6 +273,93 @@
         ctx.fillRect(0, 0, cv.width, cv.height);
         ctx.drawImage(fonte, 0, 0, cv.width, cv.height);
         return cv.toDataURL('image/jpeg', 0.82);
+    }
+
+    /* ---------- galeria de imagens das cartas (só o mestre vê) ---------- */
+    const TODAS = '*';
+    function pastas() { return [...new Set(imagens.map(i => i.pasta))].sort((a, b) => a.localeCompare(b, 'pt-BR')); }
+    /** Preenche um <select> de pastas mantendo a escolha atual ("" = sem pasta). */
+    function filtroPastas(sel) {
+        const atual = sel.options.length ? sel.value : TODAS;
+        const ps = pastas();
+        sel.innerHTML = `<option value="${TODAS}">Todas as pastas (${imagens.length})</option>` +
+            ps.map(p => `<option value="${esc(p)}">${esc(p || 'Sem pasta')} (${imagens.filter(i => i.pasta === p).length})</option>`).join('');
+        sel.value = atual === TODAS || ps.includes(atual) ? atual : TODAS;
+    }
+    function htmlGaleria(pasta, gerir) {
+        const lista = pasta === TODAS ? imagens : imagens.filter(i => i.pasta === pasta);
+        if (!lista.length) return '<p class="camp-vazio">Nenhuma imagem aqui.</p>';
+        return lista.map(i => `<div class="jg-galeria-item" data-img="${i.id}" title="${esc(i.nome)}${i.pasta ? ' · ' + esc(i.pasta) : ''}">` +
+            `<img src="${esc(i.url)}" alt="${esc(i.nome)}" loading="lazy" decoding="async">` +
+            (gerir ? `<button type="button" class="jg-galeria-x" data-excluir-img="${i.id}" aria-label="Excluir ${esc(i.nome)}">×</button>` : '') +
+            `</div>`).join('');
+    }
+
+    const galeria = $('#jg-galeria');
+    if (galeria) {
+        const filtro = $('#jg-galeria-filtro');
+        const progresso = $('#jg-galeria-progresso');
+        const renderGaleria = () => {
+            $('#jg-cont-imagens').textContent = imagens.length;
+            filtroPastas(filtro);
+            $('#jg-pastas').innerHTML = pastas().filter(Boolean).map(p => `<option value="${esc(p)}">`).join('');
+            galeria.innerHTML = htmlGaleria(filtro.value, true);
+        };
+        filtro.addEventListener('change', () => { galeria.innerHTML = htmlGaleria(filtro.value, true); });
+
+        // várias imagens de uma vez: cada uma é reduzida no navegador e vai em lotes de 8
+        $('#jg-galeria-arquivos').addEventListener('change', async e => {
+            const arquivos = Array.from(e.target.files);
+            e.target.value = '';
+            if (!arquivos.length) return;
+            const pasta = $('#jg-galeria-pasta-nova').value.trim();
+            let feitas = 0, falhas = 0;
+            const mostrar = () => {
+                progresso.hidden = false;
+                progresso.textContent = `Enviando ${feitas} de ${arquivos.length}…` + (falhas ? ` (${falhas} com problema)` : '');
+            };
+            mostrar();
+            for (let i = 0; i < arquivos.length; i += 8) {
+                const fd = new FormData();
+                fd.append('_token', D.csrf);
+                if (pasta) fd.append('pasta', pasta);
+                let n = 0;
+                for (const arq of arquivos.slice(i, i + 8)) {
+                    try {
+                        const blob = await (await fetch(await reduzir(arq, 960))).blob();
+                        const nome = arq.name.replace(/\.[^.]+$/, '');
+                        fd.append(`imagens[${n}]`, blob, nome + '.jpg');
+                        fd.append(`nomes[${n}]`, nome);
+                        n++;
+                    } catch (_) { falhas++; }
+                }
+                if (n) {
+                    try {
+                        const r = await fetch(D.url.imagens, { method: 'POST', body: fd, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                        const j = await r.json().catch(() => ({}));
+                        if (!r.ok || !j.ok) throw new Error(j.erro || j.message || 'Erro ' + r.status + ' ao enviar.');
+                        imagens = imagens.concat(j.imagens);
+                        feitas += n;
+                    } catch (err) { falhas += n; msg(err.message, true); }
+                }
+                mostrar();
+                renderGaleria();
+            }
+            progresso.textContent = `${feitas} imagem(ns) enviada(s)` + (falhas ? `, ${falhas} com problema.` : '.');
+        });
+
+        galeria.addEventListener('click', async e => {
+            const x = e.target.closest('[data-excluir-img]');
+            if (!x) return;
+            const g = imagens.find(i => i.id === +x.dataset.excluirImg);
+            if (!g || !confirm(`Excluir "${g.nome}" da galeria? As cartas que já usam essa imagem não mudam.`)) return;
+            try {
+                await post(`${D.url.imagens}/${g.id}`, {}, D.csrf, 'DELETE');
+                imagens = imagens.filter(i => i !== g);
+                renderGaleria();
+            } catch (err) { falhou(err); }
+        });
+        renderGaleria();
     }
 
     /* ---------- exército (Pela Dama) ---------- */

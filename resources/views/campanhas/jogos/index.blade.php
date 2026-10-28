@@ -85,8 +85,16 @@
                                 <label class="jg-so-feitico">Valor<input type="number" name="valor" min="0" max="9999" value="1"></label>
                                 <label class="jg-larga">Descrição<textarea name="descricao" rows="2" maxlength="500" placeholder="Texto de ambientação (opcional)"></textarea></label>
                                 <div class="jg-larga jg-img-linha">
-                                    <label class="camp-btn camp-btn-pequeno">Imagem<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>
+                                    <button type="button" class="camp-btn camp-btn-pequeno" data-acao="galeria">Da galeria</button>
+                                    <label class="camp-btn camp-btn-pequeno">Do computador<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="tirar-img">Tirar imagem</button>
+                                </div>
+                                <div class="jg-larga jg-escolher" id="jg-escolher" hidden>
+                                    <div class="jg-galeria-barra">
+                                        <select id="jg-escolher-pasta" aria-label="Pasta da galeria"></select>
+                                        <button type="button" class="camp-btn camp-btn-pequeno" data-acao="fechar-galeria">Fechar</button>
+                                    </div>
+                                    <div class="jg-galeria" id="jg-escolher-grade"></div>
                                 </div>
                                 <div class="jg-larga jg-botoes">
                                     <button class="camp-btn camp-btn-primario">Salvar carta</button>
@@ -98,6 +106,28 @@
                     @endif
                     <div class="jg-cartas" id="jg-cartas"></div>
                 </section>
+
+                @if ($souMestre)
+                    <section class="camp-card">
+                        <div class="camp-card-cab">
+                            <h2>Galeria de imagens</h2>
+                            <span class="camp-contagem" id="jg-cont-imagens">0</span>
+                        </div>
+                        <p class="camp-dica">Imagens para a arte das cartas. Envie várias de uma vez, separe por pasta e depois escolha em "Da galeria" no criador de cartas.</p>
+                        <div class="jg-galeria-envio">
+                            <label>Pasta das novas imagens
+                                <input type="text" id="jg-galeria-pasta-nova" maxlength="60" list="jg-pastas" placeholder="Ex.: Vilões (opcional)">
+                            </label>
+                            <datalist id="jg-pastas"></datalist>
+                            <label class="camp-btn camp-btn-primario">Enviar imagens<input type="file" id="jg-galeria-arquivos" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" multiple hidden></label>
+                        </div>
+                        <p class="camp-dica" id="jg-galeria-progresso" hidden></p>
+                        <div class="jg-galeria-barra">
+                            <select id="jg-galeria-filtro" aria-label="Filtrar por pasta"></select>
+                        </div>
+                        <div class="jg-galeria jg-galeria--gerir" id="jg-galeria"></div>
+                    </section>
+                @endif
             </div>
         </div>
     </section>
@@ -172,6 +202,7 @@
     'membros'   => $membros,
     'cartas'    => $cartas->map(fn ($c) => ['id' => $c->id] + $c->paraJogo() + ['imagem' => $c->imagem])->values(),
     'pecas'     => $pecas->map(fn ($p) => ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: []])->values(),
+    'imagens'   => $imagens,
     'padrao'    => \App\Jogos\PelaDama::tiposPadrao(),
     'exercito'  => \App\Jogos\PelaDama::exercitoPadrao(),
     'lobby'     => $lobby,
@@ -180,6 +211,7 @@
         'dinheiro' => route('campanhas.jogos.dinheiro', $campanha),
         'cartas'   => route('campanhas.jogos.cartas.salvar', $campanha),
         'pecas'    => route('campanhas.jogos.pecas.salvar', $campanha),
+        'imagens'  => route('campanhas.jogos.imagens.enviar', $campanha),
         'partidas' => route('campanhas.jogos.partidas.criar', $campanha),
         'base'     => url('/campanhas/' . $campanha->id . '/jogos'),
     ],

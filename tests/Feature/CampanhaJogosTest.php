@@ -4,11 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\Campanha;
 use App\Models\GladioCarta;
+use App\Models\GladioImagem;
 use App\Models\JogoCarteira;
 use App\Models\JogoPartida;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -52,6 +55,7 @@ class CampanhaJogosTest extends TestCase
             $t->timestamps();
         });
         (require database_path('migrations/2026_10_28_000011_create_jogos_da_campanha.php'))->up();
+        (require database_path('migrations/2026_10_28_000012_create_gladio_imagens.php'))->up();
 
         $u = fn ($n) => User::create(['name' => $n, 'email' => strtolower($n) . '@t.test', 'password' => 'x']);
         $this->mestre = $u('Mestre');
@@ -130,6 +134,44 @@ class CampanhaJogosTest extends TestCase
         $this->postJson($this->url("/partidas/{$p->id}/cancelar"))->assertStatus(422); // jogador não cancela
         $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/cancelar"))->assertOk();
         $this->assertSame([10, 10], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
+    }
+
+    public function test_galeria_de_imagens_das_cartas(): void
+    {
+        Storage::fake('local');
+        $arquivos = [UploadedFile::fake()->image('Kuro.jpg', 300, 170), UploadedFile::fake()->image('outro.png', 50, 50)];
+
+        // jogador não envia; o mestre envia várias de uma vez, numa pasta
+        $this->actingAs($this->ana)->post($this->url('/imagens'), ['imagens' => $arquivos], ['Accept' => 'application/json'])->assertForbidden();
+        $r = $this->actingAs($this->mestre)->post($this->url('/imagens'), [
+            'imagens' => $arquivos, 'nomes' => ['Kuro sombrio', ''], 'pasta' => 'Kuros',
+        ], ['Accept' => 'application/json'])->assertOk();
+        $this->assertSame(['Kuro sombrio', 'outro'], array_column($r->json('imagens'), 'nome'));
+        $img = GladioImagem::firstOrFail();
+        $this->assertSame('Kuros', $img->pasta);
+        Storage::disk('local')->assertExists($img->caminho);
+        $this->assertStringStartsWith("campanhas/{$this->camp->id}/galeria/", $img->caminho);
+
+        // arquivo que não é imagem é recusado
+        $this->post($this->url('/imagens'), ['imagens' => [UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')]], ['Accept' => 'application/json'])->assertStatus(422);
+
+        // membros veem a imagem; quem é de fora não
+        $this->actingAs($this->bia)->get($this->url('/imagens/' . $img->id))->assertOk();
+        $this->actingAs($this->estranho)->get($this->url('/imagens/' . $img->id))->assertForbidden();
+        // a galeria vai para a página do lobby
+        $this->actingAs($this->mestre)->get($this->url())->assertOk()->assertSee('Kuro sombrio');
+
+        // só o mestre exclui, e o arquivo some junto
+        $this->actingAs($this->ana)->deleteJson($this->url('/imagens/' . $img->id))->assertForbidden();
+        $this->actingAs($this->mestre)->deleteJson($this->url('/imagens/' . $img->id))->assertOk();
+        Storage::disk('local')->assertMissing($img->caminho);
+        $this->assertSame(1, GladioImagem::count());
+
+        // a mesma imagem em duas pastas divide o arquivo: excluir uma não apaga o arquivo da outra
+        $resto = GladioImagem::firstOrFail();
+        $copia = GladioImagem::create(['campanha_id' => $this->camp->id, 'pasta' => 'Outra', 'nome' => 'cópia', 'caminho' => $resto->caminho]);
+        $this->deleteJson($this->url('/imagens/' . $copia->id))->assertOk();
+        Storage::disk('local')->assertExists($resto->caminho);
     }
 
     public function test_pela_dama_com_peca_customizada_e_mate(): void
