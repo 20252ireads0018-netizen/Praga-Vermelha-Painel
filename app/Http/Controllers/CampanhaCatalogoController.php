@@ -25,9 +25,10 @@ class CampanhaCatalogoController extends Controller
      * Maldições restritas que o usuário ainda não pode ver [{slug, nome}].
      * Quem já vê as restritas recebe lista vazia.
      */
-    public static function disponiveis(?User $user): array
+    // $mestreDaCampanha: para testes, o mestre da campanha recebe todas as restritas mesmo já podendo vê-las
+    public static function disponiveis(?User $user, bool $mestreDaCampanha = false): array
     {
-        if (!$user || AcessoMaldicoes::podeVerRestritas($user)) {
+        if (!$user || (!$mestreDaCampanha && AcessoMaldicoes::podeVerRestritas($user))) {
             return [];
         }
         $catalogo = (array) config('maldicoes', []);
@@ -88,7 +89,7 @@ class CampanhaCatalogoController extends Controller
         $user = auth()->user();
 
         if (!Schema::hasTable('campanha_catalogos')) {
-            return response()->json(['itens' => [], 'espera' => 0, 'disponiveis' => self::disponiveis($user), 'mestre' => $campanha->ehMestre($user->id)]);
+            return response()->json(['itens' => [], 'espera' => 0, 'disponiveis' => self::disponiveis($user, $campanha->ehMestre($user->id)), 'mestre' => $campanha->ehMestre($user->id)]);
         }
 
         $souMestre = $campanha->ehMestre($user->id);
@@ -106,7 +107,7 @@ class CampanhaCatalogoController extends Controller
         return response()->json([
             'itens'       => $itens,
             'espera'      => $this->segundosRestantes($campanha, (int) $user->id),
-            'disponiveis' => self::disponiveis($user),
+            'disponiveis' => self::disponiveis($user, $souMestre),
             'mestre'      => $souMestre,
         ]);
     }
@@ -165,7 +166,7 @@ class CampanhaCatalogoController extends Controller
             return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
         }
 
-        $slugs = array_column(self::disponiveis($user), 'slug');
+        $slugs = array_column(self::disponiveis($user, $campanha->ehMestre($user->id)), 'slug');
         // Validador manual: neste projeto as exceções só viram JSON em api/*, então $request->validate()
         // redirecionaria em vez de responder 422 para o JS da disputa.
         $validador = \Illuminate\Support\Facades\Validator::make($request->all(), [

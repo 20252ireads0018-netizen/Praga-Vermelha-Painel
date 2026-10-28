@@ -97,7 +97,7 @@ class CampanhaController extends Controller
             'sons'         => $sons,
             'minhasFichas' => $minhasFichas,
             'minhasMesas'  => $minhasMesas,
-            'maldicoesDisputa' => CampanhaCatalogoController::disponiveis($user),
+            'maldicoesDisputa' => CampanhaCatalogoController::disponiveis($user, $souMestre),
         ]);
     }
 
