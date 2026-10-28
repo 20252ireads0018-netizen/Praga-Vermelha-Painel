@@ -243,6 +243,10 @@
 
     const fc = $('#jg-criador-carta');
     if (fc) {
+        // caixinhas das palavras-chave, com o efeito de cada uma ao passar o mouse
+        const PAL = window.JG.PALAVRA;
+        $('#jg-palavras-grade').innerHTML = Object.keys(PAL).map(k =>
+            `<label title="${esc(PAL[k].desc)}"><input type="checkbox" name="palavras" value="${k}"> ${esc(PAL[k].nome)}</label>`).join('');
         let imagem = null;      // data URL nova
         let semImagem = false;  // pediu para tirar a imagem atual
         let imagemAtual = null;

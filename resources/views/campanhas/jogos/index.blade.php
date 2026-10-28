@@ -97,11 +97,10 @@
                                 <label>Custo (energia)<input type="number" name="custo" min="0" max="10" value="1"></label>
                                 <label class="jg-so-lenda">Ataque<input type="number" name="ataque" min="0" max="9999" value="1"></label>
                                 <label class="jg-so-lenda">Vida<input type="number" name="vida" min="1" max="9999" value="1"></label>
-                                <div class="jg-so-lenda jg-larga jg-palavras">
-                                    <span>Palavras-chave</span>
-                                    <label title="O dano que passar da vida de quem bloquear vai para o jogador"><input type="checkbox" name="palavras" value="sobrepujar"> Sobrepujar</label>
-                                    <label title="Pode atacar no mesmo turno em que entra na mesa"><input type="checkbox" name="palavras" value="impeto"> Ímpeto</label>
-                                </div>
+                                <fieldset class="jg-so-lenda jg-larga jg-palavras">
+                                    <legend>Palavras-chave <small>(passe o mouse para ver o efeito)</small></legend>
+                                    <div class="jg-palavras-grade" id="jg-palavras-grade"></div>{{-- preenchido com JG.PALAVRA --}}
+                                </fieldset>
                                 <label class="jg-so-feitico">Efeito
                                     <select name="efeito">
                                         <option value="dano">Dano (Lenda inimiga ou adversário)</option>

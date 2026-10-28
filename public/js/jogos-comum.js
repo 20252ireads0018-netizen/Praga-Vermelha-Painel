@@ -51,7 +51,22 @@ window.JG = (function () {
     // gládio de ponta para cima: lâmina larga (o número fica nela), guarda, empunhadura e pomo
     const ESPADA = SVG('<path d="M16 .8C20 4.5 25 8 25 12.5L23.5 25h-15L7 12.5C7 8 12 4.5 16 .8z' +
         'M2.5 25Q16 28.2 29.5 25v3.6Q16 31.8 2.5 28.6zM13.6 30.4h4.8V35h-4.8zM16 34.2a2.9 2.9 0 1 0 .001 0z"/>', '0 0 32 40');
-    const PALAVRA = { sobrepujar: 'Sobrepujar', impeto: 'Ímpeto' };
+    // Palavras-chave das Lendas (mesmas chaves de App\Jogos\Gladio::PALAVRAS): nome e o efeito mostrado ao passar o mouse
+    const PALAVRA = {
+        sobrepujar:    { nome: 'Sobrepujar', desc: 'Se for bloqueada, o dano que passar do necessário para derrubar quem bloqueou vai para o jogador.' },
+        impeto:        { nome: 'Ímpeto', desc: 'Pode atacar no mesmo turno em que entra na mesa.' },
+        voar:          { nome: 'Voar', desc: 'Só pode ser bloqueada por Lendas com Voar ou Alcance.' },
+        alcance:       { nome: 'Alcance', desc: 'Pode bloquear Lendas com Voar.' },
+        toque:         { nome: 'Toque mortal', desc: 'Qualquer dano que ela causar a uma Lenda a derruba (basta 1 de dano).' },
+        vinculo:       { nome: 'Vínculo com a vida', desc: 'Todo dano que ela causa cura quem a controla na mesma quantidade (até a vida máxima).' },
+        iniciativa:    { nome: 'Iniciativa', desc: 'No combate, causa dano antes das Lendas sem Iniciativa. Se derrubar a outra, não apanha dela.' },
+        duplo:         { nome: 'Golpe duplo', desc: 'No combate, causa dano duas vezes: junto com as de Iniciativa e de novo no dano normal.' },
+        vigilancia:    { nome: 'Vigilância', desc: 'Atacar não a deixa virada: ela continua podendo bloquear no turno do adversário.' },
+        defensor:      { nome: 'Defensor', desc: 'Não pode atacar.' },
+        ameaca:        { nome: 'Ameaça', desc: 'Só pode ser bloqueada por duas ou mais Lendas.' },
+        indestrutivel: { nome: 'Indestrutível', desc: 'Não cai por dano nem por Toque mortal: a vida não baixa de 1. Ainda pode ser sacrificada.' },
+        resistencia:   { nome: 'Resistência a magia', desc: 'Não pode ser alvo de feitiços do adversário.' },
+    };
     const palavras = c => (Array.isArray(c.palavras) ? c.palavras : String(c.palavras || '').split(',')).map(s => s.trim()).filter(Boolean);
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
@@ -82,7 +97,8 @@ window.JG = (function () {
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
-            (pal.length ? `<div class="jg-carta-palavras">${pal.map(p => esc(PALAVRA[p] || p)).join(' · ')}</div>` : '') +
+            (pal.length ? `<div class="jg-carta-palavras">${pal.map(p =>
+                `<span class="jg-palavra" tabindex="0" title="${esc(PALAVRA[p].nome + ': ' + PALAVRA[p].desc)}">${esc(PALAVRA[p].nome)}</span>`).join(' · ')}</div>` : '') +
             `<div class="jg-carta-texto${tamTexto(texto)}">${esc(texto)}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
                 `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
@@ -120,6 +136,27 @@ window.JG = (function () {
         }
         return h + '</div>';
     }
+
+    // Tocar (ou clicar) numa palavra-chave mostra o efeito num balão — no celular não existe "passar o mouse".
+    // Fica na fase de captura para o toque não jogar nem escolher a carta.
+    let balao = null;
+    document.addEventListener('click', e => {
+        const p = e.target.closest('.jg-palavra');
+        if (balao) { balao.remove(); balao = null; }
+        if (!p) return;
+        e.stopPropagation();
+        e.preventDefault();
+        balao = document.createElement('div');
+        balao.className = 'jg-balao-palavra';
+        balao.textContent = p.title;
+        document.body.appendChild(balao);
+        const r = p.getBoundingClientRect();
+        const w = balao.offsetWidth;
+        balao.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+        balao.style.top = Math.max(8, r.top - balao.offsetHeight - 8) + 'px';
+        const este = balao;
+        setTimeout(() => { if (balao === este) { este.remove(); balao = null; } }, 4000);
+    }, true);
 
     return { esc, post, carta, textoEfeito, diagrama, PALAVRA };
 })();

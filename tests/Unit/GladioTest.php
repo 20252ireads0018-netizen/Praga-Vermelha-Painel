@@ -225,6 +225,165 @@ class GladioTest extends TestCase
         $this->assertCount(1, $e['lados']['a']['cemiterio']);
     }
 
+    /* ---------- palavras-chave ---------- */
+
+    private int $seqTeste = 900;
+
+    /** Põe uma Lenda pronta direto na mesa, com as palavras-chave dadas. Devolve [estado, id]. */
+    private function por(array $e, string $lado, string $nome, int $atk, int $vida, array $pal = []): array
+    {
+        $i = ++$this->seqTeste;
+        $e['lados'][$lado]['mesa'][] = ['i' => $i, 'c' => null, 'nome' => $nome, 'atk' => $atk, 'vida' => $vida, 'max' => $vida,
+                                        'pode' => true, 'virada' => false, 'pal' => $pal];
+
+        return [$e, $i];
+    }
+
+    private function vida(array $e, string $lado, int $i): ?int
+    {
+        foreach ($e['lados'][$lado]['mesa'] as $m) {
+            if ($m['i'] === $i) {
+                return $m['vida'];
+            }
+        }
+
+        return null; // caiu
+    }
+
+    /** a ataca com $atacante; b bloqueia com $bloqueadores; devolve o estado depois do combate. */
+    private function combate(array $e, int $atacante, array $bloqueadores = []): array
+    {
+        $e = Gladio::atacar($e, 'a', [$atacante]);
+        foreach ($bloqueadores as $b) {
+            $e = Gladio::bloquear($e, 'b', $b, $atacante);
+        }
+
+        return Gladio::defender($e, 'b');
+    }
+
+    public function test_voar_so_bloqueado_por_voar_ou_alcance(): void
+    {
+        [$e, $dragao] = $this->por($this->novo(), 'a', 'Dragão', 3, 3, ['voar']);
+        [$e, $chao] = $this->por($e, 'b', 'Soldado', 1, 1);
+        [$e, $arqueiro] = $this->por($e, 'b', 'Arqueiro', 1, 4, ['alcance']);
+        $e = Gladio::atacar($e, 'a', [$dragao]);
+        try {
+            Gladio::bloquear($e, 'b', $chao, $dragao);
+            $this->fail('soldado sem Alcance bloqueou quem voa');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::bloquear($e, 'b', $arqueiro, $dragao);
+        $e = Gladio::defender($e, 'b');
+        $this->assertSame([1, 2], [$this->vida($e, 'b', $arqueiro), $this->vida($e, 'a', $dragao)]);
+    }
+
+    public function test_toque_mortal_derruba_com_qualquer_dano_e_indestrutivel_resiste(): void
+    {
+        [$e, $cobra] = $this->por($this->novo(), 'a', 'Cobra', 1, 1, ['toque']);
+        [$e, $gigante] = $this->por($e, 'b', 'Gigante', 0, 10);
+        $e = $this->combate($e, $cobra, [$gigante]);
+        $this->assertNull($this->vida($e, 'b', $gigante), 'o gigante caiu com 1 de dano');
+
+        [$e, $cobra2] = $this->por($this->novo(), 'a', 'Cobra', 5, 1, ['toque']);
+        [$e, $golem] = $this->por($e, 'b', 'Golem', 0, 3, ['indestrutivel']);
+        $e = $this->combate($e, $cobra2, [$golem]);
+        $this->assertSame(1, $this->vida($e, 'b', $golem), 'indestrutível fica de pé com 1 de vida');
+    }
+
+    public function test_toque_mortal_com_sobrepujar_passa_quase_tudo(): void
+    {
+        [$e, $a] = $this->por($this->novo(), 'a', 'Hidra', 6, 6, ['toque', 'sobrepujar']);
+        [$e, $b] = $this->por($e, 'b', 'Muralha', 0, 8);
+        $e = $this->combate($e, $a, [$b]);
+        // basta 1 de dano para derrubar a muralha: os outros 5 vão para o jogador
+        $this->assertSame(5, $e['lados']['b']['vida']);
+        $this->assertNull($this->vida($e, 'b', $b));
+    }
+
+    public function test_vinculo_com_a_vida_cura_quem_controla(): void
+    {
+        $e = $this->novo();
+        $e['lados']['a']['vida'] = 4;
+        [$e, $v] = $this->por($e, 'a', 'Vampiro', 3, 3, ['vinculo']);
+        $e = $this->combate($e, $v);
+        $this->assertSame([7, 7], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+    }
+
+    public function test_iniciativa_derruba_antes_de_apanhar(): void
+    {
+        [$e, $esgrimista] = $this->por($this->novo(), 'a', 'Esgrimista', 2, 1, ['iniciativa']);
+        [$e, $bruto] = $this->por($e, 'b', 'Bruto', 5, 2);
+        $e = $this->combate($e, $esgrimista, [$bruto]);
+        $this->assertNull($this->vida($e, 'b', $bruto));
+        $this->assertSame(1, $this->vida($e, 'a', $esgrimista), 'o bruto caiu antes de bater');
+    }
+
+    public function test_golpe_duplo_bate_duas_vezes(): void
+    {
+        [$e, $d] = $this->por($this->novo(), 'a', 'Gêmeas', 3, 3, ['duplo']);
+        $e = $this->combate($e, $d);
+        $this->assertSame(4, $e['lados']['b']['vida'], 'sem bloqueio: 3 + 3');
+
+        [$e, $d2] = $this->por($this->novo(), 'a', 'Gêmeas', 2, 5, ['duplo']);
+        [$e, $b] = $this->por($e, 'b', 'Escudeiro', 1, 4);
+        $e = $this->combate($e, $d2, [$b]);
+        $this->assertNull($this->vida($e, 'b', $b), '2 no primeiro passo e 2 no normal');
+        $this->assertSame(4, $this->vida($e, 'a', $d2));
+    }
+
+    public function test_virada_vigilancia_e_defensor(): void
+    {
+        [$e, $a1] = $this->por($this->novo(), 'a', 'Guerreiro', 1, 5);
+        [$e, $a2] = $this->por($e, 'a', 'Sentinela', 1, 5, ['vigilancia']);
+        [$e, $muro] = $this->por($e, 'a', 'Muro', 0, 9, ['defensor']);
+        try {
+            Gladio::atacar($e, 'a', [$muro]);
+            $this->fail('Defensor atacou');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::defender(Gladio::atacar($e, 'a', [$a1, $a2]), 'b');
+        $e = Gladio::passar($e, 'a');
+        // turno da b: ela ataca e a só pode bloquear com quem não ficou virada
+        [$e, $inv] = $this->por($e, 'b', 'Invasor', 1, 1);
+        $e = Gladio::atacar($e, 'b', [$inv]);
+        try {
+            Gladio::bloquear($e, 'a', $a1, $inv);
+            $this->fail('Lenda virada bloqueou');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::bloquear($e, 'a', $a2, $inv); // Vigilância: não virou
+        $e = Gladio::bloquear($e, 'a', $muro, $inv);
+        $e = Gladio::defender($e, 'a');
+        $this->assertNull($this->vida($e, 'b', $inv));
+        // no turno seguinte da a, todas desviram
+        $e = Gladio::passar($e, 'b');
+        $this->assertSame([false, false, false], array_column($e['lados']['a']['mesa'], 'virada'));
+    }
+
+    public function test_ameaca_exige_dois_bloqueadores(): void
+    {
+        [$e, $lobo] = $this->por($this->novo(), 'a', 'Lobo', 2, 2, ['ameaca']);
+        [$e, $b1] = $this->por($e, 'b', 'Cão', 1, 1);
+        [$e, $b2] = $this->por($e, 'b', 'Cão', 1, 1);
+        $e = Gladio::atacar($e, 'a', [$lobo]);
+        $e = Gladio::bloquear($e, 'b', $b1, $lobo);
+        try {
+            Gladio::defender($e, 'b');
+            $this->fail('Ameaça bloqueada por uma só');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::defender(Gladio::bloquear($e, 'b', $b2, $lobo), 'b');
+        $this->assertNull($this->vida($e, 'a', $lobo));
+    }
+
+    public function test_resistencia_a_magia_protege_dos_feiticos_do_adversario(): void
+    {
+        $e = $this->novo(10, ['a' => array_merge(['2'], array_fill(0, 19, '1'))]);
+        [$e, $monge] = $this->por($e, 'b', 'Monge', 1, 3, ['resistencia']);
+        $this->expectExceptionMessage('Resistência a magia');
+        Gladio::jogar($e, 'a', $this->primeira($e, 'a', '2'), (string) $monge);
+    }
+
     public function test_visao_esconde_mao_e_baralho_do_outro(): void
     {
         $v = Gladio::visao($this->novo(), 'a');

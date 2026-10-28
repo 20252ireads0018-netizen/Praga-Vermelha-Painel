@@ -97,8 +97,14 @@
         atacantes = atacantes.filter(i => L[eu].mesa.some(m => m.i === i && m.pode));
         if (!defendo) bloqueador = null;
 
+        const tem = (x, p) => (x.pal || []).includes(p);
         const alvoOk = (lado, tipo, x) => {
-            if (defendo && bloqueador != null) return tipo === 'lenda' && lado === op && atacando.includes(x.i);
+            if (defendo && bloqueador != null) {
+                if (tipo !== 'lenda' || lado !== op || !atacando.includes(x.i)) return false;
+                // Voar: só bloqueia quem tem Voar ou Alcance
+                const b = L[eu].mesa.find(m => m.i === bloqueador);
+                return !tem(x, 'voar') || (b && (tem(b, 'voar') || tem(b, 'alcance')));
+            }
             if (!alvo) return false;
             if (alvo.tipo === 'copiar') return tipo === 'lenda' && lado === eu && x.i !== alvo.inst;
             if (alvo.precisa === 'inimigo') return lado === op;
@@ -128,16 +134,18 @@
                 const meu = lado === D.lado;
                 const bloqueia = bloqueios[x.i] != null ? L[op === lado ? eu : op].mesa.find(a => a.i === +bloqueios[x.i]) : null;
                 const cls = [];
-                if (meu && minhaVez && x.pode && x.atk > 0) cls.push('gl-pode');
+                if (meu && minhaVez && x.pode && x.atk > 0 && !tem(x, 'defensor')) cls.push('gl-pode');
+                if (x.virada) cls.push('gl-virada');
                 if (atacantes.includes(x.i)) cls.push('gl-escolhido');
                 if (atacando.includes(x.i)) cls.push('gl-atacando');
                 if (bloqueios[x.i] != null) cls.push('gl-bloqueando');
                 if (bloqueador === x.i || (alvo && alvo.inst === x.i)) cls.push('gl-mirando');
                 if (alvoOk(lado, 'lenda', x)) cls.push('gl-alvo');
-                if (meu && defendo) cls.push('gl-defensor');
+                if (meu && defendo && !x.virada) cls.push('gl-defensor');
                 const etiqueta = atacando.includes(x.i) ? '<span class="gl-etiqueta gl-etiqueta--ataque">atacando</span>'
                     : (bloqueia ? `<span class="gl-etiqueta">bloqueia ${esc(nomeLenda(bloqueia))}</span>`
-                    : (!x.pode && meu && minhaVez ? '<span class="gl-etiqueta gl-etiqueta--cansada">cansada</span>' : ''));
+                    : (x.virada ? '<span class="gl-etiqueta gl-etiqueta--cansada" title="Atacou: só volta a bloquear no próximo turno de quem a controla">virada</span>'
+                    : (!x.pode && meu && minhaVez ? '<span class="gl-etiqueta gl-etiqueta--cansada" title="Entrou neste turno ou já atacou">cansada</span>' : '')));
                 return `<div class="gl-slot">` +
                     window.JG.carta(defLenda(x), { atk: x.atk, vida: x.vida, max: x.max, pal: x.pal || [], classe: cls.join(' '),
                         attrs: `data-lenda="${x.i}" data-dono="${lado}"` }) +
@@ -361,6 +369,8 @@
             if (l.dataset.dono === eu) {
                 const bloq = e.ataque && e.ataque.bloqueios || {};
                 if (bloq[inst] != null) { bloqueador = null; acao({ acao: 'bloquear', inst }); return; } // tira o bloqueio
+                const minha = L[eu].mesa.find(m => m.i === inst);
+                if (minha && minha.virada) { msg('Essa Lenda está virada (atacou no seu último turno) e não pode bloquear.', true); return; }
                 bloqueador = bloqueador === inst ? null : inst;
                 render();
             } else if (bloqueador != null && l.classList.contains('gl-alvo')) {

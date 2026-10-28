@@ -185,6 +185,7 @@
     text-align: center;
     color: #d8b26a;
     letter-spacing: .04em;
+    line-height: 1.45;
 }
 .jg-carta-texto {
     flex: 1 1 auto;
@@ -253,10 +254,18 @@
 .jg-carta-vida.jg-ferida b { color: #ffb4a6; }
 
 /* ---------- palavras-chave no criador de cartas ---------- */
-.jg-palavras { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-size: .85rem; }
+.jg-palavras { margin: 0; padding: .5rem .6rem .6rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); font-size: .85rem; }
 .jg-palavras[hidden] { display: none; }
-.jg-palavras > span { opacity: .8; }
-.jg-palavras label { display: inline-flex; flex-direction: row; align-items: center; gap: .3rem; }
+.jg-palavras legend { padding: 0 .3rem; opacity: .85; }
+.jg-palavras legend small { opacity: .7; }
+.jg-palavras-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .3rem .8rem; }
+.jg-palavras-grade label { display: inline-flex; flex-direction: row; align-items: center; gap: .35rem; cursor: help; }
+
+/* palavra-chave na carta: passar o mouse (ou focar) mostra o efeito */
+.jg-palavra { cursor: help; border-bottom: 1px dotted rgba(216, 178, 106, .7); }
+.jg-palavra:hover, .jg-palavra:focus { color: #f3d58f; outline: none; }
+.jg-balao-palavra { position: fixed; z-index: 2000; max-width: min(280px, calc(100vw - 16px)); padding: .5rem .7rem; border: 1px solid var(--pv-gold, #c9a45c); border-radius: 8px;
+                    background: #1a0f0f; color: #f3e9d6; font-size: .85rem; line-height: 1.35; box-shadow: 0 8px 20px rgba(0, 0, 0, .7); pointer-events: none; }
 
 /* ---------- decks de Gladio ---------- */
 .jg-decks { display: flex; flex-direction: column; gap: .5rem; margin-top: .7rem; }
@@ -353,6 +362,7 @@
 .gl-jogavel { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); transition: transform .12s; }
 .gl-jogavel:hover { transform: translateY(-8px); }
 .gl-cara { filter: saturate(.55) brightness(.8); }
+.gl-virada { filter: saturate(.5) brightness(.72); transform: rotate(-4deg); } /* atacou: não bloqueia até o próximo turno de quem a controla */
 .gl-pode { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); }
 .gl-escolhido { box-shadow: 0 0 0 3px #f59e0b, 0 0 16px rgba(245, 158, 11, .55) !important; transform: translateY(-6px); }
 .gl-atacando { box-shadow: 0 0 0 3px #dc2626, 0 0 18px rgba(220, 38, 38, .6); }

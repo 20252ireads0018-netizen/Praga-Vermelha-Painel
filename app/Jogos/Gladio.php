@@ -13,22 +13,41 @@ namespace App\Jogos;
  * - Feitiço: efeito de uso único (dano, dano em todas as Lendas inimigas, cura, comprar, fortalecer, energia) e vai ao cemitério.
  * - Combate: quem tem a vez declara um ataque com uma ou mais Lendas prontas contra o adversário. O defensor pode
  *   jogar Lendas da mão (pagando com a energia que sobrou) e escolher bloqueadores; cada bloqueador segura um atacante.
- *   Atacante sem bloqueio fere o jogador; bloqueado, troca dano com quem bloqueou. Com Sobrepujar, o dano que passa
- *   da vida dos bloqueadores vai para o jogador. Lendas sem vida vão para o cemitério (fichas somem).
+ *   Atacante sem bloqueio fere o jogador; bloqueado, troca dano com quem bloqueou. Lendas sem vida vão para o
+ *   cemitério (fichas somem). Quem atacou fica "virada" e só volta a bloquear no próximo turno de quem a controla.
+ * - Palavras-chave (as regras de cada uma estão em PALAVRAS e nas dicas da tela): Sobrepujar, Ímpeto, Voar, Alcance,
+ *   Toque mortal, Vínculo com a vida, Iniciativa, Golpe duplo, Vigilância, Defensor, Ameaça, Indestrutível e
+ *   Resistência a magia. Como aqui o dano nas Lendas não some no fim do turno, Indestrutível segura a vida em 1.
  * - Ferramentas manuais (para os efeitos escritos nas cartas): comprar, embaralhar, reordenar o baralho, descartar,
  *   recuperar do cemitério, jogar sem pagar, criar ficha, ajustar ataque/vida, copiar Lenda e sacrificar.
  *   Só valem para as próprias cartas, no próprio turno, e ficam todas no registro da partida.
  *
  * Estado: { lados: { a, b }, vez, turno, fase ('principal' | 'defesa'), ataque, cartas, seq, log, fim }
  * Lado: { vida, max, energia, energiaMax, mao[], baralho[], mesa[], cemiterio[], fadiga }
- * Carta na mão/baralho/cemitério: { i, c }. Lenda na mesa: { i, c (null na ficha), nome? (ficha), atk, vida, max, pode, pal[] }.
+ * Carta na mão/baralho/cemitério: { i, c }.
+ * Lenda na mesa: { i, c (null na ficha), nome? (ficha), atk, vida, max, pode (pode atacar), virada (atacou: não bloqueia), pal[] }.
  * Ataque em andamento: { atacantes: [i…], bloqueios: { bloqueador i: atacante i } }.
  */
 class Gladio
 {
     public const TIPOS = ['lenda', 'feitico'];
     public const EFEITOS = ['dano', 'dano_todos', 'cura', 'comprar', 'fortalecer', 'energia'];
-    public const PALAVRAS = ['sobrepujar', 'impeto'];
+    /** Palavras-chave (chave curta => nome). As dicas com o efeito de cada uma ficam em public/js/jogos-comum.js. */
+    public const PALAVRAS = [
+        'sobrepujar'    => 'Sobrepujar',
+        'impeto'        => 'Ímpeto',
+        'voar'          => 'Voar',
+        'alcance'       => 'Alcance',
+        'toque'         => 'Toque mortal',
+        'vinculo'       => 'Vínculo com a vida',
+        'iniciativa'    => 'Iniciativa',
+        'duplo'         => 'Golpe duplo',
+        'vigilancia'    => 'Vigilância',
+        'defensor'      => 'Defensor',
+        'ameaca'        => 'Ameaça',
+        'indestrutivel' => 'Indestrutível',
+        'resistencia'   => 'Resistência a magia',
+    ];
     public const BARALHO = 20;      // deck sorteado (sem deck montado)
     public const MAO_INICIAL = 5;
     public const MAO_MAX = 10;
@@ -101,6 +120,7 @@ class Gladio
             $e['lados'][$lado]['cemiterio'] ??= [];
             foreach ($e['lados'][$lado]['mesa'] as $k => $m) {
                 $e['lados'][$lado]['mesa'][$k]['pal'] ??= self::palavrasDe($e, $m['c'] ?? null);
+                $e['lados'][$lado]['mesa'][$k]['virada'] ??= false;
             }
         }
 
@@ -136,7 +156,12 @@ class Gladio
         $p = $e['cartas'][$c]['palavras'] ?? [];
         $p = is_string($p) ? explode(',', $p) : (array) $p;
 
-        return array_values(array_intersect(self::PALAVRAS, array_map('trim', $p)));
+        return array_values(array_intersect(array_keys(self::PALAVRAS), array_map('trim', $p)));
+    }
+
+    private static function tem(array $m, string $palavra): bool
+    {
+        return in_array($palavra, $m['pal'] ?? [], true);
     }
 
     private static function comprarUma(array $e, string $lado): array
@@ -172,13 +197,23 @@ class Gladio
         return -1;
     }
 
-    /** Lendas sem vida vão para o cemitério (fichas somem) e vê se alguém perdeu. */
+    /**
+     * Lendas sem vida (ou marcadas por Toque mortal) vão para o cemitério (fichas somem) e vê se alguém perdeu.
+     * Indestrutível não cai: a vida fica em pelo menos 1.
+     */
     private static function conferir(array $e, string $quem): array
     {
         foreach (['a', 'b'] as $lado) {
             $vivas = [];
             foreach ($e['lados'][$lado]['mesa'] as $m) {
-                if ($m['vida'] > 0) {
+                $cai = $m['vida'] <= 0 || !empty($m['morto']);
+                unset($m['morto']);
+                if ($cai && self::tem($m, 'indestrutivel')) {
+                    $m['vida'] = max(1, $m['vida']);
+                    self::log($e, self::nomeLenda($e, $m) . ' é indestrutível e segue de pé.');
+                    $cai = false;
+                }
+                if (!$cai) {
                     $vivas[] = $m;
                     continue;
                 }
@@ -271,7 +306,7 @@ class Gladio
             }
             $pal = self::palavrasDe($e, $id);
             $l['mesa'][] = ['i' => $l['mao'][$k]['i'], 'c' => $id, 'atk' => (int) $carta['ataque'], 'vida' => (int) $carta['vida'],
-                            'max' => (int) $carta['vida'], 'pode' => !$defendendo && in_array('impeto', $pal, true), 'pal' => $pal];
+                            'max' => (int) $carta['vida'], 'pode' => !$defendendo && in_array('impeto', $pal, true), 'virada' => false, 'pal' => $pal];
             array_splice($l['mao'], $k, 1);
             $l['energia'] -= $custo;
             unset($l);
@@ -294,6 +329,9 @@ class Gladio
             } elseif (is_numeric($alvo)) {
                 $dono = $precisa === 'inimigo' ? $op : $lado;
                 $ki = self::idx($e['lados'][$dono]['mesa'], (int) $alvo);
+                if ($ki >= 0 && $dono === $op && self::tem($e['lados'][$dono]['mesa'][$ki], 'resistencia')) {
+                    throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$dono]['mesa'][$ki]) . ' tem Resistência a magia: não pode ser alvo dos seus feitiços.');
+                }
                 if ($ki >= 0) {
                     $alvoLenda = [$dono, $ki];
                 }
@@ -378,6 +416,9 @@ class Gladio
                 throw new \InvalidArgumentException('Essa Lenda não está na sua mesa.');
             }
             $m = $e['lados'][$lado]['mesa'][$k];
+            if (self::tem($m, 'defensor')) {
+                throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' tem Defensor e não pode atacar.');
+            }
             if (!$m['pode']) {
                 throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' ainda não pode atacar.');
             }
@@ -387,7 +428,10 @@ class Gladio
             $nomes[] = self::nomeLenda($e, $m);
         }
         foreach ($insts as $i) {
-            $e['lados'][$lado]['mesa'][self::idx($e['lados'][$lado]['mesa'], $i)]['pode'] = false;
+            $k = self::idx($e['lados'][$lado]['mesa'], $i);
+            $e['lados'][$lado]['mesa'][$k]['pode'] = false;
+            // atacou: fica virada (não bloqueia) até o próximo turno de quem a controla, a não ser com Vigilância
+            $e['lados'][$lado]['mesa'][$k]['virada'] = !self::tem($e['lados'][$lado]['mesa'][$k], 'vigilancia');
         }
         $e['fase'] = 'defesa';
         $e['ataque'] = ['atacantes' => $insts, 'bloqueios' => (object) []];
@@ -400,15 +444,25 @@ class Gladio
     public static function bloquear(array $e, string $lado, int $bloqueador, ?int $atacante): array
     {
         self::exigirDefesa($e, $lado);
-        if (self::idx($e['lados'][$lado]['mesa'], $bloqueador) < 0) {
+        $kb = self::idx($e['lados'][$lado]['mesa'], $bloqueador);
+        if ($kb < 0) {
             throw new \InvalidArgumentException('Escolha uma Lenda sua para bloquear.');
         }
+        $b = $e['lados'][$lado]['mesa'][$kb];
         $bloqueios = (array) $e['ataque']['bloqueios'];
         if ($atacante === null) {
             unset($bloqueios[$bloqueador]);
         } else {
             if (!in_array($atacante, $e['ataque']['atacantes'], true)) {
                 throw new \InvalidArgumentException('Essa Lenda não está atacando.');
+            }
+            if (!empty($b['virada'])) {
+                throw new \InvalidArgumentException(self::nomeLenda($e, $b) . ' está virada (atacou no seu último turno) e não pode bloquear.');
+            }
+            $ka = self::idx($e['lados'][$e['vez']]['mesa'], $atacante);
+            $a = $ka >= 0 ? $e['lados'][$e['vez']]['mesa'][$ka] : null;
+            if ($a && self::tem($a, 'voar') && !self::tem($b, 'voar') && !self::tem($b, 'alcance')) {
+                throw new \InvalidArgumentException(self::nomeLenda($e, $a) . ' tem Voar: só Lendas com Voar ou Alcance podem bloqueá-la.');
             }
             $bloqueios[$bloqueador] = $atacante;
         }
@@ -417,20 +471,54 @@ class Gladio
         return $e;
     }
 
-    /** Defensor confirma a defesa: o combate é resolvido e o turno volta para quem atacou. */
+    /** A Lenda ainda está de pé para causar dano neste combate? */
+    private static function dePe(array $m): bool
+    {
+        return self::tem($m, 'indestrutivel') || ($m['vida'] > 0 && empty($m['morto']));
+    }
+
+    /** Causa dano neste passo? Iniciativa e Golpe duplo no primeiro; sem Iniciativa (ou com Golpe duplo) no normal. */
+    private static function age(array $m, string $passo): bool
+    {
+        return $passo === 'primeiro'
+            ? self::tem($m, 'iniciativa') || self::tem($m, 'duplo')
+            : !self::tem($m, 'iniciativa') || self::tem($m, 'duplo');
+    }
+
+    private static function curar(array &$e, string $lado, int $quanto): void
+    {
+        if ($quanto > 0) {
+            $l = &$e['lados'][$lado];
+            $l['vida'] = min($l['max'], $l['vida'] + $quanto);
+        }
+    }
+
+    /**
+     * Defensor confirma a defesa: o combate é resolvido e o turno volta para quem atacou.
+     * Cada atacante luta em dois passos de dano (Iniciativa/Golpe duplo primeiro, depois o normal); no mesmo passo,
+     * todos causam dano ao mesmo tempo. O atacante distribui o dano pelos bloqueadores na ordem, o suficiente para
+     * derrubar cada um (com Toque mortal basta 1); o resto vai no último ou, com Sobrepujar, no jogador.
+     */
     public static function defender(array $e, string $lado): array
     {
         self::exigirDefesa($e, $lado);
         $at = $e['vez'];
         $bloqueios = (array) $e['ataque']['bloqueios'];
-        $danoJogador = 0;
+
+        // Ameaça: nenhum bloqueador ou dois ou mais
+        foreach ($e['ataque']['atacantes'] as $ai) {
+            $ka = self::idx($e['lados'][$at]['mesa'], $ai);
+            $n = count(array_filter($bloqueios, fn ($alvo) => (int) $alvo === $ai));
+            if ($ka >= 0 && $n === 1 && self::tem($e['lados'][$at]['mesa'][$ka], 'ameaca')) {
+                throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$at]['mesa'][$ka]) . ' tem Ameaça: bloqueie com duas ou mais Lendas, ou com nenhuma.');
+            }
+        }
 
         foreach ($e['ataque']['atacantes'] as $ai) {
             $ka = self::idx($e['lados'][$at]['mesa'], $ai);
             if ($ka < 0) {
                 continue; // saiu da mesa antes do combate
             }
-            $a = $e['lados'][$at]['mesa'][$ka];
             $bloq = [];
             foreach ($bloqueios as $bi => $alvo) {
                 $kb = self::idx($e['lados'][$lado]['mesa'], (int) $bi);
@@ -438,36 +526,86 @@ class Gladio
                     $bloq[] = $kb;
                 }
             }
-            if (!$bloq) {
-                $danoJogador += $a['atk'];
-                self::log($e, self::nomeLenda($e, $a) . " passou sem bloqueio: {$a['atk']} de dano.");
-                continue;
+            $nomeA = self::nomeLenda($e, $e['lados'][$at]['mesa'][$ka]);
+            if ($bloq) {
+                $nomesB = implode(', ', array_map(fn ($kb) => self::nomeLenda($e, $e['lados'][$lado]['mesa'][$kb]), $bloq));
+                self::log($e, "$nomeA foi bloqueado por $nomesB.");
             }
-            // o atacante distribui o dano: o suficiente para derrubar cada bloqueador, na ordem; o resto vai no último
-            // (ou no jogador, com Sobrepujar). Todos os bloqueadores ferem o atacante ao mesmo tempo.
-            $resto = $a['atk'];
-            $recebido = 0;
-            foreach ($bloq as $n => $kb) {
-                $b = $e['lados'][$lado]['mesa'][$kb];
-                $recebido += max(0, $b['atk']);
-                $d = min($resto, max(0, $b['vida']));
-                $e['lados'][$lado]['mesa'][$kb]['vida'] -= $d;
-                $resto -= $d;
-            }
-            $nomesB = implode(', ', array_map(fn ($kb) => self::nomeLenda($e, $e['lados'][$lado]['mesa'][$kb]), $bloq));
-            self::log($e, self::nomeLenda($e, $a) . " foi bloqueado por $nomesB.");
-            if ($resto > 0) {
-                if (in_array('sobrepujar', $a['pal'] ?? [], true)) {
-                    $danoJogador += $resto;
-                    self::log($e, self::nomeLenda($e, $a) . " sobrepujou: $resto de dano passou para o jogador.");
-                } else {
-                    $e['lados'][$lado]['mesa'][end($bloq)]['vida'] -= $resto;
+
+            foreach (['primeiro', 'normal'] as $passo) {
+                $a = $e['lados'][$at]['mesa'][$ka];
+                $danoNoJogador = 0;
+                $danoNosBloq = [];    // índice => dano
+                $danoNoAtacante = 0;
+                $toqueNoAtacante = false;
+                $curaDefensor = 0;
+
+                if (self::age($a, $passo) && self::dePe($a) && $a['atk'] > 0) {
+                    if (!$bloq) {
+                        $danoNoJogador = $a['atk'];
+                    } else {
+                        $resto = $a['atk'];
+                        $vivos = array_values(array_filter($bloq, fn ($kb) => self::dePe($e['lados'][$lado]['mesa'][$kb])));
+                        foreach ($vivos as $kb) {
+                            $b = $e['lados'][$lado]['mesa'][$kb];
+                            $letal = self::tem($a, 'toque') ? min(1, max(0, $b['vida'])) : max(0, $b['vida']);
+                            $d = min($resto, $letal);
+                            $danoNosBloq[$kb] = ($danoNosBloq[$kb] ?? 0) + $d;
+                            $resto -= $d;
+                        }
+                        if ($resto > 0) {
+                            if (self::tem($a, 'sobrepujar')) {
+                                $danoNoJogador = $resto;
+                                self::log($e, "$nomeA sobrepujou: $resto de dano passou para o jogador.");
+                            } elseif ($vivos) {
+                                $ult = end($vivos);
+                                $danoNosBloq[$ult] = ($danoNosBloq[$ult] ?? 0) + $resto;
+                            }
+                        }
+                    }
+                }
+                foreach ($bloq as $kb) {
+                    $b = $e['lados'][$lado]['mesa'][$kb];
+                    if (self::age($b, $passo) && self::dePe($b) && $b['atk'] > 0) {
+                        $danoNoAtacante += $b['atk'];
+                        $toqueNoAtacante = $toqueNoAtacante || self::tem($b, 'toque');
+                        if (self::tem($b, 'vinculo')) {
+                            $curaDefensor += $b['atk'];
+                        }
+                    }
+                }
+
+                // tudo do mesmo passo acontece junto
+                $causado = $danoNoJogador + array_sum($danoNosBloq);
+                foreach ($danoNosBloq as $kb => $d) {
+                    $e['lados'][$lado]['mesa'][$kb]['vida'] -= $d;
+                    if ($d > 0 && self::tem($a, 'toque')) {
+                        $e['lados'][$lado]['mesa'][$kb]['morto'] = true;
+                    }
+                }
+                if ($danoNoJogador > 0) {
+                    $e['lados'][$lado]['vida'] -= $danoNoJogador;
+                    if (!$bloq) {
+                        self::log($e, "$nomeA passou sem bloqueio: $danoNoJogador de dano" . ($passo === 'primeiro' ? ' (Iniciativa).' : '.'));
+                    }
+                }
+                if ($danoNoAtacante > 0) {
+                    $e['lados'][$at]['mesa'][$ka]['vida'] -= $danoNoAtacante;
+                    if ($toqueNoAtacante) {
+                        $e['lados'][$at]['mesa'][$ka]['morto'] = true;
+                    }
+                }
+                if ($causado > 0 && self::tem($a, 'vinculo')) {
+                    self::curar($e, $at, $causado);
+                    self::log($e, "$nomeA (Vínculo com a vida) curou $causado.");
+                }
+                if ($curaDefensor > 0) {
+                    self::curar($e, $lado, $curaDefensor);
+                    self::log($e, "Vínculo com a vida: o defensor curou $curaDefensor.");
                 }
             }
-            $e['lados'][$at]['mesa'][$ka]['vida'] -= $recebido;
         }
 
-        $e['lados'][$lado]['vida'] -= $danoJogador;
         $e['fase'] = 'principal';
         $e['ataque'] = null;
 
@@ -486,6 +624,7 @@ class Gladio
         $l['energia'] = $l['energiaMax'];
         foreach ($l['mesa'] as $i => $m) {
             $l['mesa'][$i]['pode'] = true;
+            $l['mesa'][$i]['virada'] = false;
         }
         unset($l);
         $e = self::comprarUma($e, $op);
@@ -604,7 +743,7 @@ class Gladio
         $atk = max(0, min(9999, $atk));
         $vida = min(9999, $vida);
         $e['lados'][$lado]['mesa'][] = ['i' => ++$e['seq'], 'c' => null, 'nome' => $nome, 'atk' => $atk, 'vida' => $vida,
-                                        'max' => $vida, 'pode' => false, 'pal' => []];
+                                        'max' => $vida, 'pode' => false, 'virada' => false, 'pal' => []];
         self::log($e, "Criou a ficha $nome ($atk/$vida).");
 
         return $e;
@@ -652,7 +791,7 @@ class Gladio
             $vida = $mod['max'];
         }
         $e['lados'][$lado]['mesa'][$k] = ['i' => $mesa[$k]['i'], 'c' => $mod['c'], 'nome' => $mod['nome'] ?? null,
-            'atk' => $atk, 'vida' => $vida, 'max' => $vida, 'pode' => $mesa[$k]['pode'], 'pal' => $mod['pal'] ?? []];
+            'atk' => $atk, 'vida' => $vida, 'max' => $vida, 'pode' => $mesa[$k]['pode'], 'virada' => $mesa[$k]['virada'] ?? false, 'pal' => $mod['pal'] ?? []];
         if ($mod['c'] !== null) {
             unset($e['lados'][$lado]['mesa'][$k]['nome']);
         }

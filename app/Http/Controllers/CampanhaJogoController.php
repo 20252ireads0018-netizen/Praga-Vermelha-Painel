@@ -115,7 +115,7 @@ class CampanhaJogoController extends Controller
             'imagem'    => ['nullable', 'string', 'max:400000'],
             'sem_imagem'=> ['nullable', 'boolean'],
             'palavras'  => ['nullable', 'array'],
-            'palavras.*'=> [Rule::in(Gladio::PALAVRAS)],
+            'palavras.*'=> [Rule::in(array_keys(Gladio::PALAVRAS))],
         ]);
         if ($d['tipo'] === 'lenda' && (int) ($d['vida'] ?? 0) < 1) {
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
@@ -140,7 +140,11 @@ class CampanhaJogoController extends Controller
             'descricao' => trim((string) ($d['descricao'] ?? '')) ?: null,
         ]);
         if (Schema::hasColumn('gladio_cartas', 'palavras')) {
-            $carta->palavras = $lenda ? (implode(',', array_unique($d['palavras'] ?? [])) ?: null) : null;
+            $palavras = $lenda ? implode(',', array_unique($d['palavras'] ?? [])) : '';
+            if (strlen($palavras) > 100) { // tamanho da coluna
+                return response()->json(['ok' => false, 'erro' => 'Palavras-chave demais numa carta só: escolha menos.'], 422);
+            }
+            $carta->palavras = $palavras ?: null;
         }
         if (!empty($d['imagem'])) {
             if (!preg_match('#^data:image/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$#', $d['imagem'])) {
