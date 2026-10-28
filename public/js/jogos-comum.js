@@ -34,6 +34,21 @@ window.JG = (function () {
     };
     const textoEfeito = c => (EFEITO[c.efeito] ? EFEITO[c.efeito](c.valor) : '');
 
+    // Emblemas em traço fino (no lugar da arte quando a carta não tem imagem) e formas dos atributos
+    const SVG = (corpo, vb) => `<svg viewBox="${vb || '0 0 64 64'}" aria-hidden="true" focusable="false">${corpo}</svg>`;
+    const EMBLEMA = {
+        lenda: SVG('<g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">' +
+            '<path d="M13 11l4 1 27 28-3 3-27-27z"/><path d="M38 47l9-9"/><path d="M44 44l7 7"/><circle cx="52.5" cy="52.5" r="2"/>' +
+            '<path d="M51 11l-4 1-27 28 3 3 27-27z"/><path d="M26 47l-9-9"/><path d="M20 44l-7 7"/><circle cx="11.5" cy="52.5" r="2"/></g>'),
+        feitico: SVG('<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">' +
+            '<circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="18" stroke-dasharray="1.5 3"/>' +
+            '<path d="M32 13l16.5 28.5h-33z"/><path d="M32 51l-16.5-28.5h33z" opacity=".55"/><circle cx="32" cy="32" r="3.5"/></g>'),
+    };
+    const ESCUDO = SVG('<path d="M16 3l11 4v9c0 7-5 11.5-11 13.5C10 27.5 5 23 5 16V7z"/>', '0 0 32 32');
+    // nomes compridos diminuem; os muito compridos quebram em duas linhas
+    const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
+    const GOTA = SVG('<path d="M16 2c5 8 11 13.5 11 19.5A11 11 0 0 1 5 21.5C5 15.5 11 10 16 2z"/>', '0 0 32 32');
+
     /**
      * c: carta { nome, tipo, custo, ataque, vida, efeito, valor, descricao, imagem }.
      * o: { atk, vida, max (valores atuais na mesa), classe, attrs }
@@ -46,14 +61,16 @@ window.JG = (function () {
         const ferida = o.max != null && vida < o.max ? ' jg-ferida' : '';
         const arte = c.imagem
             ? `<img src="${esc(c.imagem)}" alt="" draggable="false">`
-            : `<span class="jg-carta-icone" aria-hidden="true">${lenda ? '⚔️' : '✨'}</span>`;
+            : `<span class="jg-carta-emblema">${EMBLEMA[lenda ? 'lenda' : 'feitico']}</span>`;
         return `<div class="jg-carta jg-carta--${lenda ? 'lenda' : 'feitico'} ${o.classe || ''}" ${o.attrs || ''} title="${esc(c.descricao || '')}">` +
-            `<span class="jg-carta-custo" title="Custo em energia">${esc(c.custo)}</span>` +
+            `<span class="jg-carta-custo" title="Custo em energia"><b>${esc(c.custo)}</b></span>` +
             `<div class="jg-carta-arte">${arte}</div>` +
-            `<div class="jg-carta-nome">${esc(c.nome)}</div>` +
+            `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
             `<div class="jg-carta-texto">${esc(lenda ? (c.descricao || '') : textoEfeito(c))}</div>` +
-            (lenda ? `<span class="jg-carta-atk" title="Ataque">${esc(atk)}</span><span class="jg-carta-vida${ferida}" title="Vida">${esc(vida)}</span>` : '') +
+            (lenda ? `<div class="jg-carta-atributos">` +
+                `<span class="jg-carta-atk" title="Ataque">${ESCUDO}<b>${esc(atk)}</b></span>` +
+                `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>` : '') +
             `</div>`;
     }
 

@@ -57,52 +57,153 @@
 .jg-carta-item { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
 .jg-carta-acoes { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: center; }
 
+/* Carta gravada: tinta escura, moldura de sangue com filete dourado, selo de cera no custo.
+   Tudo em proporção de --cw (largura da carta). */
 .jg-carta {
     --cw: 150px;
+    --ouro: rgba(201, 164, 92, .55);
+    --pergaminho: #efe2c9;
     position: relative;
     width: var(--cw);
     height: calc(var(--cw) * 1.42);
     box-sizing: border-box;
-    padding: calc(var(--cw) * .05);
+    padding: calc(var(--cw) * .075) calc(var(--cw) * .07) calc(var(--cw) * .06);
     display: flex;
     flex-direction: column;
-    gap: calc(var(--cw) * .025);
-    border-radius: calc(var(--cw) * .07);
-    background: linear-gradient(160deg, #3a1d1d, #170c0c);
-    border: 2px solid #8a6a32;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
-    color: #f3e9d6;
-    font-size: calc(var(--cw) * .075);
+    align-items: stretch;
+    gap: calc(var(--cw) * .03);
+    border-radius: 4px;
+    border: 1px solid #5c1818;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+        radial-gradient(ellipse at 50% 30%, #2a1313 0%, #150b0b 55%, #0b0606 100%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .6);
+    color: var(--pergaminho);
+    font-family: Georgia, serif;
     line-height: 1.2;
     user-select: none;
     overflow: hidden;
     flex: 0 0 auto;
 }
-.jg-carta--feitico { background: linear-gradient(160deg, #1d2440, #0c0f1c); border-color: #5c74b8; }
-.jg-carta-arte { flex: 0 0 auto; height: 42%; border-radius: calc(var(--cw) * .04); overflow: hidden; background: rgba(0, 0, 0, .35); display: flex; align-items: center; justify-content: center; }
-.jg-carta-arte img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-.jg-carta-icone { font-size: calc(var(--cw) * .25); opacity: .6; }
-.jg-carta-nome { font-weight: 700; font-size: calc(var(--cw) * .085); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.jg-carta-tipo { font-size: calc(var(--cw) * .06); text-align: center; text-transform: uppercase; letter-spacing: .08em; opacity: .7; }
-.jg-carta-texto { flex: 1 1 auto; font-size: calc(var(--cw) * .068); text-align: center; overflow: hidden; opacity: .92; }
-.jg-carta-custo, .jg-carta-atk, .jg-carta-vida {
+/* filete dourado por dentro da moldura */
+.jg-carta::before {
+    content: '';
     position: absolute;
+    inset: calc(var(--cw) * .028);
+    border: 1px solid var(--ouro);
+    border-radius: 2px;
+    pointer-events: none;
+}
+.jg-carta--feitico {
+    border-color: #4a3518;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+        radial-gradient(ellipse at 50% 30%, #1d1418 0%, #110c0f 55%, #080608 100%);
+}
+
+.jg-carta-arte {
+    position: relative;
+    flex: 0 0 auto;
+    height: 43%;
+    overflow: hidden;
+    border: 1px solid var(--ouro);
+    background: radial-gradient(circle at 50% 42%, #2b1515 0%, #0d0707 75%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.jg-carta--feitico .jg-carta-arte { background: radial-gradient(circle at 50% 42%, #231a1f 0%, #0b0809 75%); }
+.jg-carta-arte::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 calc(var(--cw) * .1) rgba(0, 0, 0, .85); pointer-events: none; }
+.jg-carta-arte img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; filter: sepia(.2) saturate(.85) contrast(1.05); }
+.jg-carta-emblema { width: 52%; color: rgba(201, 164, 92, .5); display: flex; }
+.jg-carta--lenda .jg-carta-emblema { color: rgba(190, 70, 60, .55); }
+.jg-carta-emblema svg { width: 100%; height: auto; display: block; }
+
+.jg-carta-nome {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--cw) * .03);
+    font-family: var(--fonte-titulo, 'Cinzel', Georgia, serif);
+    font-weight: 700;
+    font-size: calc(var(--cw) * .088);
+    letter-spacing: .02em;
+    color: var(--pergaminho);
+    margin-top: calc(var(--cw) * .01);
+}
+.jg-carta-nome::before, .jg-carta-nome::after { content: ''; flex: 1 1 0; min-width: calc(var(--cw) * .05); height: 1px; background: linear-gradient(90deg, transparent, var(--ouro)); }
+.jg-carta-nome::after { background: linear-gradient(270deg, transparent, var(--ouro)); }
+.jg-carta-nome span { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jg-carta-nome.jg-nome-longo { font-size: calc(var(--cw) * .07); }
+.jg-carta-nome.jg-nome-2l { font-size: calc(var(--cw) * .066); }
+.jg-carta-nome.jg-nome-2l::before, .jg-carta-nome.jg-nome-2l::after { display: none; }
+.jg-carta-nome.jg-nome-2l span { flex: 1 1 auto; white-space: normal; text-align: center; line-height: 1.1;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.jg-carta-tipo {
+    margin-top: calc(var(--cw) * -.02);
+    font-family: var(--fonte-titulo, 'Cinzel', Georgia, serif);
+    font-size: calc(var(--cw) * .05);
+    letter-spacing: .32em;
+    text-transform: uppercase;
+    text-align: center;
+    color: #b62525;
+}
+.jg-carta--feitico .jg-carta-tipo { color: #c9a45c; }
+.jg-carta-texto {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0 calc(var(--cw) * .04);
+    font-style: italic;
+    font-size: calc(var(--cw) * .064);
+    line-height: 1.25;
+    text-align: center;
+    color: #bcaa98;
+    overflow: hidden;
+}
+.jg-carta--lenda .jg-carta-texto { padding-bottom: calc(var(--cw) * .14); } /* espaço dos atributos */
+
+/* custo: selo de cera, borda irregular */
+.jg-carta-custo {
+    position: absolute;
+    z-index: 2;
+    top: calc(var(--cw) * .012);
+    left: calc(var(--cw) * .012);
     width: calc(var(--cw) * .2);
     height: calc(var(--cw) * .2);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    font-weight: 800;
-    font-size: calc(var(--cw) * .095);
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+    clip-path: polygon(50% 0, 62% 4%, 75% 3%, 84% 13%, 96% 22%, 97% 36%, 100% 50%, 96% 63%, 97% 77%, 86% 86%, 76% 97%, 62% 96%, 50% 100%, 37% 97%, 24% 97%, 15% 86%, 4% 77%, 4% 63%, 0 50%, 4% 37%, 3% 23%, 14% 14%, 24% 3%, 38% 4%);
+    background: radial-gradient(circle at 36% 30%, #cf4a42 0%, #93201d 42%, #5a0d0d 80%, #3d0707 100%);
+    box-shadow: inset 0 0 0 calc(var(--cw) * .02) rgba(0, 0, 0, .25);
 }
-.jg-carta-custo { top: calc(var(--cw) * .025); left: calc(var(--cw) * .025); background: #2563eb; }
-.jg-carta-atk { bottom: calc(var(--cw) * .025); left: calc(var(--cw) * .025); background: #b45309; }
-.jg-carta-vida { bottom: calc(var(--cw) * .025); right: calc(var(--cw) * .025); background: #b91c1c; }
-.jg-carta-vida.jg-ferida { color: #fecaca; }
+.jg-carta-custo b, .jg-carta-atributos b {
+    font-family: var(--fonte-titulo, 'Cinzel', Georgia, serif);
+    font-weight: 700;
+    font-size: calc(var(--cw) * .09);
+    line-height: 1;
+    color: #f6e6cc;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
+
+/* atributos: escudo (ataque) e gota de sangue (vida) */
+.jg-carta-atributos {
+    position: absolute;
+    z-index: 2;
+    left: calc(var(--cw) * .05);
+    right: calc(var(--cw) * .05);
+    bottom: calc(var(--cw) * .045);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+.jg-carta-atk, .jg-carta-vida { position: relative; width: calc(var(--cw) * .2); height: calc(var(--cw) * .2); display: flex; align-items: center; justify-content: center; }
+.jg-carta-atributos svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.jg-carta-atributos b { position: relative; }
+.jg-carta-atk svg path { fill: #231a17; stroke: rgba(201, 164, 92, .8); stroke-width: 1.2; }
+.jg-carta-atk b { margin-top: calc(var(--cw) * -.01); }
+.jg-carta-vida svg path { fill: #8a1a1a; stroke: #c23b33; stroke-width: 1; }
+.jg-carta-vida b { margin-top: calc(var(--cw) * .045); }
+.jg-carta-vida.jg-ferida b { color: #ffb4a6; }
 
 /* ---------- criador de peça (Pela Dama) ---------- */
 .jg-grade-mov { display: grid; grid-template-columns: repeat(15, 1fr); width: min(100%, 390px); aspect-ratio: 1; border: 1px solid var(--camp-borda-forte); }
