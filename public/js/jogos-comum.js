@@ -69,13 +69,15 @@ window.JG = (function () {
         const atk = o.atk != null ? o.atk : c.ataque;
         const vida = o.vida != null ? o.vida : c.vida;
         const ferida = o.max != null && vida < o.max ? ' jg-ferida' : '';
-        const texto = lenda ? (c.descricao || '') : textoEfeito(c);
+        // o texto da carta é só a descrição escrita pelo mestre; no feitiço, o efeito automático fica na dica ao passar o mouse
+        const texto = c.descricao || '';
+        const dica = lenda ? texto : [texto, textoEfeito(c)].filter(Boolean).join('\n\n');
         // palavras-chave: da carta ou, na mesa, as que a Lenda tem agora (o.pal)
         const pal = (o.pal || palavras(c)).filter(p => PALAVRA[p]);
         const arte = c.imagem
             ? `<img src="${esc(c.imagem)}" alt="" draggable="false">`
             : `<span class="jg-carta-emblema">${EMBLEMA[lenda ? 'lenda' : 'feitico']}</span>`;
-        return `<div class="jg-carta jg-carta--${lenda ? 'lenda' : 'feitico'} ${o.classe || ''}" ${o.attrs || ''} title="${esc(c.descricao || '')}">` +
+        return `<div class="jg-carta jg-carta--${lenda ? 'lenda' : 'feitico'} ${o.classe || ''}" ${o.attrs || ''} title="${esc(dica)}">` +
             `<span class="jg-carta-custo" title="Custo em energia"><b>${esc(c.custo)}</b></span>` +
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
