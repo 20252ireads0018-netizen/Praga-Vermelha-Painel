@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
+<head><meta charset="utf-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Praga Vermelha')</title>
@@ -27,6 +27,21 @@
             background: none; border: 0; font: inherit; color: inherit; cursor: pointer;
         }
         .pv-dropdown__sep { height: 1px; margin: 6px 12px; background: rgba(255,255,255,.08); }
+        /* Submenu flutuante com as campanhas da pessoa (ao passar o mouse em "Campanhas") */
+        .pv-dropdown__item--sub { position: relative; }
+        .pv-sub-caret { font-size: .7rem; opacity: .7; margin-left: 6px; }
+        .pv-subdropdown {
+            position: absolute; top: -8px; left: 100%; min-width: 240px; max-height: 70vh; overflow-y: auto;
+            padding: 8px; margin-left: 4px; background: var(--pv-surface); border: 1px solid var(--pv-border);
+            border-radius: var(--pv-radius); box-shadow: var(--pv-shadow);
+            opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s; z-index: 1200;
+        }
+        .pv-subdropdown::before { content: ''; position: absolute; top: 0; bottom: 0; left: -12px; width: 12px; }
+        .pv-dropdown__item--sub:hover > .pv-subdropdown,
+        .pv-dropdown__item--sub:focus-within > .pv-subdropdown { opacity: 1; visibility: visible; }
+        @media (max-width: 900px) {
+            .pv-subdropdown { position: static; opacity: 1; visibility: visible; margin: 0 0 4px 12px; max-height: none; box-shadow: none; }
+        }
         @media (max-width: 900px) {
             .pv-nav__item--conta .pv-dropdown { right: auto; min-width: 0; }
         }
@@ -80,6 +95,25 @@
                                 <strong>Tabletop</strong>
                                 <small>Mesa virtual para jogar</small>
                             </a>
+                            {{-- Ao passar o mouse, um submenu lista as campanhas em que a pessoa está (ver AppServiceProvider) --}}
+                            <div class="pv-dropdown__item--sub">
+                                <a href="{{ route('campanhas.index') }}" class="pv-dropdown__link">
+                                    <strong>Campanhas @auth<span class="pv-sub-caret">▸</span>@endauth</strong>
+                                    <small>Mestre, jogadores, fichas e sons</small>
+                                </a>
+                                @auth
+                                <div class="pv-subdropdown" aria-label="Suas campanhas">
+                                    @forelse (($campanhasAtalho ?? collect()) as $c)
+                                        <a href="{{ route('campanhas.show', $c) }}" class="pv-dropdown__link">
+                                            <strong>{{ $c->nome }}</strong>
+                                            <small>{{ (int) $c->mestre_id === (int) auth()->id() ? 'você é o mestre' : 'jogador' }}{{ $c->sessao_ativa ? ' · sessão ativa' : '' }}</small>
+                                        </a>
+                                    @empty
+                                        <span class="pv-dropdown__link"><small>Você ainda não está em nenhuma campanha.</small></span>
+                                    @endforelse
+                                </div>
+                                @endauth
+                            </div>
                         </div>
                     </li>
 
@@ -116,6 +150,10 @@
                                 <a href="{{ route('tabletop.index') }}" class="pv-dropdown__link">
                                     <strong>Minhas mesas</strong>
                                     <small>Mesas virtuais salvas</small>
+                                </a>
+                                <a href="{{ route('campanhas.index') }}" class="pv-dropdown__link">
+                                    <strong>Minhas campanhas</strong>
+                                    <small>Campanhas e convites</small>
                                 </a>
                                 <div class="pv-dropdown__sep"></div>
                                 <form action="{{ route('logout') }}" method="POST" class="pv-dropdown__form">

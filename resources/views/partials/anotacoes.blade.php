@@ -151,7 +151,7 @@
 </style>
 
 <div class="card card-rolagem card-talentos" id="anotacoes-card" style="max-height: 80%; overflow-y:auto;">
-    <button type="button" class="botao-fechar" id="fechar-anotacoes">X</button>
+    <button type="button" class="botao-fechar" id="fechar-anotacoes" title="Fechar (Esc)" aria-label="Fechar">✕</button>
 
     <div class="botoes-grid" style="text-align:center">
         <h1>Anotações</h1>

@@ -2,12 +2,17 @@
 
 @section('conteudo')
 @php
-    // $maldicoes vem do MaldicaoController@index (config/maldicoes.php)
-    $maldicoes = $maldicoes ?? [];
+    // $maldicoes (config detalhado) e $lista (itens visíveis) vêm do MaldicaoController@index
+    $maldicoes        = $maldicoes ?? [];
+    $lista            = $lista ?? [];
+    $ehMestre         = $ehMestre ?? false;
+    $temChave         = $temChave ?? false;
+    $podeVerRestritas = $podeVerRestritas ?? false;
+    $chaveStatus      = session('chave_status');
 
     // Raridades existentes no catálogo, na ordem em que aparecem
-    $raridades = collect($maldicoes)
-        ->pluck('raridade')
+    $raridades = collect($lista)
+        ->map(fn ($i) => $maldicoes[$i['slug'] ?? '']['raridade'] ?? null)
         ->filter(fn ($r) => is_string($r) && trim($r) !== '')
         ->unique()
         ->values();
@@ -65,6 +70,34 @@
         color: var(--tinta-fraca);
     }
 
+    .chave-bloco{
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        background: rgba(0,0,0,.25);
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 8px;
+        font-size: .85rem;
+    }
+    .chave-bloco form{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; }
+    .chave-bloco input[type=text]{ flex: 1 1 160px; min-width: 0; box-sizing: border-box; }
+    .chave-bloco .chave-titulo{ margin: 0 0 6px; font-size: .72rem; letter-spacing: 1px; text-transform: uppercase; color: var(--tinta-fraca); }
+    .chave-bloco .chave-msg{ margin: 8px 0 0; color: var(--tinta-fraca); }
+    .chave-bloco .chave-ok{ color: var(--sangue-4); }
+
+    .maldicao-meta{ margin: 2px 0 0; font-size: .78rem; color: var(--tinta-fraca); }
+    .maldicao-tag{
+        display: inline-block;
+        margin: 6px 6px 0 0;
+        padding: 1px 8px;
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 999px;
+        font-size: .62rem;
+        letter-spacing: .5px;
+        color: var(--tinta-fraca);
+    }
+    .maldicao-tag.restrita{ border-color: rgba(220,70,70,.4); }
+    div.maldicao-indice-card{ cursor: default; }
+
     .maldicao-indice-card[hidden]{
         display: none !important;
     }
@@ -82,17 +115,47 @@
             <span class="maldicao-selo">✠</span>
             <h1 class="maldicao-titulo">Maldições</h1>
             <div class="maldicao-etiquetas">
-                <span class="maldicao-etiqueta">{{ count($maldicoes) }} {{ count($maldicoes) === 1 ? 'registro' : 'registros' }}</span>
+                <span class="maldicao-etiqueta">{{ count($lista) }} {{ count($lista) === 1 ? 'registro' : 'registros' }}</span>
             </div>
         </div>
 
         <hr>
 
+        {{-- ========== CHAVE DE MALDIÇÕES ========== --}}
+        <div class="chave-bloco">
+            <p class="chave-titulo">Chave de maldições</p>
+            @if($ehMestre)
+                <span>Você é mestre: todas as maldições estão visíveis.</span>
+            @else
+                @auth
+                    <form method="POST" action="{{ route('maldicoes.chave') }}">
+                        @csrf
+                        @if($temChave)
+                            <span class="chave-ok">Chave aceita</span>
+                            <input type="hidden" name="chave" value="">
+                            <button type="submit" class="filtro-chip">Remover chave</button>
+                        @else
+                            <input type="text" name="chave" maxlength="80" autocomplete="off" placeholder="Chave do mestre" aria-label="Chave de maldições">
+                            <button type="submit" class="filtro-chip">Usar chave</button>
+                        @endif
+                    </form>
+                @endauth
+            @endif
+
+            @if($chaveStatus === 'aceita')
+                <p class="chave-msg chave-ok">Chave aceita: maldições não catalogadas liberadas.</p>
+            @elseif($chaveStatus === 'invalida')
+                <p class="chave-msg">Essa chave não corresponde a nenhuma campanha.</p>
+            @elseif($chaveStatus === 'removida')
+                <p class="chave-msg">Chave removida.</p>
+            @endif
+        </div>
+
         {{-- ========== ÍNDICE ========== --}}
         <section class="maldicao-secao">
             <h2 class="maldicao-secao-titulo">Catálogo</h2>
 
-            @if(count($maldicoes) === 0)
+            @if(count($lista) === 0)
                 <p class="tecnica-vazia">Nenhuma maldição cadastrada ainda.</p>
             @else
 
@@ -114,20 +177,19 @@
                 </div>
 
                 <div class="maldicao-indice" id="maldicao-indice">
-                    @foreach($maldicoes as $slug => $maldicao)
+                    @foreach($lista as $item)
                         @php
+                            $slug         = $item['slug'] ?? null;
+                            $maldicao     = $slug ? ($maldicoes[$slug] ?? []) : [];
                             $raridade     = $maldicao['raridade'] ?? '';
                             $raridadeSlug = \Illuminate\Support\Str::of($raridade)->ascii()->lower()->slug('');
-                            $primeiro     = preg_split('/\R+/', trim($maldicao['descricao'] ?? ''))[0] ?? '';
-                            $resumo       = \Illuminate\Support\Str::limit(trim($primeiro), 150);
-                            $qtdAmeacas   = count($maldicao['ameacas'] ?? []);
-                            $qtdTecnicas  = count($maldicao['tecnicas'] ?? []);
-                            $nomeExibido  = $maldicao['nome'] ?? $slug;
+                            $nomeExibido  = $item['nome'] ?? ($maldicao['nome'] ?? '');
+                            $tag          = $slug ? 'a' : 'div';
                         @endphp
 
-                        <a href="{{ route('maldicoes.show', $slug) }}"
+                        <{{ $tag }} @if($slug) href="{{ route('maldicoes.show', $slug) }}" @endif
                            class="maldicao-indice-card maldicao-pagina raridade-{{ $raridadeSlug }}"
-                           data-nome="{{ $nomeExibido }}"
+                           data-nome="{{ $nomeExibido }} {{ $item['apelido'] ?? '' }}"
                            data-raridade="{{ $raridade }}">
 
                             @if($raridade !== '')
@@ -136,15 +198,21 @@
 
                             <h3 class="maldicao-indice-nome">{{ $nomeExibido }}</h3>
 
-                            @if($resumo !== '')
-                                <p class="maldicao-indice-resumo">{{ $resumo }}</p>
+                            @if(!empty($item['categoria']))
+                                <p class="maldicao-meta">{{ $item['categoria'] }}</p>
+                            @endif
+                            @if(!empty($item['orgao']))
+                                <p class="maldicao-meta">Órgão hospedado: {{ $item['orgao'] }}</p>
+                            @endif
+                            @if(!empty($item['apelido']))
+                                <p class="maldicao-meta">Apelido: {{ $item['apelido'] }}</p>
                             @endif
 
-                            <span class="maldicao-indice-rodape">
-                                {{ $qtdAmeacas }} {{ $qtdAmeacas === 1 ? 'ameaça' : 'ameaças' }}
-                                · {{ $qtdTecnicas }} {{ $qtdTecnicas === 1 ? 'técnica' : 'técnicas' }}
+                            <span>
+                                @if(!$slug)<span class="maldicao-tag">Sem página detalhada</span>@endif
+                                @if(!empty($item['restrita']))<span class="maldicao-tag restrita">Não catalogada</span>@endif
                             </span>
-                        </a>
+                        </{{ $tag }}>
                     @endforeach
                 </div>
 
@@ -155,7 +223,7 @@
     </div>
 </div>
 
-@if(count($maldicoes) > 0)
+@if(count($lista) > 0)
 <script>
 (function(){
     const busca    = document.getElementById("maldicao-busca");
@@ -168,7 +236,7 @@
 
     function normalizar(texto){
         return (texto || "")
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .normalize("NFD").replace(/[̀-ͯ]/g, "")
             .toLowerCase()
             .trim();
     }

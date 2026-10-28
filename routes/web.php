@@ -3,10 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PersonagemController;
+use App\Http\Controllers\FichaArquivoController;
 use App\Http\Controllers\LivroController;
 use App\Http\Controllers\HistoriaController;
 use App\Http\Controllers\MaldicaoController;
 use App\Http\Controllers\TabletopController;
+use App\Http\Controllers\CampanhaController;
+use App\Http\Controllers\CampanhaCatalogoController;
+use App\Http\Controllers\CampanhaRolagemController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -32,6 +36,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/fichas', [PersonagemController::class, 'fichas'])->name('fichas.create');
     Route::post('/fichafeita', [PersonagemController::class, 'fichafeita'])->name('fichafeita.store');
     Route::get('/personagens', [PersonagemController::class, 'index'])->name('personagens.index');
+
+    // Baixar / importar ficha (arquivo .json). "importar" fica antes de /personagens/{id}.
+    Route::post('/personagens/importar', [FichaArquivoController::class, 'importar'])
+        ->middleware('throttle:20,1')
+        ->name('personagens.importar');
+    Route::get('/personagens/{id}/exportar', [FichaArquivoController::class, 'exportar'])
+        ->whereNumber('id')
+        ->name('personagens.exportar');
+
     Route::get('/personagens/{id}', [PersonagemController::class, 'show'])->name('personagens.show');
     Route::put('/personagens/{id}', [PersonagemController::class, 'update'])->name('personagens.update');
     Route::delete('/personagens/{id}', [PersonagemController::class, 'destroy'])->name('personagens.destroy');
@@ -42,6 +55,93 @@ Route::middleware('auth')->group(function () {
     Route::get('/tabletop/{mesa}', [TabletopController::class, 'show'])->name('tabletop.show');
     Route::put('/tabletop/{mesa}', [TabletopController::class, 'update'])->name('tabletop.update'); // autosave (JSON)
     Route::delete('/tabletop/{mesa}', [TabletopController::class, 'destroy'])->name('tabletop.destroy');
+
+    // Salas online do Tabletop: o dono abre/encerra a sala; qualquer pessoa logada com o código entra e joga junto
+    Route::post('/tabletop/entrar', [TabletopController::class, 'entrar'])
+        ->middleware('throttle:20,1')
+        ->name('tabletop.entrar');
+    Route::post('/tabletop/{mesa}/sala', [TabletopController::class, 'abrirSala'])->name('tabletop.sala.abrir');
+    Route::delete('/tabletop/{mesa}/sala', [TabletopController::class, 'encerrarSala'])->name('tabletop.sala.encerrar');
+    Route::get('/tabletop/sala/{codigo}', [TabletopController::class, 'sala'])
+        ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala');
+    Route::get('/tabletop/sala/{codigo}/estado', [TabletopController::class, 'salaEstado'])
+        ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala.estado');   // consulta rápida: tem novidade?
+    Route::get('/tabletop/sala/{codigo}/pesado', [TabletopController::class, 'salaPesado'])
+        ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala.pesado');   // fundo do mapa e imagens das peças
+    Route::post('/tabletop/sala/{codigo}/alterar', [TabletopController::class, 'salaAlterar'])
+        ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala.alterar');  // manda só o que mudou
+
+    // Chave de acesso às maldições não catalogadas (registrada antes de /maldicoes/{slug})
+    Route::post('/maldicoes/chave', [MaldicaoController::class, 'salvarChave'])
+        ->middleware('throttle:20,1')->name('maldicoes.chave');
+
+    // Campanhas: mestre, jogadores, fichas, tabletops e efeitos sonoros
+    Route::prefix('/campanhas')->name('campanhas.')->group(function () {
+        Route::get('/', [CampanhaController::class, 'index'])->name('index');
+        Route::post('/', [CampanhaController::class, 'store'])->name('store');
+        Route::get('/{campanha}', [CampanhaController::class, 'show'])->name('show');
+        Route::put('/{campanha}', [CampanhaController::class, 'update'])->name('update');
+        Route::delete('/{campanha}', [CampanhaController::class, 'destroy'])->name('destroy');
+
+        // Jogadores
+        Route::post('/{campanha}/convidar', [CampanhaController::class, 'convidar'])
+            ->middleware('throttle:20,1')->name('convidar');
+        Route::post('/{campanha}/aceitar', [CampanhaController::class, 'aceitar'])->name('aceitar');
+        Route::post('/{campanha}/recusar', [CampanhaController::class, 'recusar'])->name('recusar');
+        Route::delete('/{campanha}/sair', [CampanhaController::class, 'sair'])->name('sair');
+        Route::delete('/{campanha}/jogadores/{user}', [CampanhaController::class, 'removerJogador'])->name('jogadores.remover');
+
+        // Fichas (e foto da ficha)
+        Route::post('/{campanha}/fichas', [CampanhaController::class, 'vincularFicha'])->name('fichas.vincular');
+        Route::get('/{campanha}/fichas-estado', [CampanhaController::class, 'fichasEstado'])->name('fichas.estado'); // polling: mestre vê todas, jogador só as suas
+        Route::delete('/{campanha}/fichas/{vinculo}', [CampanhaController::class, 'desvincularFicha'])->name('fichas.desvincular');
+        Route::get('/{campanha}/fichas/{vinculo}/ver', [CampanhaController::class, 'verFicha'])->name('fichas.ver'); // ficha completa (mestre ou dono)
+        Route::get('/{campanha}/fichas/{vinculo}/foto', [CampanhaController::class, 'fotoFicha'])->name('fichas.foto');
+        Route::post('/{campanha}/fichas/{vinculo}/foto', [CampanhaController::class, 'enviarFotoFicha'])
+            ->middleware('throttle:20,1')->name('fichas.foto.enviar');
+        Route::post('/{campanha}/fichas/{vinculo}/vitais', [CampanhaController::class, 'atualizarVitais'])
+            ->middleware('throttle:60,1')->name('fichas.vitais'); // PV/Aura/Sanidade pela miniatura (mestre ou dono)
+        // Imagem de fundo do banner (mestre envia/remove; membros veem)
+        Route::get('/{campanha}/banner', [CampanhaController::class, 'banner'])->name('banner');
+        Route::post('/{campanha}/chave-maldicoes', [CampanhaController::class, 'salvarChaveMaldicoes'])->name('chave-maldicoes');
+        Route::post('/{campanha}/banner', [CampanhaController::class, 'enviarBanner'])
+            ->middleware('throttle:20,1')->name('banner.enviar');
+        Route::delete('/{campanha}/banner', [CampanhaController::class, 'removerBanner'])->name('banner.remover');
+
+        // Tabletops
+        Route::post('/{campanha}/mesas', [CampanhaController::class, 'vincularMesa'])->name('mesas.vincular');
+        Route::post('/{campanha}/mesas/nova', [CampanhaController::class, 'criarMesa'])->name('mesas.criar');
+        Route::delete('/{campanha}/mesas/{mesa}', [CampanhaController::class, 'desvincularMesa'])->name('mesas.desvincular');
+
+        // Sessão
+        Route::post('/{campanha}/sessao/iniciar', [CampanhaController::class, 'iniciarSessao'])->name('sessao.iniciar');
+        Route::post('/{campanha}/sessao/encerrar', [CampanhaController::class, 'encerrarSessao'])->name('sessao.encerrar');
+        Route::get('/{campanha}/estado', [CampanhaController::class, 'estado'])->name('estado'); // polling dos jogadores
+
+        // Pote de dados (rolagens públicas da campanha)
+        Route::get('/{campanha}/rolagens', [CampanhaRolagemController::class, 'index'])->name('rolagens.index'); // polling: novas rolagens
+        Route::post('/{campanha}/rolagens', [CampanhaRolagemController::class, 'store'])
+            ->middleware('throttle:40,1')->name('rolagens.store');
+        Route::delete('/{campanha}/rolagens', [CampanhaRolagemController::class, 'limpar'])->name('rolagens.limpar'); // limpa o histórico do pote
+        // Potes secretos (criador + convidados; o mestre vê todos)
+        Route::post('/{campanha}/potes', [CampanhaRolagemController::class, 'criarPote'])
+            ->middleware('throttle:20,1')->name('potes.criar');
+        Route::delete('/{campanha}/potes/{pote}', [CampanhaRolagemController::class, 'excluirPote'])
+            ->whereNumber('pote')->name('potes.excluir');
+
+        // Disputa de catálogo (descrever maldições restritas)
+        Route::get('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'index'])->name('catalogos.index');
+        Route::post('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'store'])
+            ->middleware('throttle:10,1')->name('catalogos.store');
+
+        // Efeitos sonoros
+        Route::post('/{campanha}/sons', [CampanhaController::class, 'enviarSom'])->name('sons.enviar');
+        Route::post('/{campanha}/sons/parar', [CampanhaController::class, 'pararSom'])->name('sons.parar');
+        Route::post('/{campanha}/sons/padrao', [CampanhaController::class, 'adicionarSonsPadrao'])->name('sons.padrao'); // efeitos coringa
+        Route::get('/{campanha}/sons/{som}/arquivo', [CampanhaController::class, 'arquivoSom'])->name('sons.arquivo');
+        Route::post('/{campanha}/sons/{som}/tocar', [CampanhaController::class, 'tocarSom'])->name('sons.tocar');
+        Route::delete('/{campanha}/sons/{som}', [CampanhaController::class, 'excluirSom'])->name('sons.excluir');
+    });
 });
 
 // ---------- Conteúdo público ----------

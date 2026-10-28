@@ -3,15 +3,109 @@
 @section('conteudo')
 @php
     $editando = isset($personagem);
+    // Regra dos modificadores: primeiro dígito do valor (80 => 8); de 1 a 9 o mod é sempre 1; 0 => 0
+    $modDe = fn ($v) => $v >= 10 ? intdiv($v, 10) : ($v >= 1 ? 1 : 0);
+    // Mestre vendo a ficha de um jogador (campanhas): mesma página, mas nada pode ser alterado nem salvo
+    $somenteLeitura = !empty($somenteLeitura ?? false);
     $habilidadesSalvas = $personagem->habilidades ?? [];
     $pontosGastosAtributos = ($personagem->forca ?? 0) + ($personagem->constituicao ?? 0) + ($personagem->destreza ?? 0)
         + ($personagem->conhecimento ?? 0) + ($personagem->carisma ?? 0) + ($personagem->percepcao ?? 0) + ($personagem->alma ?? 0);
-    $pontosRestantesIniciais = $editando ? (300 - $pontosGastosAtributos) : 300;
-    
+
+    // Pontos extras ganhos de fontes externas (atributos e habilidades)
+    $extraAtributos   = (int) ($personagem->pontos_extras_atributos ?? 0);
+    $extraHabilidades = (int) ($personagem->pontos_extras_habilidades ?? 0);
+    // Ajuste manual dos pontos de habilidade (modo "ficha já existente"); pode ser negativo
+    $ajusteHabilidades = (int) ($personagem->pontos_habilidade_ajuste ?? 0);
+    // Mods de atributo ajustados à mão (modo "ficha já existente"): {"forca": 10, ...}
+    $modsManuais = $personagem->mods_atributos ?? [];
+    if (is_string($modsManuais)) { $modsManuais = json_decode($modsManuais, true) ?: []; }
+    if (!is_array($modsManuais)) { $modsManuais = []; }
+
+    $pontosRestantesIniciais = $editando ? (300 + $extraAtributos - $pontosGastosAtributos) : 300;
 
     $vitaisExtrasSalvos = $personagem->vitais_extras ?? [];
     if (is_string($vitaisExtrasSalvos)) {
         $vitaisExtrasSalvos = json_decode($vitaisExtrasSalvos, true) ?: [];
+    }
+
+    // Distribuição de níveis por profissão (um item por nível mundano)
+    $niveisProfissaoSalvos = $personagem->niveis_profissao ?? [];
+    if (is_string($niveisProfissaoSalvos)) {
+        $niveisProfissaoSalvos = json_decode($niveisProfissaoSalvos, true) ?: [];
+    }
+    if (!is_array($niveisProfissaoSalvos)) {
+        $niveisProfissaoSalvos = [];
+    }
+
+    // Itens e ações registrados na ficha
+    $itensSalvos = $personagem->itens ?? [];
+    if (is_string($itensSalvos)) {
+        $itensSalvos = json_decode($itensSalvos, true) ?: [];
+    }
+    if (!is_array($itensSalvos)) {
+        $itensSalvos = [];
+    }
+
+    // Pastas de organização (talentos, técnicas, anotações)
+    $pastasSalvas = $personagem->pastas ?? [];
+    if (is_string($pastasSalvas)) {
+        $pastasSalvas = json_decode($pastasSalvas, true) ?: [];
+    }
+    if (!is_array($pastasSalvas)) {
+        $pastasSalvas = [];
+    }
+
+    // Talentos mundanos registrados na ficha
+    $talentosSalvos = $personagem->talentos ?? [];
+    if (is_string($talentosSalvos)) {
+        $talentosSalvos = json_decode($talentosSalvos, true) ?: [];
+    }
+    if (!is_array($talentosSalvos)) {
+        $talentosSalvos = [];
+    }
+
+    // Técnicas registradas na ficha
+    $tecnicasSalvas = $personagem->tecnicas ?? [];
+    if (is_string($tecnicasSalvas)) {
+        $tecnicasSalvas = json_decode($tecnicasSalvas, true) ?: [];
+    }
+    if (!is_array($tecnicasSalvas)) {
+        $tecnicasSalvas = [];
+    }
+
+    // Armaduras e resistências (coluna armaduras; pode ainda não existir)
+    $tiposDanoArmadura = ['cortante', 'perfurante', 'impacto', 'explosivo', 'flamejante', 'congelante', 'eletrizante', 'tóxico', 'amaldiçoado', 'queda'];
+    $armaduraPadrao = [
+        'pecas' => [
+            ['nome' => 'Capacete de armadura', 'descricao' => 'Um capacete de aço comum e customizável.', 'tamanho' => 'Médio', 'alcance_min' => 1, 'alcance_max' => 15, 'defesa' => 6, 'contra_corte_impacto' => 20, 'defesa_base' => 0, 'penalidade_destreza' => 4, 'peso' => 3.5, 'equipada' => false],
+            ['nome' => 'Peitoral de armadura', 'descricao' => 'Peitoral comum de aço customizável.', 'tamanho' => 'Médio', 'alcance_min' => 16, 'alcance_max' => 30, 'defesa' => 8, 'contra_corte_impacto' => 25, 'defesa_base' => 5, 'penalidade_destreza' => 6, 'peso' => 5.0, 'equipada' => false],
+            ['nome' => 'Calças de armadura', 'descricao' => 'Calças de armadura feitas de aço customizável.', 'tamanho' => 'Médio', 'alcance_min' => 31, 'alcance_max' => 45, 'defesa' => 8, 'contra_corte_impacto' => 25, 'defesa_base' => 5, 'penalidade_destreza' => 6, 'peso' => 5.5, 'equipada' => false],
+            ['nome' => 'Braceiras de armadura', 'descricao' => 'Proteções para os braços feitas de aço e customizáveis.', 'tamanho' => 'Médio', 'alcance_min' => 46, 'alcance_max' => 60, 'defesa' => 4, 'contra_corte_impacto' => 14, 'defesa_base' => 5, 'penalidade_destreza' => 5, 'peso' => 2.5, 'equipada' => false],
+        ],
+        'armadura_natural' => 0,
+        'resistencias' => [],
+        'imunidades' => [],
+    ];
+    $armaduraSalva = $personagem->armaduras ?? null;
+    if (is_string($armaduraSalva)) {
+        $armaduraSalva = json_decode($armaduraSalva, true);
+    }
+    if (!is_array($armaduraSalva) || !isset($armaduraSalva['pecas']) || !is_array($armaduraSalva['pecas'])) {
+        $armaduraSalva = $armaduraPadrao;
+    }
+
+    // Propriedades fisiomantes salvas na ficha (coluna propriedades_fisiomantes) e catálogo completo (resources/data)
+    $propriedadesSalvas = $personagem->propriedades_fisiomantes ?? [];
+    if (is_string($propriedadesSalvas)) {
+        $propriedadesSalvas = json_decode($propriedadesSalvas, true) ?: [];
+    }
+    if (!is_array($propriedadesSalvas)) {
+        $propriedadesSalvas = [];
+    }
+    $catalogoPropriedades = ['grupos' => [], 'fontes' => []];
+    $arquivoCatalogo = resource_path('data/propriedades_fisiomantes.json');
+    if (is_file($arquivoCatalogo)) {
+        $catalogoPropriedades = json_decode((string) file_get_contents($arquivoCatalogo), true) ?: $catalogoPropriedades;
     }
 @endphp
 <style>
@@ -185,23 +279,710 @@
     .vital-novo .vital-ajuste { grid-template-columns: repeat(3, 1fr); }
     .vital-novo .vital-ajuste-campo:nth-child(1) { grid-column: 1 / -1; }
 }
+
+/* ===== Botões: tamanho e alinhamento consistentes ===== */
+#form-ficha .button,
+#form-ficha .botao-adicionar-talento,
+#form-ficha .botao-rolar-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 22px;
+    box-sizing: border-box;
+    line-height: 1.2;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+/* Botão X no topo dos cards (Talentos, Maldições, Rolagem) */
+#form-ficha .card-rolagem > .botao-fechar {
+    width: 36px;
+    height: 36px;
+    min-height: 0;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    line-height: 1;
+}
+
+/* ===== Pontos extras ===== */
+.pontos-extras {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin: 8px 0 16px;
+}
+.pontos-extras label { margin: 0; width: auto; white-space: nowrap; }
+.pontos-extras input[type="text"] {
+    flex: 0 0 90px;
+    width: 90px !important;
+    max-width: 90px;
+    height: 40px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    text-align: center;
+}
+#pontos-a-distribuir { flex-direction: column; align-items: center; gap: 6px; }
+
+/* ===== Talentos (Mundanos e de Arte) ===== */
+#talentos-mundanos-card, #talentos-arte-card {
+    max-height: 85vh !important;
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+#talentos-mundanos-card > .botao-adicionar-talento,
+#talentos-arte-card .aba-conteudo > .botao-adicionar-talento { width: 100%; margin-top: 8px; }
+
+/* ===== Abas dentro dos painéis (Técnicas de arte, Técnicas) ===== */
+.abas-painel { display: flex; gap: 6px; margin: 10px 0 6px; border-bottom: 1px solid rgba(255, 255, 255, .14); }
+.aba-painel {
+    flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 38px; padding: 0 10px; background: rgba(0, 0, 0, .25); color: inherit; font: inherit; font-size: .9rem;
+    border: 1px solid rgba(255, 255, 255, .14); border-bottom: none; border-radius: 10px 10px 0 0; cursor: pointer; opacity: .8;
+    transition: border-color .15s ease, background .15s ease, opacity .15s ease;
+}
+.aba-painel:hover { opacity: 1; border-color: rgba(220, 70, 70, .6); }
+.aba-painel.ativo { opacity: 1; background: #8b1a1a; border-color: rgba(220, 70, 70, .85); }
+.aba-conteudo { display: none; }
+.aba-conteudo.ativo { display: block; }
+
+/* ===== Vitais em abas: Vitais / Armaduras / Resistências ===== */
+#vitais-abas > .aba-conteudo.ativo[data-aba="vitais"] { display: flex; flex-direction: column; gap: 18px; }
+#vitais-abas > .aba-conteudo.ativo[data-aba="armaduras"], #vitais-abas > .aba-conteudo.ativo[data-aba="resistencias"] { display: flex; flex-direction: column; gap: 10px; }
+#vitais-abas .aba-painel { font-size: .85rem; padding: 0 4px; min-width: 0; }
+.arm-natural { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.arm-natural input { width: 90px; max-width: 100%; box-sizing: border-box; }
+.arm-lista { display: flex; flex-direction: column; gap: 8px; }
+.arm-peca { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.arm-peca.equipada { border-color: rgba(220, 70, 70, .6); }
+.arm-peca.atingida { box-shadow: 0 0 0 2px #8b1a1a, 0 0 12px rgba(220, 70, 70, .6); }
+.arm-peca-topo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.arm-peca-nome { font-weight: 700; flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; }
+.arm-faixa { font-size: .8rem; opacity: .75; }
+.arm-peca-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; font-size: .85rem; }
+.arm-peca-desc { font-size: .82rem; opacity: .75; margin: 4px 0; overflow-wrap: anywhere; }
+.arm-peca-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.arm-peca-acoes label, .arm-check { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; }
+.arm-peca-acoes .arm-mini { margin-left: auto; }
+.arm-mini { min-height: 32px; padding: 0 10px; background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(255, 255, 255, .14); border-radius: 8px; cursor: pointer; font: inherit; font-size: .8rem; }
+.arm-mini:hover { border-color: rgba(220, 70, 70, .7); }
+.arm-mini + .arm-mini { margin-left: 0 !important; }
+.arm-edit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; margin-top: 6px; }
+.arm-edit label { display: flex; flex-direction: column; gap: 2px; font-size: .75rem; opacity: .9; min-width: 0; }
+.arm-edit label.larga { grid-column: 1 / -1; }
+.arm-edit input, .arm-edit textarea { width: 100%; box-sizing: border-box; min-width: 0; }
+.arm-aviso { font-size: .8rem; color: #e8a0a0; margin: 0; }
+.arm-resumo { font-size: .9rem; padding: 8px 10px; background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; overflow-wrap: anywhere; }
+.arm-rolar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.arm-rolar-res { font-size: .88rem; overflow-wrap: anywhere; }
+.arm-dano { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.arm-dano h4, .arm-grupo-titulo { margin: 0; font-size: .95rem; }
+.arm-dano-campos { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
+.arm-dano-campos input, .arm-dano-campos select { width: 100%; box-sizing: border-box; min-width: 0; }
+.arm-log { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; opacity: .9; }
+.arm-log:empty { display: none; }
+.arm-log div { padding: 4px 6px; border-left: 2px solid rgba(220, 70, 70, .6); overflow-wrap: anywhere; }
+.arm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.arm-chip { min-height: 34px; padding: 0 12px; background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(255, 255, 255, .14); border-radius: 999px; cursor: pointer; font: inherit; font-size: .85rem; }
+.arm-chip.ativo { background: #8b1a1a; border-color: rgba(220, 70, 70, .85); }
+.arm-chip:disabled { cursor: default; }
+
+/* sub-abas (dentro de uma aba): um pouco menores e com quebra de linha no celular */
+.abas-internas { margin-top: 2px; }
+.abas-internas .aba-painel { font-size: .82rem; min-height: 34px; text-align: center; flex-wrap: wrap; }
+
+/* ===== Propriedades fisiomânticas (Técnicas de arte > Fisiomancia > sub-aba) ===== */
+.propriedades-titulo { margin: 12px 0 0; font-size: 1.05rem; text-align: center; }
+.propriedades-fisio .maldicao-subtitulo { margin: 14px 0 8px; }
+.prop-busca-linha { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: center; }
+.prop-busca-linha input, .prop-busca-linha select { height: 42px; min-width: 0; width: 100%; box-sizing: border-box; }
+.prop-grupo-descricao { font-size: .82rem; opacity: .75; margin: 8px 0 0; }
+.prop-grupo-descricao:empty { display: none; }
+#prop-catalogo { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.prop-fonte { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 0 12px; }
+.prop-fonte > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 40px; font-weight: 600; }
+.prop-fonte > summary::-webkit-details-marker { display: none; }
+.prop-fonte > summary::before { content: "▸"; opacity: .7; font-size: .8rem; }
+.prop-fonte[open] > summary::before { content: "▾"; }
+.prop-fonte .prop-qtd { opacity: .65; font-size: .78rem; font-weight: 400; font-variant-numeric: tabular-nums; }
+.prop-fonte .prop-fonte-descricao { font-size: .82rem; opacity: .75; margin: 0 0 8px; }
+.prop-item { padding: 8px 0 10px; border-top: 1px solid rgba(255, 255, 255, .08); display: flex; flex-direction: column; gap: 4px; }
+.prop-item-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prop-item-cab strong { font-size: .95rem; }
+.prop-ameaca { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: rgba(220, 70, 70, .22); border: 1px solid rgba(220, 70, 70, .5); white-space: nowrap; }
+.prop-item-cab .button { margin-left: auto; min-height: 32px; min-width: 0; padding: 0 12px; font-size: .8rem; }
+.prop-item p, .prop-card p { margin: 0; font-size: .86rem; line-height: 1.4; }
+.prop-item .prop-ref { opacity: .7; font-style: italic; }
+#prop-minhas-lista { display: flex; flex-direction: column; gap: 8px; }
+.prop-card { background: rgba(0, 0, 0, .25); border: 1px solid rgba(220, 70, 70, .35); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.prop-card .botao-remover-item { margin-left: auto; }
+.prop-card-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .82rem; }
+.prop-card-linha label { margin: 0; width: auto; display: inline-flex; align-items: center; gap: 6px; }
+.prop-card-linha input[type="number"] { width: 76px; height: 34px; }
+.prop-card-linha input[type="text"] { flex: 1 1 160px; min-width: 0; height: 34px; }
+
+.lista-talentos {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin: 16px 0;
+}
+.talento-topo { display: flex; align-items: flex-start; gap: 10px; }
+.talento-topo .talento-titulo,
+.talento-topo .talento-titulo-exibido { flex: 1; min-width: 0; }
+.talento-topo .talento-titulo-exibido { padding-top: 4px; }
+
+.talento-card .botao-fechar.talento-remover {
+    position: static !important;
+    transform: none;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    line-height: 1;
+}
+.talento-card .button { align-self: flex-end; min-width: 140px; }
+
+/* Talentos: custo de Aura e ativação */
+.talento-custo-edicao { display: flex; align-items: center; gap: 10px; }
+.talento-custo-edicao label { margin: 0; width: auto; white-space: nowrap; }
+.talento-custo-edicao .talento-custo { width: 110px; flex: none; box-sizing: border-box; }
+.talento-custo-tag { font-weight: 600; font-variant-numeric: tabular-nums; }
+.talento-custo-edicao { flex-wrap: wrap; }
+.talento-custo-edicao .talento-eficiencia-input { width: 110px; flex: none; box-sizing: border-box; }
+.talento-aprim-edicao { display: flex; flex-direction: column; gap: 8px; }
+.talento-aprim-edicao .talento-aprim-add { width: 100%; }
+.talento-aprim-view:empty { display: none; }
+.talento-card .talento-eficiencia-view { align-self: flex-start; }
+.talento-acoes { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+.talento-toggle {
+    min-width: 140px; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+    background: transparent; color: #fff; border: 1px solid rgba(220, 70, 70, .6);
+    font-family: inherit; letter-spacing: .04em; text-transform: uppercase; font-size: .8rem;
+}
+.talento-toggle:hover { background: rgba(139, 26, 26, .35); }
+.talento-card.talento-ativo { border-color: rgba(220, 70, 70, .85); box-shadow: inset 0 0 0 1px rgba(220, 70, 70, .35); }
+.talento-card.talento-ativo .talento-toggle { background: #8b1a1a; }
+
+/* Popup de distribuição de níveis: grade rolável em vez de uma coluna gigante */
+#distribuir-niveis-popup .popup-conteudo {
+    display: flex; flex-direction: column; gap: 14px;
+    width: min(760px, 92vw); max-width: 92vw;
+    max-height: calc(100vh - 150px);
+    box-sizing: border-box; overflow: hidden;
+}
+#distribuir-niveis-popup h3 { margin: 0; text-align: center; flex: none; }
+#campos-distribuicao-niveis {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px; overflow-y: auto; min-height: 0; flex: 1 1 auto; padding: 4px 6px 4px 2px;
+}
+#campos-distribuicao-niveis .campo { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 0; }
+#campos-distribuicao-niveis .campo label { text-align: left; margin: 0; width: auto; }
+#campos-distribuicao-niveis .campo select { width: 100%; margin: 0 !important; }
+#fechar-distribuir { flex: none; align-self: center; }
+
+/* ===== Botões de fechar (X) ===== */
+#form-ficha .botao-fechar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%;
+    background: #8b1a1a; color: #fff;
+    border: 1px solid rgba(255, 255, 255, .16);
+    font: 700 1rem/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer;
+    flex: 0 0 auto;
+    transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+#form-ficha .botao-fechar:hover {
+    background: #b3201f; transform: scale(1.08) rotate(90deg);
+    box-shadow: 0 0 0 4px rgba(179, 32, 31, .25);
+}
+#form-ficha .botao-fechar:active { transform: scale(.94); }
+#form-ficha .botao-fechar:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Nos painéis com rolagem (Talentos, Técnicas, Anotações, Maldições) o X fica preso ao canto
+   superior direito e acompanha a rolagem, sem sumir quando a lista é longa */
+#form-ficha #talentos-mundanos-card > .botao-fechar,
+#form-ficha #talentos-arte-card > .botao-fechar,
+#form-ficha #tecnicas-card > .botao-fechar,
+#form-ficha #anotacoes-card > .botao-fechar,
+#form-ficha #maldicao-card > .botao-fechar {
+    position: sticky; top: 0; align-self: flex-end;
+    margin: 0 0 -36px auto; z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+}
+
+/* ===== Pastas ===== */
+.pastas-barra { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.pastas-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pasta-chip {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px;
+    border-radius: 999px; background: rgba(0, 0, 0, .25); color: inherit; font: inherit; font-size: .85rem;
+    border: 1px solid rgba(255, 255, 255, .14); cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+}
+.pasta-chip:hover { border-color: rgba(220, 70, 70, .6); }
+.pasta-chip.ativo { background: #8b1a1a; border-color: rgba(220, 70, 70, .85); }
+.pasta-chip.pasta-nova { border-style: dashed; }
+.pasta-chip .pasta-qtd { opacity: .7; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.pastas-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.pasta-link {
+    background: none; border: none; color: inherit; opacity: .75; cursor: pointer;
+    font: inherit; font-size: .8rem; text-decoration: underline; padding: 2px 4px;
+}
+.pasta-link:hover { opacity: 1; }
+.pasta-link.perigo.confirmar { color: #ff8a8a; opacity: 1; }
+.pasta-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pasta-editor input { flex: 1 1 180px; min-width: 0; }
+.pasta-editor .button { min-height: 38px; }
+.pasta-erro { color: #ff8a8a; font-size: .8rem; margin: 0; }
+.item-pasta { display: flex; align-items: center; gap: 8px; font-size: .8rem; opacity: .95; }
+.item-pasta label { margin: 0; width: auto; white-space: nowrap; }
+.item-pasta select { flex: 1; min-width: 0; max-width: 240px; }
+.vazio-lista { text-align: center; opacity: .65; padding: 18px 8px; font-size: .9rem; margin: 0; }
+
+/* ===== Botões de acesso (Talentos, Anotações, Técnicas) ===== */
+/* Maldição, Talentos, Anotações, Técnicas e Rolagem numa só grade (3 em cima, 2 embaixo).
+   As divs continuam existindo para o recolher/expandir; display:contents deixa os botões na grade. */
+.acessos-grade {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px; width: 100%; margin: 10px 0 14px;
+}
+.acessos-grade > div:not(.oculto) { display: contents; }
+.acessos-grade .button {
+    grid-column: span 2; width: 100% !important; margin: 0 !important;
+    min-height: 52px; white-space: normal; text-align: center;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+/* Desktop (6 col): 3 botões em cima, 2 embaixo (Arte, Anotações), Rolagem na linha inteira. */
+.acessos-grade #talentos-arte-abrir,
+.acessos-grade #anotacoes-abrir { grid-column: span 3; }
+.acessos-grade #rolarD100 { grid-column: 1 / -1; }
+@media (max-width: 560px) {
+    .acessos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .acessos-grade .button,
+    .acessos-grade #talentos-arte-abrir { grid-column: span 1; }
+    /* 5 itens em 2 colunas: Anotações ocupa a linha inteira, sem buraco. */
+    .acessos-grade #anotacoes-abrir,
+    .acessos-grade #rolarD100 { grid-column: 1 / -1; }
+}
+.contador-painel {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+    background: rgba(255, 255, 255, .16); font-size: .75rem;
+}
+.contador-painel:empty { display: none; }
+
+/* ===== Nova técnica recolhível ===== */
+.tecnica-novo {
+    border: 1px solid rgba(255, 255, 255, .1); border-radius: 10px;
+    padding: 0 14px; margin: 12px 0; background: rgba(0, 0, 0, .15);
+}
+.tecnica-novo > summary {
+    cursor: pointer; padding: 12px 0; font-weight: 600; letter-spacing: .04em; list-style: none;
+}
+.tecnica-novo > summary::-webkit-details-marker { display: none; }
+.tecnica-novo > summary::before { content: "＋ "; }
+.tecnica-novo[open] > summary::before { content: "－ "; }
+
+/* ===== Voltar ao topo ===== */
+.voltar-topo {
+    position: fixed; right: 16px; bottom: 64px; width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(139, 26, 26, .92); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
+    font-size: 1.2rem; cursor: pointer; opacity: 0; pointer-events: none; z-index: 900;
+    transition: opacity .2s ease, transform .15s ease;
+}
+.voltar-topo.visivel { opacity: 1; pointer-events: auto; }
+.voltar-topo:hover { transform: translateY(-2px); }
+
+/* ===== Itens e Ações ===== */
+#itens-conteudo .item-form-linha {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.item-form-nome        { grid-column: span 3; }
+.item-form-categoria   { grid-column: span 3; }
+.item-form-qtd,
+.item-form-dado,
+.item-form-valor-fixo  { grid-column: span 2; }
+
+.item-form-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.item-form-campo label { font-size: .72rem; letter-spacing: .6px; }
+.item-form-campo input,
+.item-form-campo select { width: 100%; height: 44px; box-sizing: border-box; }
+
+#itens-conteudo input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+#itens-conteudo input[type="number"]::-webkit-outer-spin-button,
+#itens-conteudo input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+#itens-conteudo .campo-descricao { margin-bottom: 18px; }
+#itens-conteudo .campo-descricao label { display: block; margin-bottom: 8px; }
+#itens-conteudo .campo-descricao textarea {
+    width: 100%;
+    min-height: 90px;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+.itens-botoes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 6px;
+}
+.itens-botoes button { width: 100%; margin: 0; }
+
+.rolar-preview-resultado { margin-top: 12px; }
+.rolar-preview-resultado:empty { display: none; }
+
+/* ===== Itens adicionados ===== */
+#lista-itens { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
+#lista-itens .item-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, .25);
+    border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 10px;
+}
+
+#lista-itens .item-card-topo {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+#lista-itens .item-card-nome {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+#lista-itens .item-tag { flex: none; }
+#lista-itens .botao-remover-item {
+    flex: none;
+    width: auto;
+    margin: 0 0 0 auto;
+    padding: 4px 10px;
+    font-size: .75rem;
+}
+
+#lista-itens .item-card-dano { font-size: .95rem; }
+#lista-itens .item-rotulo,
+#lista-itens .item-resultado-rotulo {
+    margin-right: 6px;
+    font-size: .72rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: .6;
+}
+#lista-itens .item-dano-valor { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+#lista-itens .item-card-descricao,
+#lista-itens .item-card-modificacoes {
+    padding-top: 8px;
+    font-size: .9rem;
+    line-height: 1.5;
+    opacity: .85;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+#lista-itens .item-card-rodape {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+#lista-itens .botao-rolar-item { flex: none; margin: 0; }
+#lista-itens .item-card-resultado {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+#lista-itens .item-card-resultado:empty { display: none; }
+#lista-itens .item-resultado-total {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    color: #ff6b6b;
+    font-variant-numeric: tabular-nums;
+}
+#lista-itens .item-resultado-detalhe {
+    max-height: 4.2em;
+    overflow-y: auto;
+    font-size: .8rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, .65);
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+    #lista-itens .item-card-rodape { flex-direction: column; }
+    #lista-itens .botao-rolar-item { width: 100%; }
+}
+
+/* ===== Botões dos popups (Maldição e Re-roll) ===== */
+.btn-popup-card {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 60%;
+    min-width: 0;
+    margin: 6px auto;
+    padding: 16px 11px;
+    gap: 8px;
+    box-sizing: border-box;
+    background: #1f1212;
+    border: 1px solid var(--linha, #444);
+    border-radius: 14px;
+    transition: .3s;
+}
+
+/* ===== Ações finais da ficha ===== */
+.ficha-acoes {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--linha, #444);
+}
+.ficha-acoes .button { flex: 1; margin: 0; min-height: 48px; }
+.ficha-acoes .button[type="submit"] { flex: 2; }
+.ficha-acoes .button-secundario {
+    background: transparent;
+    border: 1px dashed var(--linha, #444);
+    color: var(--tinta-fraca, #aaa);
+}
+.ficha-acoes .button-secundario:hover { color: var(--tinta, #eee); }
+
+@media (max-width: 560px) {
+    #itens-conteudo .item-form-linha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .item-form-nome, .item-form-categoria { grid-column: 1 / -1; }
+    .item-form-qtd, .item-form-dado       { grid-column: span 1; }
+    .item-form-valor-fixo                 { grid-column: 1 / -1; }
+    .itens-botoes { grid-template-columns: 1fr; }
+    .ficha-acoes { flex-direction: column-reverse; }
+}
+
+/* ===== Técnicas ===== */
+#tecnicas-card { max-height: 85vh !important; overflow-y: auto; padding-bottom: 20px; }
+.tecnica-form { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+/* O .campo global coloca rótulo e input lado a lado; aqui empilhamos (rótulo em cima, campo embaixo, largura total) */
+.tecnica-form .campo {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+.tecnica-form .campo > label {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+    white-space: normal;
+}
+.tecnica-form .campo input,
+.tecnica-form .campo textarea {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.tecnica-form .campo input { height: 44px; }
+.tecnica-form .campo textarea { min-height: 80px; max-height: 240px; resize: vertical; overflow-y: auto; }
+/* tira as setinhas do number, que cortavam o valor */
+.tecnica-form input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.tecnica-form input[type="number"]::-webkit-outer-spin-button,
+.tecnica-form input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.tecnica-form-linha { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.tecnica-aprim-linha { display: grid; grid-template-columns: minmax(0, 1fr) 90px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
+.tecnica-aprim-linha input[type="text"], .tecnica-aprim-linha input[type="number"] { height: 40px; box-sizing: border-box; width: 100%; min-width: 0; }
+.tecnica-aprim-linha .aprim-acum { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; margin: 0; width: auto; font-size: .82rem; opacity: .85; cursor: pointer; }
+.tecnica-aprim-linha .aprim-acum input { width: 16px; height: 16px; margin: 0; accent-color: #8b1a1a; }
+
+/* aprimoramentos: personalizados + gerais, com quantidade (acumulativos) e usos grátis */
+.aprim-bloco .aprim-gerais-titulo { margin: 10px 0 2px; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
+.tecnica-aprim-item.aprim-linha { flex-wrap: wrap; row-gap: 4px; cursor: default; }
+.aprim-linha .aprim-nome { flex: 1 1 150px; min-width: 0; display: flex; align-items: center; gap: 8px; margin: 0; width: auto; overflow-wrap: anywhere; cursor: pointer; }
+.aprim-linha .tec-aprim-custo { margin-left: 0; font-size: .82rem; }
+.aprim-passo { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; white-space: nowrap; }
+.aprim-passo b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.aprim-passo .aprim-btn {
+    width: 28px; height: 28px; padding: 0; line-height: 1; font-size: 1rem; cursor: pointer;
+    background: rgba(0, 0, 0, .35); color: inherit; border: 1px solid rgba(255, 255, 255, .14); border-radius: 6px;
+}
+.aprim-passo .aprim-btn:hover:not(:disabled) { border-color: rgba(220, 70, 70, .8); background: rgba(139, 26, 26, .55); }
+.aprim-passo .aprim-btn:disabled { opacity: .35; cursor: not-allowed; }
+.aprim-passo.aprim-gratis { opacity: .9; color: #ffb4b4; }
+.aprim-gratis-label input { width: 60px; }
+.aprim-usados { font-size: .75rem; opacity: .7; }
+@media (max-width: 560px) { .aprim-linha .aprim-nome { flex-basis: 100%; } }
+#tec-add-aprimoramento, #adicionar-tecnica { width: 100%; }
+#lista-tecnicas { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.tecnica-card { padding: 14px 16px; background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.10); border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tecnica-card h4 { margin: 0; font-size: 1.1rem; overflow-wrap: anywhere; }
+.tecnica-card dl { margin: 0; display: grid; gap: 6px; }
+.tecnica-card dt { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
+.tecnica-card dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tecnica-aprim-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.tecnica-aprim-item span.tec-aprim-custo { margin-left: auto; font-weight: 600; white-space: nowrap; }
+/* checkbox própria dos aprimoramentos (o controle nativo não combina com o tema escuro) */
+.tecnica-aprim-item { cursor: pointer; }
+.tecnica-aprim-item .tec-aprim-check {
+    appearance: none; -webkit-appearance: none;
+    flex: 0 0 auto; width: 20px; height: 20px; margin: 0;
+    display: inline-grid; place-content: center;
+    border: 2px solid rgba(255, 255, 255, .35); border-radius: 5px;
+    background: rgba(0, 0, 0, .35); cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.tecnica-aprim-item .tec-aprim-check::before {
+    content: ""; width: 11px; height: 11px; background: #fff;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transform: scale(0); transition: transform .12s ease;
+}
+.tecnica-aprim-item .tec-aprim-check:hover { border-color: rgba(220, 70, 70, .8); }
+.tecnica-aprim-item .tec-aprim-check:checked { background: #8b1a1a; border-color: #d24a4a; box-shadow: 0 0 0 3px rgba(179, 32, 31, .22); }
+.tecnica-aprim-item .tec-aprim-check:checked::before { transform: scale(1); }
+.tecnica-aprim-item .tec-aprim-check:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.tecnica-aprim-item:has(.tec-aprim-check:checked) .tec-aprim-custo { color: #ff9b9b; }
+.tecnica-rodape { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.tecnica-total { margin-right: auto; font-weight: 600; }
+.tecnica-eficiencia { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; white-space: nowrap; }
+.tecnica-eficiencia input { width: 72px; height: 34px; box-sizing: border-box; text-align: center; -moz-appearance: textfield; appearance: textfield; }
+@media (max-width: 560px) { .tecnica-form-linha { grid-template-columns: 1fr; } }
+
+/* ===== Descanso curto / longo ===== */
+.descanso-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 12px; width: 100%; }
+.descanso-barra .button { flex: 1 1 180px; margin: 0 !important; }
+
+/* ===== Pontos de habilidade disponíveis (modo "ficha já existente") ===== */
+.pontos-livre {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+    margin: 4px auto 12px; padding: 8px 12px; max-width: 520px;
+    border: 1px dashed rgba(220, 70, 70, .5); border-radius: 10px; background: rgba(139, 26, 26, .12); font-size: .85rem;
+}
+.pontos-livre label { margin: 0; width: auto; white-space: nowrap; }
+.pontos-livre input { width: 96px; text-align: center; }
+.pontos-livre .button { min-height: 38px; padding: 0 14px; }
+.pontos-livre small { flex-basis: 100%; opacity: .7; line-height: 1.3; }
+
+/* ===== Mods ajustados à mão (modo "ficha já existente") ===== */
+/* mods ajustados à mão ficam com a mesma aparência dos automáticos; só o cursor muda no modo livre */
+#form-ficha .mod.mod-editavel { cursor: text; }
+
+/* ===== Painéis flutuantes redimensionáveis (Talentos, Técnicas, Anotações, Maldições) ===== */
+/* a altura máxima desconta a posição do topo (120px no desktop, 70px no celular), para o fim do painel
+   e a alça de redimensionar ficarem sempre dentro da tela */
+#form-ficha .card-rolagem.redimensionavel {
+    resize: both; overflow: auto;
+    min-width: 280px; min-height: 240px;
+    max-width: 96vw; max-height: calc(100vh - 136px) !important;
+}
+#form-ficha .card-talentos.redimensionavel { right: auto; width: 340px; }
+@media (max-width: 600px) {
+    #form-ficha .card-rolagem.redimensionavel { max-height: calc(100vh - 86px) !important; }
+}
+
+/* ===== Somente leitura (mestre vendo a ficha de um jogador) ===== */
+.ficha-somente-leitura {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px;
+    margin: 0 0 14px; padding: 10px 14px; font-size: .92rem;
+    border: 1px solid rgba(220, 70, 70, .5); border-radius: 10px; background: rgba(139, 26, 26, .14);
+}
+.ficha-somente-leitura .button { min-height: 38px; padding: 0 16px; margin: 0; }
+#form-ficha.somente-leitura .modo-livre,
+#form-ficha.somente-leitura .ficha-acoes,
+#form-ficha.somente-leitura .descanso-barra,
+#form-ficha.somente-leitura .pontos-livre { display: none !important; }
+#form-ficha.somente-leitura input:disabled,
+#form-ficha.somente-leitura select:disabled,
+#form-ficha.somente-leitura textarea:disabled,
+#form-ficha.somente-leitura button:disabled { opacity: .85; cursor: default; }
+
+/* ===== Modo "ficha já existente" (sem verificação de pontos) ===== */
+.modo-livre {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 10px 14px;
+    border: 1px dashed rgba(220, 70, 70, .5); border-radius: 10px; background: rgba(0, 0, 0, .2);
+    cursor: pointer; font-size: .9rem; line-height: 1.3; text-align: left;
+}
+.modo-livre input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none;
+    flex: 0 0 auto; width: 22px; height: 22px; margin: 0;
+    display: inline-grid; place-content: center;
+    border: 2px solid rgba(255, 255, 255, .35); border-radius: 6px;
+    background: rgba(0, 0, 0, .35); cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.modo-livre input[type="checkbox"]::before {
+    content: ""; width: 12px; height: 12px; background: #fff;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transform: scale(0); transition: transform .12s ease;
+}
+.modo-livre:hover input[type="checkbox"] { border-color: rgba(220, 70, 70, .8); }
+.modo-livre input[type="checkbox"]:checked { background: #8b1a1a; border-color: #d24a4a; box-shadow: 0 0 0 3px rgba(179, 32, 31, .22); }
+.modo-livre input[type="checkbox"]:checked::before { transform: scale(1); }
+.modo-livre input[type="checkbox"]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.modo-livre.ativo { border-style: solid; background: rgba(139, 26, 26, .18); }
+.modo-livre small { display: block; opacity: .7; font-size: .78rem; }
 </style>
 <div class="container">
     <div class="card ficha-card">
 
         <div class="ficha-header">
             <span class="selo">△</span>
-            <h1>{{ $editando ? 'Editar Ficha do Agente' : 'Criar Ficha do Agente' }}</h1>
+            <h1>{{ $somenteLeitura ? 'Ficha do Agente' : ($editando ? 'Editar Ficha do Agente' : 'Criar Ficha do Agente') }}</h1>
             <p class="ficha-subtitulo">Registro Confidencial</p>
         </div>
+        @if ($somenteLeitura)
+            <div class="ficha-somente-leitura">
+                <a href="{{ $voltarUrl ?? route('campanhas.index') }}" class="button">← Voltar</a>
+                <span>Ficha de <strong>{{ $donoNome ?? 'jogador' }}</strong> · somente leitura</span>
+            </div>
+        @endif
 
         <hr>
 
-    <form action="{{ $editando ? route('personagens.update', $personagem->id) : route('fichafeita.store') }}" method="POST">
+    <form id="form-ficha" action="{{ $somenteLeitura ? '#' : ($editando ? route('personagens.update', $personagem->id) : route('fichafeita.store')) }}" method="POST" @if ($somenteLeitura) class="somente-leitura" data-somente-leitura="1" @endif>
         @csrf
         @if($editando)
             @method('PUT')
         @endif
+
+        {{-- Modo "ficha já existente": permite digitar tudo sem o controle de pontos. Não é salvo no banco (fica lembrado no navegador). --}}
+        <label class="modo-livre" title="Desliga a verificação de pontos de atributos, habilidades e nível. Útil para registrar uma ficha que já existe no papel.">
+            <input type="checkbox" id="modo-livre">
+            <span><strong>Ficha já existente</strong> — preencher sem verificação de pontos
+                <small>Atributos, habilidades, BE, sorte e nível aceitam qualquer valor. Os pontos continuam sendo exibidos, mas não bloqueiam.</small></span>
+        </label>
 
         @include('partials.anotacoes')
         
@@ -248,6 +1029,7 @@
                     </select>
                     <button class="button" id="distribuir-niveis">Distribuir Níveis</button>
                 </div>
+                <input type="hidden" id="niveis_profissao" name="niveis_profissao" value="">
                 <div class="campo">
                     <label for="idade">Nível Mundano</label>
                     <input id="nivel-mundano" name="nivel_mundano" type="number" style="width:40%" value="{{ old('nivel_mundano', $personagem->nivel_mundano ?? '') }}" placeholder="Digite o Nível Mundano do agente">
@@ -274,7 +1056,7 @@
                 </div>
                 <div class="campo">
                     <label for="idade">BE</label>
-                    <input id="be" name="be" type="number" style="width:40%" value="{{ old('be', $personagem->be ?? '') }}" placeholder="Digite o BE do agente" readonly>
+                    <input id="be" name="be" type="number" style="width:40%" value="{{ old('be', $personagem->be ?? '') }}" placeholder="Digite o BE do agente" min="0" title="Pode ser ajustado à mão; não mexe nos pontos já gastos em habilidades">
                 </div>
             </div>
 
@@ -287,7 +1069,15 @@
                     </button>
             </div>
             <div class="barras" id="barras-atributos-vitais">
- 
+              {{-- Abas: Vitais (conteúdo original), Armaduras e Resistências. O pai (id vitais-abas) guarda a aba no localStorage. --}}
+              <div id="vitais-abas">
+                <div class="abas-painel" role="tablist">
+                    <button type="button" class="aba-painel ativo" data-aba="vitais">Vitais</button>
+                    <button type="button" class="aba-painel" data-aba="armaduras">Armaduras</button>
+                    <button type="button" class="aba-painel" data-aba="resistencias">Resistências</button>
+                </div>
+              <div class="aba-conteudo ativo" data-aba="vitais">
+
                 <div class="barra-grupo">
                     <div class="barra-topo">
                         <span class="barra-nome">Vida</span>
@@ -326,6 +1116,12 @@
                 </div>
                 <input type="hidden" id="aura_atual" name="aura_atual" value="{{ $personagem->aura_atual ?? '' }}">
                 <input type="hidden" id="aura_maxima" name="aura_maxima" value="{{ $personagem->aura_maxima ?? '' }}">
+
+                {{-- Descanso: recupera Vida, Sanidade e Aura conforme as regras rápidas de descanso --}}
+                <div class="descanso-barra">
+                    <button type="button" class="button descanso-btn" id="descanso-curto" title="1–2 horas: Vida +1, Sanidade +1d2, Aura +1d20">🌙 Descanso curto</button>
+                    <button type="button" class="button descanso-btn" id="descanso-longo" title="6–8 horas: Vida +1d3, Sanidade +1d4, Aura +4d20">🛏️ Descanso longo</button>
+                </div>
             
                 {{-- Atributos vitais personalizados --}}
                 <div id="vitais-extras-lista"></div>
@@ -354,6 +1150,45 @@
                 </div>
             
                 <input type="hidden" id="vitais_extras" name="vitais_extras" value="">
+              </div>
+
+              <div class="aba-conteudo" data-aba="armaduras">
+                <div class="arm-natural">
+                    <label for="armadura-natural">Armadura natural</label>
+                    <input type="number" id="armadura-natural" min="0" step="1" value="0" title="Reduz o dano recebido (ex.: propriedade Duro)">
+                </div>
+                <div class="arm-lista" id="armadura-lista"></div>
+                <button type="button" class="botao-adicionar-talento" id="armadura-nova">+ Nova peça</button>
+                <p class="arm-aviso" id="armadura-aviso" style="display:none"></p>
+                <div class="arm-resumo" id="armadura-resumo"></div>
+                <div class="arm-rolar">
+                    <button type="button" class="button" id="armadura-rolar-local">Rolar local (d100)</button>
+                    <span id="armadura-rolar-res" class="arm-rolar-res"></span>
+                </div>
+                <div class="arm-dano">
+                    <h4>Aplicar dano</h4>
+                    <div class="arm-dano-campos">
+                        <input type="number" id="armadura-dano-valor" min="0" step="1" value="0" aria-label="Valor do dano">
+                        <select id="armadura-dano-tipo" aria-label="Tipo de dano">
+                            @foreach ($tiposDanoArmadura as $tipoDano)
+                                <option value="{{ $tipoDano }}">{{ ucfirst($tipoDano) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <label class="arm-check"><input type="checkbox" id="armadura-dano-usar" checked> Usar resistências e imunidades</label>
+                    <div class="arm-log" id="armadura-log"></div>
+                    <button type="button" class="button" id="armadura-aplicar-dano">Aplicar dano</button>
+                </div>
+              </div>
+
+              <div class="aba-conteudo" data-aba="resistencias">
+                <h4 class="arm-grupo-titulo">Resistências (metade do dano)</h4>
+                <div class="arm-chips" id="armadura-chips-res"></div>
+                <h4 class="arm-grupo-titulo">Imunidades (dano zero)</h4>
+                <div class="arm-chips" id="armadura-chips-imu"></div>
+              </div>
+              <input type="hidden" id="armaduras" name="armaduras" value="">
+              </div>
             </div>
 
             <hr>
@@ -369,52 +1204,57 @@
                 <div class="ficha-header colapsavel">
                     <h3 class="secao-titulo" id="pontos-restantes-texto">Pontos: {{ $pontosRestantesIniciais }}</h3>
                 </div>
+                <div class="pontos-extras">
+                    <label for="pontos-extras-atributos" title="Pontos de atributo ganhos de fontes externas">Pontos extras</label>
+                    <input id="pontos-extras-atributos" name="pontos_extras_atributos" type="text" inputmode="numeric"
+                           placeholder="0" value="{{ $extraAtributos ?: '' }}">
+                </div>
                 <div class="atributos-grid">
                     <div class="atributo-card">
                         <span class="atributo-nome">Força</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="forca" name="forca" value="{{ old('forca', $personagem->forca ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-forca" name="mod_forca" value="{{ isset($personagem->forca) ? intdiv((int)$personagem->forca, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-forca" name="mod_forca" value="{{ $modsManuais['forca'] ?? (isset($personagem->forca) ? $modDe((int)$personagem->forca) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card" id="card-constituicao">
                         <span class="atributo-nome">Constituição</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="constituicao" name="constituicao" value="{{ old('constituicao', $personagem->constituicao ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-constituicao" name="mod_constituicao" value="{{ isset($personagem->constituicao) ? intdiv((int)$personagem->constituicao, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-constituicao" name="mod_constituicao" value="{{ $modsManuais['constituicao'] ?? (isset($personagem->constituicao) ? $modDe((int)$personagem->constituicao) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome">Destreza</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="destreza" name="destreza" value="{{ old('destreza', $personagem->destreza ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-destreza" name="mod_destreza" value="{{ isset($personagem->destreza) ? intdiv((int)$personagem->destreza, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-destreza" name="mod_destreza" value="{{ $modsManuais['destreza'] ?? (isset($personagem->destreza) ? $modDe((int)$personagem->destreza) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome">Conhecimento</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="conhecimento" name="conhecimento" value="{{ old('conhecimento', $personagem->conhecimento ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-conhecimento" name="mod_conhecimento" value="{{ isset($personagem->conhecimento) ? intdiv((int)$personagem->conhecimento, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-conhecimento" name="mod_conhecimento" value="{{ $modsManuais['conhecimento'] ?? (isset($personagem->conhecimento) ? $modDe((int)$personagem->conhecimento) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome">Carisma</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="carisma" name="carisma" value="{{ old('carisma', $personagem->carisma ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-carisma" name="mod_carisma" value="{{ isset($personagem->carisma) ? intdiv((int)$personagem->carisma, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-carisma" name="mod_carisma" value="{{ $modsManuais['carisma'] ?? (isset($personagem->carisma) ? $modDe((int)$personagem->carisma) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome">Percepção</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="percepcao" name="percepcao" value="{{ old('percepcao', $personagem->percepcao ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-percepcao" name="mod_percepcao" value="{{ isset($personagem->percepcao) ? intdiv((int)$personagem->percepcao, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-percepcao" name="mod_percepcao" value="{{ $modsManuais['percepcao'] ?? (isset($personagem->percepcao) ? $modDe((int)$personagem->percepcao) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome">Alma</span>
                         <input type="text" class="atributo-valor" placeholder="0" id="alma" name="alma" value="{{ old('alma', $personagem->alma ?? '') }}">
                         <span class="atributo-nome">Mod</span>
-                        <input type="text" class="mod" placeholder="0" id="mod-alma" name="mod_alma" value="{{ isset($personagem->alma) ? intdiv((int)$personagem->alma, 10) : '' }}" readonly>
+                        <input type="text" class="mod" placeholder="0" id="mod-alma" name="mod_alma" value="{{ $modsManuais['alma'] ?? (isset($personagem->alma) ? $modDe((int)$personagem->alma) : '') }}" readonly title="Marque “Ficha já existente” para ajustar o mod à mão">
                     </div>
                     <div class="atributo-card">
                         <span class="atributo-nome" id="nome-sorte" style="{{ isset($personagem->sorte) ? 'color: var(--tinta-fraca);' : 'color: rgba(189, 3, 3, 0.658);' }}">Sorte</span>
-                        <input type="text" id="sorte" name="sorte" class="atributo-valor" placeholder="0" value="{{ old('sorte', $personagem->sorte ?? '') }}" readonly>
+                        <input type="text" id="sorte" name="sorte" class="atributo-valor" placeholder="0" value="{{ old('sorte', $personagem->sorte ?? '') }}" title="Role ou digite a Sorte">
                     </div>
                     
                     <button class="button" style="width: 30%" id="espalhar-pontos">
@@ -435,6 +1275,7 @@
                 </button>
             </div>
 
+            <div class="acessos-grade">
             <div class="ficha-header" id="maldicao-div">
                 <button class="button" style="margin-top:8px;" id="maldicao-adicao">
                     Maldição
@@ -442,8 +1283,14 @@
             </div>
 
             <div class="ficha-header" id="acessos-div">
-                <button class="button" style="margin-top:8px;" id="talentos-mundanos">
-                    Talentos Mundanos
+                <button type="button" class="button" style="margin-top:8px;" id="tecnicas-abrir">
+                    Técnicas <span class="contador-painel" id="cont-tecnicas"></span>
+                </button>
+                <button type="button" class="button" style="margin-top:8px;" id="talentos-mundanos">
+                    Talentos Mundanos <span class="contador-painel" id="cont-talentos"></span>
+                </button>
+                <button type="button" class="button" style="margin-top:8px;" id="talentos-arte-abrir" title="Técnicas de Hexomancia e de Fisiomancia">
+                    Técnicas de arte <span class="contador-painel" id="cont-talentos-arte"></span>
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="anotacoes-abrir">
                     Anotações
@@ -451,9 +1298,10 @@
             </div>
 
             <div class="ficha-header" id="rolagem-setor-conteudo">
-                <button class="button" id="rolarD100" style="width:40%;margin-top:10px">
+                <button class="button" id="rolarD100">
                     Rolagem
                 </button>
+            </div>
             </div>
 
             <div class="rolador-dados" id="rolador-dados">
@@ -496,6 +1344,20 @@
                 </div>
                 <div class="ficha-header" id="pontos-a-distribuir">
                     <h4 id="pontos-habilidade-restantes-texto">Pontos a distribuir: </h4>
+                    <input type="hidden" id="pontos-habilidade-ajuste" name="pontos_habilidade_ajuste" value="{{ $ajusteHabilidades }}">
+                    <input type="hidden" id="mods-atributos" name="mods_atributos" value="{{ json_encode((object) $modsManuais) }}">
+                    {{-- Só no modo "ficha já existente": define direto quantos pontos ficam disponíveis (ajusta os pontos extras) --}}
+                    <div class="pontos-livre" id="pontos-livre" hidden>
+                        <label for="pontos-livre-valor">Definir pontos disponíveis</label>
+                        <input id="pontos-livre-valor" type="number" inputmode="numeric" placeholder="0">
+                        <button type="button" class="button" id="pontos-livre-aplicar">Aplicar</button>
+                        <small>O valor digitado vira o saldo de "Pontos a distribuir". A diferença fica salva como ajuste da ficha e não mexe nos pontos extras.</small>
+                    </div>
+                    <div class="pontos-extras">
+                        <label for="pontos-extras-habilidades" title="Pontos de habilidade ganhos de fontes externas">Pontos extras</label>
+                        <input id="pontos-extras-habilidades" name="pontos_extras_habilidades" type="text" inputmode="numeric"
+                               placeholder="0" value="{{ $extraHabilidades ?: '' }}">
+                    </div>
                 </div>
 
                 <div id="habilidades-conteudo">
@@ -886,6 +1748,7 @@
                 <div class="itens-adicionados-titulo" id="itens-adicionados-titulo" style="display:none">
                     <h3 class="secao-titulo">Itens Adicionados</h3>
                 </div>
+                <input type="hidden" id="itens" name="itens" value="">
                 <div class="lista-itens" id="lista-itens"></div>
             </div>
                 
@@ -904,30 +1767,116 @@
                 </div>
             </div>
 
-            <button class="button" type="button" id="preencher-teste" style=" margin-top:8px;margin-bottom:8px;">
-                Preencher com Dados de Teste
-            </button>
-
-            <button class="button" type="submit">{{ $editando ? 'Salvar Alterações' : 'Salvar Ficha' }}</button>
+            <div class="ficha-acoes">
+                <button class="button button-secundario" type="button" id="preencher-teste">Ficha Teste</button>
+                <button class="button" type="submit">{{ $editando ? 'Salvar Alterações' : 'Salvar Ficha' }}</button>
+            </div>
 
         </div>
 
-        <div class="card card-rolagem card-talentos" id="talentos-mundanos-card" style="max-height: 50%; overflow-y:auto;">
-            <button class="botao-fechar" id="fechar-talentos">X</button>
+        <div class="card card-rolagem card-talentos" id="talentos-mundanos-card">
+            <button type="button" class="botao-fechar" id="fechar-talentos" title="Fechar (Esc)" aria-label="Fechar">✕</button>
 
             <div class="botoes-grid" style="text-align:center">
                 <h1>Talentos Mundanos</h1>
             </div>
 
-            <div class="lista-talentos" style="justify-content:center;" id="lista-talentos"></div>
+            <input type="hidden" id="talentos" name="talentos" value="">
+            <div class="pastas-barra" id="pastas-talentos"></div>
 
-            <button class="botao-adicionar-talento" id="adicionar-talento">
+            <button type="button" class="botao-adicionar-talento" id="adicionar-talento">
                 + Adicionar Talento
             </button>
+
+            <div class="lista-talentos" id="lista-talentos"></div>
+            <p class="vazio-lista" id="talentos-vazio" style="display:none"></p>
+        </div>
+
+        {{-- Técnicas de arte: Hexomancia e Fisiomancia em abas. Mesma mecânica dos Talentos Mundanos (custo de Aura, ativar, pastas);
+             todos ficam no mesmo JSON "talentos", separados pelo campo "tipo". --}}
+        <div class="card card-rolagem card-talentos" id="talentos-arte-card">
+            <button type="button" class="botao-fechar" id="fechar-talentos-arte" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+
+            <div class="botoes-grid" style="text-align:center">
+                <h1>Técnicas de arte</h1>
+            </div>
+
+            <div class="abas-painel" role="tablist">
+                <button type="button" class="aba-painel ativo" data-aba="hexomancia">Hexomancia <span class="contador-painel" id="cont-talentos-hexomancia"></span></button>
+                <button type="button" class="aba-painel" data-aba="fisiomancia">Fisiomancia <span class="contador-painel" id="cont-talentos-fisiomancia"></span></button>
+            </div>
+
+            <div class="aba-conteudo ativo" data-aba="hexomancia">
+                <div class="pastas-barra" id="pastas-talentos-hexomancia"></div>
+                <button type="button" class="botao-adicionar-talento" id="adicionar-talento-hexomancia">+ Adicionar técnica</button>
+                <div class="lista-talentos" id="lista-talentos-hexomancia"></div>
+                <p class="vazio-lista" id="talentos-hexomancia-vazio" style="display:none"></p>
+            </div>
+
+            {{-- Fisiomancia tem sub-abas: as técnicas e as propriedades fisiomânticas (catálogo em resources/data/propriedades_fisiomantes.json
+                 e propriedades salvas na ficha, coluna propriedades_fisiomantes). O pai das sub-abas é este bloco (id usado no localStorage). --}}
+            <div class="aba-conteudo" data-aba="fisiomancia" id="arte-fisio-subabas">
+                <div class="abas-painel abas-internas" role="tablist">
+                    <button type="button" class="aba-painel ativo" data-aba="tecnicas">Técnicas</button>
+                    <button type="button" class="aba-painel" data-aba="propriedades">Propriedades fisiomânticas <span class="contador-painel" id="cont-propriedades"></span></button>
+                </div>
+
+                <div class="aba-conteudo ativo" data-aba="tecnicas">
+                    <div class="pastas-barra" id="pastas-talentos-fisiomancia"></div>
+                    <button type="button" class="botao-adicionar-talento" id="adicionar-talento-fisiomancia">+ Adicionar técnica</button>
+                    <div class="lista-talentos" id="lista-talentos-fisiomancia"></div>
+                    <p class="vazio-lista" id="talentos-fisiomancia-vazio" style="display:none"></p>
+                </div>
+
+                <div class="aba-conteudo propriedades-fisio" data-aba="propriedades" id="propriedades-fisio">
+                    <h3 class="propriedades-titulo">Propriedades fisiomânticas</h3>
+                    <input type="hidden" id="propriedades-fisiomantes" name="propriedades_fisiomantes" value="">
+
+                    <h5 class="maldicao-subtitulo">Minhas propriedades</h5>
+                    <div id="prop-minhas-lista"></div>
+                    <p class="vazio-lista" id="prop-minhas-vazio">Nenhuma propriedade salva. Pesquise no catálogo e clique em “Salvar”.</p>
+
+                    <h5 class="maldicao-subtitulo">Catálogo</h5>
+                    <div class="prop-busca-linha">
+                        <input type="search" id="prop-busca" class="prop-busca" placeholder="Pesquisar propriedade, material ou efeito…" autocomplete="off">
+                        <select id="prop-grupo" class="prop-grupo"><option value="">Todos os grupos</option></select>
+                    </div>
+                    <p class="prop-grupo-descricao" id="prop-grupo-descricao"></p>
+                    <div id="prop-catalogo"></div>
+                    <p class="vazio-lista" id="prop-catalogo-vazio">Digite o nome de uma propriedade, material ou efeito para pesquisar.</p>
+
+                    <details class="tecnica-novo" id="prop-personalizada">
+                        <summary>Propriedade personalizada</summary>
+                        <div class="tecnica-form">
+                            <div class="tecnica-form-linha">
+                                <div class="campo">
+                                    <label for="prop-pers-nome">Nome</label>
+                                    <input id="prop-pers-nome" type="text" placeholder="Nome da propriedade">
+                                </div>
+                                <div class="campo">
+                                    <label for="prop-pers-fonte">Fonte</label>
+                                    <input id="prop-pers-fonte" type="text" placeholder="Material, ser ou situação">
+                                </div>
+                            </div>
+                            <div class="tecnica-form-linha">
+                                <div class="campo">
+                                    <label for="prop-pers-ameaca">Ameaça</label>
+                                    <input id="prop-pers-ameaca" type="number" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="campo">
+                                <label for="prop-pers-descricao">Descrição</label>
+                                <textarea id="prop-pers-descricao" placeholder="Efeito da propriedade"></textarea>
+                            </div>
+                            <button type="button" class="botao-adicionar-talento" id="prop-pers-salvar">+ Salvar propriedade</button>
+                        </div>
+                    </details>
+                </div>
+            </div>
         </div>
 
         <div class="card card-rolagem" id="card-rolagem">
-            <button class="botao-fechar" id="x">✕</button>
+            <button class="botao-fechar" id="x" title="Fechar (Esc)" aria-label="Fechar">✕</button>
             <div class="titulo-rolagem">
                 <h1>Rolagem</h1>
             </div>
@@ -964,6 +1913,79 @@
             </div>
         </div>
 
+        <input type="hidden" id="tecnicas" name="tecnicas" value="">
+        <input type="hidden" id="pastas" name="pastas" value="">
+
+        <div class="card card-rolagem card-talentos" id="tecnicas-card">
+            <button type="button" class="botao-fechar" id="fechar-tecnicas" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+
+            <div class="botoes-grid" style="text-align:center">
+                <h1>Técnicas</h1>
+            </div>
+
+            <div class="abas-painel" role="tablist">
+                <button type="button" class="aba-painel ativo" data-aba="hexomancia">Técnicas de Hexomancia <span class="contador-painel" id="cont-tecnicas-hexomancia"></span></button>
+                <button type="button" class="aba-painel" data-aba="fisiomancia">Técnicas de Fisiomancia <span class="contador-painel" id="cont-tecnicas-fisiomancia"></span></button>
+            </div>
+
+            <div class="pastas-barra" id="pastas-tecnicas"></div>
+
+            <details class="tecnica-novo" id="tecnica-novo" open>
+            <summary>Nova técnica</summary>
+            <div class="tecnica-form">
+                <div class="campo">
+                    <label for="tec-nome">Nome</label>
+                    <input id="tec-nome" type="text" placeholder="Nome da técnica">
+                </div>
+                <div class="campo">
+                    <label for="tec-descricao">Descrição</label>
+                    <textarea id="tec-descricao" placeholder="Descrição da técnica"></textarea>
+                </div>
+                <div class="campo">
+                    <label for="tec-logica">Lógica de obtenção</label>
+                    <textarea id="tec-logica" placeholder="Como a técnica é obtida"></textarea>
+                </div>
+                <div class="campo">
+                    <label for="tec-pasta">Pasta</label>
+                    <select id="tec-pasta"></select>
+                </div>
+                <div class="tecnica-form-linha">
+                    <div class="campo">
+                        <label for="tec-nivel" id="tec-nivel-rotulo">Nível de maldição requisitado</label>
+                        <input id="tec-nivel" type="number" min="0" placeholder="0">
+                    </div>
+                    <div class="campo">
+                        <label for="tec-custo">Custo (Aura)</label>
+                        <input id="tec-custo" type="number" min="0" placeholder="0">
+                    </div>
+                </div>
+                <div class="campo">
+                    <label for="tec-eficiencia" title="Aura abatida do custo base da técnica. Não afeta o custo dos aprimoramentos.">Eficiência (Aura abatida do custo base)</label>
+                    <input id="tec-eficiencia" type="number" min="0" placeholder="0">
+                </div>
+                <div class="campo">
+                    <label for="tec-processo">Processo</label>
+                    <textarea id="tec-processo" placeholder="Processo para executar a técnica"></textarea>
+                </div>
+                <div class="campo">
+                    <label for="tec-efeito">Efeito</label>
+                    <textarea id="tec-efeito" placeholder="Efeito da técnica"></textarea>
+                </div>
+
+                <div class="campo">
+                    <label>Aprimoramentos</label>
+                    <div id="tec-aprimoramentos-form"></div>
+                    <button type="button" class="button" id="tec-add-aprimoramento">+ Aprimoramento</button>
+                </div>
+
+                <button type="button" class="botao-adicionar-talento" id="adicionar-tecnica">+ Adicionar Técnica</button>
+            </div>
+            </details>
+
+            <div id="lista-tecnicas"></div>
+            <p class="vazio-lista" id="tecnicas-vazio" style="display:none"></p>
+        </div>
+
         <div class="popup" id="popup">
             <div class="popup-conteudo">
                 <h3>Aviso</h3>
@@ -980,40 +2002,12 @@
             <div class="popup-conteudo">
                 <p id="mensagem-popup-maldicao"></p>
 
-                <button class="atributo-card" 
-                style="width: 60%
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                background: #1f1212;
-                border: 1px solid var(--linha);
-                border-radius: 14px;
-                padding: 16px 11px;
-                gap: 8px;
-                min-width: 0;
-                transition: .3s;"
-                id="rolagem-raridade">
+                <button class="atributo-card btn-popup-card" id="rolagem-raridade">
                     Rolar Raridade
                 </button>
                 
                 <div id="div-maldicao" style="display:none">
-                    <button class="atributo-card" 
-                    style="width: 60%
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    background: #1f1212;
-                    border: 1px solid var(--linha);
-                    border-radius: 14px;
-                    padding: 16px 11px;
-                    gap: 8px;
-                    min-width: 0;
-                    transition: .3s;"
-                    id="rolagem-maldicao-def">
+                    <button class="atributo-card btn-popup-card" id="rolagem-maldicao-def">
                         Rolar Maldição
                     </button>
                 </div>
@@ -1081,67 +2075,19 @@
                 <p id="popup-re-roll-mensagem"></p>
                 <div class="botoes-grid">
 
-                    <button class="atributo-card" id="re-roll-vida" style="width: 60%
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    background: #1f1212;
-                    border: 1px solid var(--linha);
-                    border-radius: 14px;
-                    padding: 16px 11px;
-                    gap: 8px;
-                    min-width: 0;
-                    transition: .3s;">
+                    <button class="atributo-card btn-popup-card" id="re-roll-vida">
                         Re-rolar seus Pontos de Vida
                     </button>
 
-                    <button class="atributo-card" id="re-roll-sanidade" style="width: 60%
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    background: #1f1212;
-                    border: 1px solid var(--linha);
-                    border-radius: 14px;
-                    padding: 16px 11px;
-                    gap: 8px;
-                    min-width: 0;
-                    transition: .3s;">
+                    <button class="atributo-card btn-popup-card" id="re-roll-sanidade">
                         Re-rolar seus Pontos de Sanidade
                     </button>
 
-                    <button class="atributo-card" id="re-roll-sorte" style="width: 60%
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    background: #1f1212;
-                    border: 1px solid var(--linha);
-                    border-radius: 14px;
-                    padding: 16px 11px;
-                    gap: 8px;
-                    min-width: 0;
-                    transition: .3s;">
+                    <button class="atributo-card btn-popup-card" id="re-roll-sorte">
                         Re-rolar seus Pontos de Sorte
                     </button>
 
-                    <button class="atributo-card" id="re-roll-aura" style="width: 60%
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    background: #1f1212;
-                    border: 1px solid var(--linha);
-                    border-radius: 14px;
-                    padding: 16px 11px;
-                    gap: 8px;
-                    min-width: 0;
-                    transition: .3s;">
+                    <button class="atributo-card btn-popup-card" id="re-roll-aura">
                         Re-rolar seus Pontos de Aura
                     </button>
 
@@ -1161,7 +2107,7 @@
         </div>
 
         <div class="card card-rolagem card-talentos card-maldicoes" id="maldicao-card">
-    <button type="button" class="botao-fechar" id="fechar-maldicao-card">X</button>
+    <button type="button" class="botao-fechar" id="fechar-maldicao-card" title="Fechar (Esc)" aria-label="Fechar">✕</button>
 
     <div class="botoes-grid" style="text-align:center">
         <h1>Maldições</h1>
@@ -1170,11 +2116,11 @@
     <div class="maldicao-config">
         <div class="campo">
             <label for="nivel-hexomante">Nível de Hexomante</label>
-            <input id="nivel-hexomante" name="nivel_hexomante" type="number" min="0" placeholder="Nível">
+            <input id="nivel-hexomante" name="nivel_hexomante" type="number" min="0" placeholder="Nível" value="{{ old('nivel_hexomante', $personagem->nivel_hexomante ?? 0) }}">
         </div>
         <div class="campo">
             <label for="ameaca">Ameaça de Maldição</label>
-            <input id="ameaca" name="ameaca" type="number" min="0" placeholder="Ameaça">
+            <input id="ameaca" name="ameaca" type="number" min="0" placeholder="Ameaça" value="{{ old('ameaca', $personagem->ameaca ?? 0) }}">
         </div>
     </div>
 
@@ -1184,6 +2130,11 @@
                 <select id="maldicao-catalogo"></select>
             </div>
             <p class="maldicao-previa" id="maldicao-previa"></p>
+            @auth
+                @unless (\App\Support\AcessoMaldicoes::podeVerRestritas(auth()->user()))
+                    <p class="maldicao-previa"><a href="{{ route('maldicoes.index') }}">Tem a chave do mestre? Use-a no catálogo de maldições.</a></p>
+                @endunless
+            @endauth
 
             <div class="maldicao-custom" id="maldicao-custom">
                 <div class="campo">
@@ -1209,10 +2160,491 @@
 
 <script>window.VITAIS_EXTRAS = @json($vitaisExtrasSalvos);</script>
 <script src="{{ asset('js/vitais.js') }}"></script>
+<script>
+// ==================== Pastas (talentos, técnicas, anotações) + atalhos ====================
+window.PastasFicha = (function(){
+    const TIPOS = ["talentos", "tecnicas", "anotacoes", "talentos_hexomancia", "talentos_fisiomancia"];
+    const salvo = @json($pastasSalvas);
+    const estado = {};
+    TIPOS.forEach(function(t){
+        estado[t] = Array.isArray(salvo[t]) ? salvo[t].filter(n => typeof n === "string" && n.trim() !== "") : [];
+    });
+    const filtro = {};
+    const cfg = {};
+    const modo = {};
+    const confirmarExcl = {};
+
+    function esc(t){
+        return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function usos(tipo){ return cfg[tipo] ? cfg[tipo].usadas() : []; }
+
+    function nomes(tipo){
+        const vistos = new Set();
+        const out = [];
+        estado[tipo].concat(usos(tipo).filter(n => n)).forEach(function(n){
+            if(!vistos.has(n)){ vistos.add(n); out.push(n); }
+        });
+        return out.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }
+
+    function visivel(tipo, pasta){
+        const f = filtro[tipo] || "__todas__";
+        if(f === "__todas__") return true;
+        if(f === "__sem__") return !pasta;
+        return pasta === f;
+    }
+
+    function filtroAtual(tipo){
+        const f = filtro[tipo] || "__todas__";
+        return (f === "__todas__" || f === "__sem__") ? "" : f;
+    }
+
+    function opcoes(tipo, atual){
+        let lista = nomes(tipo);
+        if(atual && !lista.includes(atual)) lista = lista.concat([atual]);
+        return '<option value="">Sem pasta</option>' + lista.map(function(n){
+            return '<option value="' + esc(n) + '"' + (n === atual ? " selected" : "") + ">" + esc(n) + "</option>";
+        }).join("");
+    }
+
+    function chip(valor, rotulo, qtd, ativo){
+        return '<button type="button" class="pasta-chip' + (ativo === valor ? " ativo" : "") +
+            '" data-pasta="' + esc(valor) + '">' + esc(rotulo) +
+            ' <span class="pasta-qtd">' + qtd + "</span></button>";
+    }
+
+    function render(tipo){
+        const c = cfg[tipo];
+        if(!c) return;
+        const lista = nomes(tipo);
+        const f = filtro[tipo] || "__todas__";
+        if(f !== "__todas__" && f !== "__sem__" && !lista.includes(f)) filtro[tipo] = "__todas__";
+        const ativo = filtro[tipo] || "__todas__";
+        const us = usos(tipo);
+
+        let h = '<div class="pastas-chips">';
+        h += chip("__todas__", "Todas", us.length, ativo);
+        h += chip("__sem__", "Sem pasta", us.filter(n => !n).length, ativo);
+        lista.forEach(function(n){
+            h += chip(n, "📁 " + n, us.filter(x => x === n).length, ativo);
+        });
+        h += '<button type="button" class="pasta-chip pasta-nova" data-acao="nova">＋ Nova pasta</button></div>';
+
+        if(ativo !== "__todas__" && ativo !== "__sem__"){
+            const conf = !!confirmarExcl[tipo];
+            h += '<div class="pastas-acoes">' +
+                '<button type="button" class="pasta-link" data-acao="renomear">Renomear pasta</button>' +
+                '<button type="button" class="pasta-link perigo' + (conf ? " confirmar" : "") + '" data-acao="excluir">' +
+                (conf ? "Clique de novo para excluir (os itens ficam sem pasta)" : "Excluir pasta") + "</button></div>";
+        }
+
+        const m = modo[tipo];
+        if(m){
+            h += '<div class="pasta-editor"><input type="text" class="pasta-editor-input" maxlength="60" placeholder="Nome da pasta" value="' +
+                esc(m.tipo === "renomear" ? m.alvo : "") + '">' +
+                '<button type="button" class="button" data-acao="salvar-pasta">Salvar</button>' +
+                '<button type="button" class="pasta-link" data-acao="cancelar-pasta">Cancelar</button></div>' +
+                '<p class="pasta-erro" style="display:none"></p>';
+        }
+
+        c.barra.innerHTML = h;
+        if(m){
+            const inp = c.barra.querySelector(".pasta-editor-input");
+            inp.focus();
+            inp.select();
+        }
+    }
+
+    function avisarMudanca(){
+        const campo = document.getElementById("pastas");
+        if(campo) campo.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function mudou(tipo){
+        const c = cfg[tipo];
+        if(c.aoMudarPastas) c.aoMudarPastas();
+        render(tipo);
+        if(c.aoFiltrar) c.aoFiltrar();
+        avisarMudanca();
+    }
+
+    function salvarPasta(tipo){
+        const c = cfg[tipo];
+        const m = modo[tipo];
+        const inp = c.barra.querySelector(".pasta-editor-input");
+        const erro = c.barra.querySelector(".pasta-erro");
+        const nome = inp.value.trim();
+        const falhar = function(msg){ erro.textContent = msg; erro.style.display = "block"; inp.focus(); };
+
+        if(nome === "") return falhar("Digite um nome para a pasta.");
+        if(nome === "__todas__" || nome === "__sem__") return falhar("Esse nome não pode ser usado.");
+        const repetido = nomes(tipo).some(n => n.toLowerCase() === nome.toLowerCase() && !(m.tipo === "renomear" && n === m.alvo));
+        if(repetido) return falhar("Já existe uma pasta com esse nome.");
+
+        if(m.tipo === "nova"){
+            estado[tipo].push(nome);
+        } else {
+            const i = estado[tipo].indexOf(m.alvo);
+            if(i >= 0) estado[tipo][i] = nome; else estado[tipo].push(nome);
+            if(c.aoRenomear) c.aoRenomear(m.alvo, nome);
+        }
+        filtro[tipo] = nome;
+        modo[tipo] = null;
+        mudou(tipo);
+    }
+
+    function registrar(tipo, config){
+        cfg[tipo] = config;
+        config.barra.addEventListener("click", function(e){
+            const btn = e.target.closest("button");
+            if(!btn) return;
+
+            if(btn.dataset.pasta !== undefined){
+                filtro[tipo] = btn.dataset.pasta;
+                confirmarExcl[tipo] = false;
+                modo[tipo] = null;
+                render(tipo);
+                if(config.aoFiltrar) config.aoFiltrar();
+                return;
+            }
+
+            const acao = btn.dataset.acao;
+            if(acao === "nova"){ modo[tipo] = { tipo: "nova" }; render(tipo); }
+            else if(acao === "renomear"){ modo[tipo] = { tipo: "renomear", alvo: filtro[tipo] }; render(tipo); }
+            else if(acao === "cancelar-pasta"){ modo[tipo] = null; render(tipo); }
+            else if(acao === "salvar-pasta"){ salvarPasta(tipo); }
+            else if(acao === "excluir"){
+                if(!confirmarExcl[tipo]){
+                    confirmarExcl[tipo] = true;
+                    render(tipo);
+                    setTimeout(function(){
+                        if(confirmarExcl[tipo]){ confirmarExcl[tipo] = false; render(tipo); }
+                    }, 4000);
+                    return;
+                }
+                const alvo = filtro[tipo];
+                estado[tipo] = estado[tipo].filter(n => n !== alvo);
+                if(config.aoExcluir) config.aoExcluir(alvo);
+                filtro[tipo] = "__todas__";
+                confirmarExcl[tipo] = false;
+                mudou(tipo);
+            }
+        });
+
+        config.barra.addEventListener("keydown", function(e){
+            if(!e.target.classList.contains("pasta-editor-input")) return;
+            if(e.key === "Enter"){ e.preventDefault(); salvarPasta(tipo); }
+            if(e.key === "Escape"){ e.preventDefault(); e.stopPropagation(); modo[tipo] = null; render(tipo); }
+        });
+
+        render(tipo);
+    }
+
+    function json(){
+        const out = {};
+        TIPOS.forEach(function(t){ out[t] = nomes(t); });
+        return JSON.stringify(out);
+    }
+
+    return { registrar: registrar, opcoes: opcoes, visivel: visivel, filtroAtual: filtroAtual,
+             atualizar: render, json: json };
+})();
+
+// Esc fecha o painel aberto; botão "voltar ao topo"
+(function(){
+    document.addEventListener("keydown", function(e){
+        if(e.key !== "Escape") return;
+        const abertos = document.querySelectorAll("#form-ficha .card-rolagem.ativo");
+        if(abertos.length) abertos[abertos.length - 1].classList.remove("ativo");
+    });
+
+    const topo = document.createElement("button");
+    topo.type = "button";
+    topo.className = "voltar-topo";
+    topo.title = "Voltar ao topo";
+    topo.setAttribute("aria-label", "Voltar ao topo");
+    topo.textContent = "↑";
+    topo.addEventListener("click", function(){ window.scrollTo({ top: 0, behavior: "smooth" }); });
+    document.body.appendChild(topo);
+    window.addEventListener("scroll", function(){
+        topo.classList.toggle("visivel", window.scrollY > 600);
+    }, { passive: true });
+})();
+
+// Abas dentro dos painéis (.abas-painel > .aba-painel[data-aba]; conteúdos em .aba-conteudo[data-aba] filhos diretos do painel).
+// A aba escolhida fica lembrada no navegador; o painel recebe o evento "aba-mudou".
+(function(){
+    document.querySelectorAll(".abas-painel").forEach(function(abas){
+        const painel = abas.parentElement;
+        function ativar(nome, lembrar){
+            const b = abas.querySelector('.aba-painel[data-aba="' + nome + '"]');
+            if(!b) return;
+            abas.querySelectorAll(".aba-painel").forEach(x => x.classList.toggle("ativo", x === b));
+            painel.querySelectorAll(":scope > .aba-conteudo").forEach(c => c.classList.toggle("ativo", c.dataset.aba === nome));
+            if(lembrar){ try { localStorage.setItem("ficha-aba:" + painel.id, nome); } catch(e) {} }
+            painel.dispatchEvent(new CustomEvent("aba-mudou", { detail: nome }));
+        }
+        abas.addEventListener("click", function(e){
+            const b = e.target.closest(".aba-painel");
+            if(b) ativar(b.dataset.aba, true);
+        });
+        try {
+            const salva = localStorage.getItem("ficha-aba:" + painel.id);
+            if(salva) ativar(salva, false);
+        } catch(e) {}
+    });
+})();
+
+// Painéis flutuantes redimensionáveis: arraste o canto inferior direito; o tamanho fica lembrado no navegador
+(function(){
+    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card"].forEach(function(id){
+        const card = document.getElementById(id);
+        if(!card) return;
+        card.classList.add("redimensionavel");
+        const chave = "ficha-painel-tamanho:" + id;
+        try {
+            const salvo = JSON.parse(localStorage.getItem(chave) || "null");
+            if(salvo && salvo.w && salvo.h){ card.style.width = salvo.w + "px"; card.style.height = salvo.h + "px"; }
+        } catch(e) {}
+        let antes = "";
+        card.addEventListener("mousedown", function(){ antes = card.offsetWidth + "x" + card.offsetHeight; });
+        card.addEventListener("mouseup", function(){
+            const w = Math.round(card.offsetWidth), h = Math.round(card.offsetHeight);
+            if(antes === "" || antes === w + "x" + h) return; // não foi um redimensionamento
+            try { localStorage.setItem(chave, JSON.stringify({ w: w, h: h })); } catch(e) {}
+        });
+    });
+})();
+</script>
 @endsection
 
 @section('script')
 <script>
+    // ==================== Aprimoramentos (compartilhado: painel Técnicas e Técnicas de arte) ====================
+    // Item = { custo, eficiencia, aprimoramentos:[{texto,custo,acumulativo,qtd,gratis,ativo}], gerais:{dano:{qtd,gratis},...}, gratis_disponiveis }
+    // Custo total = max(0, custo - eficiência) + Σ custoUnitário × max(0, qtd - grátis). A eficiência não afeta os aprimoramentos.
+    // O trecho entre os marcadores é puro (sem DOM) e é carregado por deploy/tests/aprimoramentos.test.js.
+    /*APRIM-INICIO*/
+    const Aprimoramentos = {
+        somenteLeitura: false,
+        GERAIS: [
+            { chave: "dano", nome: "+1 dado de dano/cura ou vantagem −5", tipo: "fixo", custo: 9 },
+            { chave: "acao", nome: "Ação de uso −1", tipo: "original" },
+            { chave: "alvos", nome: "+1 alvo", tipo: "original" },
+            { chave: "alcance", nome: "Alcance +3 m", tipo: "fixo", custo: 9 }
+        ],
+        nat: function(v, max){
+            let n = parseInt(v, 10);
+            if(isNaN(n) || n < 0) n = 0;
+            return max === undefined ? n : Math.min(n, max);
+        },
+        esc: function(t){
+            return String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        },
+        // Registros antigos (só "ativo") viram qtd 1/0; não acumulativo vai de 0 a 1; grátis nunca passa de qtd
+        normalizarLista: function(lista){
+            const self = this;
+            return (Array.isArray(lista) ? lista : []).filter(a => a && typeof a === "object").map(function(a){
+                const acum = !!a.acumulativo;
+                let qtd = (a.qtd === undefined || a.qtd === null || a.qtd === "") ? (a.ativo ? 1 : 0) : self.nat(a.qtd, 99);
+                if(!acum) qtd = Math.min(qtd, 1);
+                return {
+                    texto: String(a.texto == null ? "" : a.texto),
+                    custo: self.nat(a.custo),
+                    acumulativo: acum,
+                    qtd: qtd,
+                    gratis: self.nat(a.gratis, qtd),
+                    ativo: qtd > 0
+                };
+            });
+        },
+        normalizarGerais: function(g){
+            const res = {};
+            const self = this;
+            this.GERAIS.forEach(function(def){
+                const o = (g && typeof g === "object" && g[def.chave] && typeof g[def.chave] === "object") ? g[def.chave] : {};
+                const qtd = self.nat(o.qtd, 99);
+                res[def.chave] = { qtd: qtd, gratis: self.nat(o.gratis, qtd) };
+            });
+            return res;
+        },
+        // Só as chaves com qtd > 0 vão para o JSON salvo
+        serializarGerais: function(g){
+            const res = {};
+            const n = this.normalizarGerais(g);
+            this.GERAIS.forEach(function(def){
+                if(n[def.chave].qtd > 0) res[def.chave] = { qtd: n[def.chave].qtd, gratis: n[def.chave].gratis };
+            });
+            return res;
+        },
+        // Referências (na ordem de exibição) a tudo que pode receber grátis
+        entradas: function(item){
+            const lista = item.aprimoramentos.slice();
+            this.GERAIS.forEach(def => lista.push(item.gerais[def.chave]));
+            return lista;
+        },
+        usadosGratis: function(item){
+            return this.entradas(item).reduce((s, r) => s + Math.min(r.gratis, r.qtd), 0);
+        },
+        // A soma de grátis não pode passar de gratis_disponiveis: tira dos últimos primeiro
+        limitarGratis: function(item){
+            const disp = item.gratis_disponiveis;
+            let excesso = this.usadosGratis(item) - disp;
+            const lista = this.entradas(item);
+            for(let i = lista.length - 1; i >= 0 && excesso > 0; i--){
+                const tira = Math.min(lista[i].gratis, excesso);
+                lista[i].gratis -= tira;
+                excesso -= tira;
+            }
+            return item;
+        },
+        // Normaliza o item no lugar (idempotente)
+        normalizarItem: function(item){
+            item.custo = this.nat(item.custo);
+            item.eficiencia = this.nat(item.eficiencia);
+            item.aprimoramentos = this.normalizarLista(item.aprimoramentos);
+            item.gerais = this.normalizarGerais(item.gerais);
+            item.gratis_disponiveis = this.nat(item.gratis_disponiveis, 99);
+            return this.limitarGratis(item);
+        },
+        custoBase: function(item){
+            return Math.max(0, this.nat(item.custo) - this.nat(item.eficiencia));
+        },
+        // Soma dos aprimoramentos (personalizados e gerais); "original" custa o custo digitado, sem eficiência
+        custoAprimoramentos: function(item){
+            const original = this.nat(item.custo);
+            let total = 0;
+            this.normalizarLista(item.aprimoramentos).forEach(function(a){
+                total += a.custo * Math.max(0, a.qtd - a.gratis);
+            });
+            const g = this.normalizarGerais(item.gerais);
+            this.GERAIS.forEach(function(def){
+                const unit = def.tipo === "fixo" ? def.custo : original;
+                total += unit * Math.max(0, g[def.chave].qtd - g[def.chave].gratis);
+            });
+            return total;
+        },
+        custoTotal: function(item){
+            return this.custoBase(item) + this.custoAprimoramentos(item);
+        },
+        textoCusto: function(item){
+            const base = this.custoBase(item);
+            const ef = this.nat(item.eficiencia);
+            const ap = this.custoAprimoramentos(item);
+            const gr = this.usadosGratis(this.normalizarItem({
+                custo: item.custo, eficiencia: item.eficiencia, aprimoramentos: item.aprimoramentos,
+                gerais: item.gerais, gratis_disponiveis: 99
+            }));
+            let s = "Custo: " + this.nat(item.custo);
+            if(ef > 0) s += " − " + ef + " de eficiência = " + base;
+            if(ap > 0 || gr > 0) s += " + " + ap + " de aprimoramentos" + (gr > 0 ? " (" + gr + (gr === 1 ? " grátis)" : " grátis)") : "") + " = " + this.custoTotal(item);
+            return s + " Aura";
+        },
+        textoUsados: function(item){
+            return "usados " + this.usadosGratis(item) + " de " + item.gratis_disponiveis;
+        },
+
+        // ---- HTML (strings) ----
+        passo: function(acao, ap, k, valor, podeMenos, podeMais, rotulo){
+            const ro = this.somenteLeitura ? " disabled" : "";
+            const dados = ' data-ap="' + ap + '" data-k="' + this.esc(k) + '"';
+            return '<span class="aprim-passo' + (rotulo ? " aprim-gratis" : "") + '"' + (rotulo ? ' title="Usos grátis (não cobram Aura)"' : "") + ">" +
+                (rotulo ? rotulo + " " : "") +
+                '<button type="button" class="aprim-btn" data-acao="' + acao + 'menos"' + dados + (podeMenos && !ro ? "" : " disabled") + ' aria-label="Diminuir">−</button>' +
+                "<b>" + valor + "</b>" +
+                '<button type="button" class="aprim-btn" data-acao="' + acao + 'mais"' + dados + (podeMais && !ro ? "" : " disabled") + ' aria-label="Aumentar">+</button>' +
+                "</span>";
+        },
+        linha: function(item, ref, ap, k, nome, custoTxt, acum){
+            const disp = item.gratis_disponiveis;
+            const ro = this.somenteLeitura ? " disabled" : "";
+            const dados = ' data-ap="' + ap + '" data-k="' + this.esc(k) + '"';
+            let h = '<div class="tecnica-aprim-item aprim-linha">';
+            if(acum){
+                h += '<span class="aprim-nome"><span>' + this.esc(nome) + "</span></span>";
+                h += '<span class="tec-aprim-custo">' + this.esc(custoTxt) + "</span>";
+                h += this.passo("", ap, k, ref.qtd, ref.qtd > 0, ref.qtd < 99);
+            } else {
+                h += '<label class="aprim-nome"><input type="checkbox" class="tec-aprim-check" data-acao="alternar"' + dados + (ref.qtd > 0 ? " checked" : "") + ro + "><span>" + this.esc(nome) + "</span></label>";
+                h += '<span class="tec-aprim-custo">' + this.esc(custoTxt) + "</span>";
+            }
+            if(disp > 0 && ref.qtd > 0){
+                h += this.passo("g", ap, k, ref.gratis, ref.gratis > 0, ref.gratis < ref.qtd && this.usadosGratis(item) < disp, "grátis");
+            }
+            return h + "</div>";
+        },
+        html: function(item){
+            const self = this;
+            const original = this.nat(item.custo);
+            let h = '<h5 class="maldicao-subtitulo">Aprimoramentos</h5>';
+            item.aprimoramentos.forEach(function(a, i){
+                h += self.linha(item, a, "p", i, a.texto, "+" + a.custo + (a.acumulativo ? " por uso" : ""), a.acumulativo);
+            });
+            h += '<div class="aprim-gerais-titulo">Gerais (acumulativos)</div>';
+            this.GERAIS.forEach(function(def){
+                h += self.linha(item, item.gerais[def.chave], "g", def.chave, def.nome,
+                    def.tipo === "fixo" ? "+" + def.custo : "+" + original + " (custo original)", true);
+            });
+            return h;
+        },
+        // Campo "Aprimoramentos grátis" do rodapé (ao lado da Eficiência)
+        rodapeHtml: function(item){
+            return '<label class="tecnica-eficiencia aprim-gratis-label" title="Quantas aplicações de aprimoramento esta técnica tem de graça">🎁 Aprimoramentos grátis ' +
+                '<input type="number" min="0" max="99" class="aprim-gratis-disp" value="' + item.gratis_disponiveis + '"> ' +
+                '<span class="aprim-usados">' + this.textoUsados(item) + "</span></label>";
+        },
+        // Linha de criação de um aprimoramento personalizado (formulário "Nova técnica" e edição das técnicas de arte)
+        linhaEdicaoHtml: function(){
+            return '<input type="text" class="tec-aprim-texto" placeholder="Aprimoramento">' +
+                '<input type="number" min="0" class="tec-aprim-custo-input" placeholder="Custo">' +
+                '<button type="button" class="vital-btn tec-aprim-remover" title="Remover">✕</button>' +
+                '<label class="aprim-acum" title="Pode ser aplicado várias vezes"><input type="checkbox" class="tec-aprim-acum"> Acumulativo</label>';
+        },
+        // ---- Interação ----
+        // Aplica o evento (click nos botões −/+, change nas caixas, input no campo de grátis) ao item. Retorna true se mudou algo.
+        tratar: function(e, item){
+            if(this.somenteLeitura) return false;
+            const t = e.target;
+            if(!t || !t.classList) return false;
+            if(t.classList.contains("aprim-gratis-disp")){
+                if(e.type !== "input") return false;
+                item.gratis_disponiveis = this.nat(t.value, 99);
+                this.limitarGratis(item);
+                return true;
+            }
+            const el = t.closest ? t.closest("[data-acao]") : null;
+            if(!el) return false;
+            if(el.tagName === "BUTTON" ? e.type !== "click" : e.type !== "change") return false;
+            const ref = el.dataset.ap === "g" ? item.gerais[el.dataset.k] : item.aprimoramentos[Number(el.dataset.k)];
+            if(!ref) return false;
+            const acum = el.dataset.ap === "g" || ref.acumulativo;
+            const acao = el.dataset.acao;
+            if(acao === "alternar") ref.qtd = el.checked ? 1 : 0;
+            else if(acao === "mais" && acum && ref.qtd < 99) ref.qtd++;
+            else if(acao === "menos" && ref.qtd > 0) ref.qtd--;
+            else if(acao === "gmais"){
+                if(ref.gratis < ref.qtd && this.usadosGratis(item) < item.gratis_disponiveis) ref.gratis++;
+            }
+            else if(acao === "gmenos" && ref.gratis > 0) ref.gratis--;
+            else return false;
+            ref.gratis = Math.min(ref.gratis, ref.qtd);
+            if("ativo" in ref) ref.ativo = ref.qtd > 0;
+            return true;
+        },
+        // Redesenha só o bloco de aprimoramentos e o "usados X de N" do card (não mexe nos campos digitados)
+        redesenhar: function(card, item){
+            const bloco = card.querySelector(".aprim-bloco");
+            if(bloco) bloco.innerHTML = this.html(item);
+            const u = card.querySelector(".aprim-usados");
+            if(u) u.textContent = this.textoUsados(item);
+        }
+    };
+    /*APRIM-FIM*/
+    Aprimoramentos.somenteLeitura = @json(!empty($somenteLeitura));
+
     const botaoX = document.getElementById("x");
 
     //ocultação
@@ -1314,11 +2746,115 @@
     const modPercepcao = document.getElementById("mod-percepcao");
     const modAlma = document.getElementById("mod-alma");
     const be = document.getElementById("be");
+
+    // ---- Modo "ficha já existente": desliga a verificação de pontos (atributos, habilidades, nível) ----
+    const modoLivreCheck = document.getElementById("modo-livre");
+    const MODO_LIVRE_CHAVE = "ficha-modo-livre:" + @json($editando ? (int) $personagem->id : 'nova');
+    function modoLivre(){ return !!(modoLivreCheck && modoLivreCheck.checked); }
+    if(modoLivreCheck){
+        try { modoLivreCheck.checked = localStorage.getItem(MODO_LIVRE_CHAVE) === "1"; } catch(e) {}
+        const refletirModoLivre = () => {
+            modoLivreCheck.closest(".modo-livre").classList.toggle("ativo", modoLivreCheck.checked);
+            const pl = document.getElementById("pontos-livre");
+            if(pl) pl.hidden = !modoLivreCheck.checked;
+            // no modo livre o saldo é definido direto, então o campo "Pontos extras" de habilidades some (seria redundante)
+            const extrasHab = document.getElementById("pontos-extras-habilidades");
+            const blocoExtras = extrasHab ? extrasHab.closest(".pontos-extras") : null;
+            if(blocoExtras) blocoExtras.hidden = modoLivreCheck.checked;
+        };
+        refletirModoLivre();
+        modoLivreCheck.addEventListener("change", function(){
+            try { localStorage.setItem(MODO_LIVRE_CHAVE, this.checked ? "1" : "0"); } catch(e) {}
+            refletirModoLivre();
+        });
+    }
+
+    // ---- Modo "ficha já existente": definir direto os pontos de habilidade disponíveis ----
+    // O saldo é nível × BE + bônus + extras − gastos; o único termo livre é "pontos extras",
+    // então o valor digitado é convertido no extra necessário (e salvo com a ficha).
+    const pontosLivreValor = document.getElementById("pontos-livre-valor");
+    if(pontosLivreValor){
+        pontosLivreValor.addEventListener("focus", function(){
+            if(this.value === "") this.value = pontosHabilidadeRestantes;
+        });
+        const aplicarPontosLivre = function(){
+            const alvo = parseInt(pontosLivreValor.value, 10);
+            if(isNaN(alvo)){ mostrarPopup("Digite quantos pontos de habilidade devem ficar disponíveis."); return; }
+            // O ajuste é a diferença entre o saldo pedido e o saldo calculado (sem ajuste); pode ser negativo
+            const bonus = (profissao.value !== "Selecione") ? 30 : 15;
+            const base = (Number(nivelMundano.value || 1) * Number(be.value || 0)) + bonus + extraHabilidades - pontosHabilidadeGastos;
+            ajusteHabilidades = alvo - base;
+            const campoAjuste = document.getElementById("pontos-habilidade-ajuste");
+            campoAjuste.value = ajusteHabilidades;
+            pontosHabilidadeRestantes = alvo;
+            pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
+            campoAjuste.dispatchEvent(new Event("input", { bubbles: true })); // dispara o salvamento automático
+            mostrarPopup("Pontos a distribuir definidos em " + alvo + ". O ajuste (" + (ajusteHabilidades >= 0 ? "+" : "") + ajusteHabilidades + ") fica salvo na ficha e não mexe nos pontos extras.");
+        };
+        document.getElementById("pontos-livre-aplicar").addEventListener("click", aplicarPontosLivre);
+        pontosLivreValor.addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); aplicarPontosLivre(); } });
+    }
     const modCarisma = document.getElementById("mod-carisma");
+
+    // ---- Mods de atributo ajustados à mão (modo "ficha já existente") ----
+    // Um mod editado deixa de seguir o atributo (ex.: Força 75 com mod 10) até ser apagado ou igualado ao automático.
+    // Ganho de vida/aura por nível, BE e mods das habilidades leem o valor que estiver no campo.
+    let modsManuais = @json((object) $modsManuais);
+    const campoModsManuais = document.getElementById("mods-atributos");
+    const MODS_POR_ATRIBUTO = { forca: modForca, constituicao: modConstituicao, destreza: modDestreza, conhecimento: modConhecimento, carisma: modCarisma, percepcao: modPercepcao, alma: modAlma };
+    function sincronizarModsManuais(){ if(campoModsManuais) campoModsManuais.value = JSON.stringify(modsManuais); }
+    // Regra dos modificadores: primeiro dígito do valor (80 => 8); de 1 a 9 o mod é sempre 1; 0 ou vazio => 0
+    function modDeAtributo(valor){
+        const v = Number(valor);
+        if(isNaN(v)) return 0;
+        if(v >= 10) return Math.floor(v / 10);
+        return v >= 1 ? 1 : 0;
+    }
+    function modAutomatico(inputAtributo){ return inputAtributo.value === "" ? "" : String(modDeAtributo(inputAtributo.value)); }
+    // Bônus dos atributos nas habilidades cresce com o nível: ×1 (1–5), ×2 (6–10), ×3 (11–15), ×4 (16–20), +1 a cada 5 níveis
+    function multiplicadorNivel(){
+        const n = Number(nivelMundano.value) || 1;
+        return Math.max(1, Math.ceil(n / 5));
+    }
+    // chamado pelos listeners dos atributos: só recalcula o mod se ele não foi ajustado à mão
+    function definirModAuto(atributo, inputAtributo, inputMod){
+        if(modsManuais[atributo] !== undefined) return;
+        inputMod.value = modAutomatico(inputAtributo);
+    }
+    function refletirModsEditaveis(){
+        const livre = modoLivre();
+        Object.values(MODS_POR_ATRIBUTO).forEach(m => { m.readOnly = !livre; m.classList.toggle("mod-editavel", livre); });
+    }
+    Object.entries(MODS_POR_ATRIBUTO).forEach(([atributo, inputMod]) => {
+        inputMod.classList.toggle("mod-manual", modsManuais[atributo] !== undefined);
+        inputMod.addEventListener("input", function(){
+            if(this.readOnly) return;
+            this.value = this.value.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "").slice(0, 3);
+            const inputAtributo = document.getElementById(atributo);
+            if(this.value === "" || this.value === "-" || this.value === modAutomatico(inputAtributo)){
+                delete modsManuais[atributo]; // volta a seguir o atributo
+                if(this.value === "" || this.value === "-") this.value = modAutomatico(inputAtributo);
+            } else {
+                modsManuais[atributo] = Number(this.value);
+            }
+            this.classList.toggle("mod-manual", modsManuais[atributo] !== undefined);
+            sincronizarModsManuais();
+            atualizarHabilidadesMod();
+        });
+    });
+    refletirModsEditaveis();
+    if(modoLivreCheck) modoLivreCheck.addEventListener("change", refletirModsEditaveis);
     const pontosRestantesTexto = document.getElementById("pontos-restantes-texto");
 
-    // ---- PONTOS DE ATRIBUTOS: total fixo e único ponto de verdade ----
-    const PONTOS_TOTAL_ATRIBUTOS = 300;
+    // ---- PONTOS EXTRAS (ganhos de fontes externas) ----
+    // Somam ao total base de atributos (300) e ao total de pontos de habilidade.
+    let extraAtributos   = {{ $extraAtributos }};
+    let extraHabilidades = {{ $extraHabilidades }};
+    let ajusteHabilidades = {{ $ajusteHabilidades }}; // ajuste manual (modo "ficha já existente")
+
+    // ---- PONTOS DE ATRIBUTOS: total e único ponto de verdade ----
+    const PONTOS_BASE_ATRIBUTOS = 300;
+    let PONTOS_TOTAL_ATRIBUTOS = PONTOS_BASE_ATRIBUTOS + extraAtributos;
     let pontosRestantes = {{ $pontosRestantesIniciais }};
 
     // Guarda o último valor válido de cada atributo, usado apenas para
@@ -1518,29 +3054,53 @@
     const fecharDistribuir = document.getElementById("fechar-distribuir");
     const camposDistribuicaoNiveis = document.getElementById("campos-distribuicao-niveis");
 
+    // ---- Distribuição de níveis por profissão ----
+    // O estado vive em um array (um item por nível) espelhado num campo oculto
+    // (#niveis_profissao) que vai junto com o formulário ao salvar.
+    const PROFISSOES = ["Criminoso","Lutador","Intelectual","Comunicador","Construtor"];
+    const niveisProfissaoInput = document.getElementById("niveis_profissao");
+    let niveisProfissao = @json($niveisProfissaoSalvos);
+    if(!Array.isArray(niveisProfissao)) niveisProfissao = [];
 
-    let checkDistribuir = 0;
-    camposDistribuicaoNiveis.innerHTML = "";
+    // Ajusta o array à quantidade de níveis atual e atualiza o campo oculto
+    function sincronizarNiveisProfissao(){
+        const qtd = Math.max(1, Number(nivelMundano.value) || 1);
+        const padrao = PROFISSOES.includes(profissao.value) ? profissao.value : PROFISSOES[0];
+        niveisProfissao = niveisProfissao.slice(0, qtd);
+        while(niveisProfissao.length < qtd) niveisProfissao.push(padrao);
+        niveisProfissaoInput.value = JSON.stringify(niveisProfissao);
+    }
+
+    function renderizarDistribuicaoNiveis(){
+        sincronizarNiveisProfissao();
+        camposDistribuicaoNiveis.innerHTML = "";
+        niveisProfissao.forEach((prof, i) => {
+            const campo = document.createElement("div");
+            campo.className = "campo";
+
+            const label = document.createElement("label");
+            label.textContent = "Nível " + (i + 1);
+
+            const select = document.createElement("select");
+            select.style.marginTop = "5px";
+            PROFISSOES.forEach(p => {
+                const o = new Option(p, p);
+                o.selected = (p === prof);
+                select.add(o);
+            });
+            select.addEventListener("change", () => {
+                niveisProfissao[i] = select.value;
+                sincronizarNiveisProfissao();
+            });
+
+            campo.append(label, select);
+            camposDistribuicaoNiveis.appendChild(campo);
+        });
+    }
+
     distribuirNiveis.addEventListener("click", function(){
+        renderizarDistribuicaoNiveis();
         distribuirNiveisPopup.classList.add("ativo");
-        let quantidadeNiveis = Number(nivelMundano.value);
-        camposDistribuicaoNiveis.innerHTML += "";
-        if(checkDistribuir == 0){
-            for(let i = 1;i<=quantidadeNiveis;i++){
-                checkDistribuir=1;
-                camposDistribuicaoNiveis.innerHTML +=`
-                <div class="campo">
-                    <label>Nível ${i}</label>
-                    <select type="text" style="margin-top:5px;" placeholder="Escolha a Profissão do agente no nível ${i}">
-                        <option>Criminoso</option>
-                        <option>Lutador</option>
-                        <option>Intelectual</option>
-                        <option>Comunicador</option>
-                        <option>Construtor</option>
-                    </select>
-                `;
-            }
-        }
     });
 
     fecharDistribuir.addEventListener("click", function(){
@@ -1643,25 +3203,40 @@
     const rolarHabilidade = document.getElementById("rolar-dado-habilidade");
     const resultadoFinal = document.getElementById("resultado-final");
 
+    // Estado da rolagem aberta. Os listeners do popup são registrados UMA vez, fora do loop:
+    // antes, cada abertura acumulava um novo listener e a rolagem somava valores de habilidades antigas.
+    let habilidadeRolagem = null; // { input, mod }
+    const numRolagem = v => Number(v) || 0;
+    function reducaoRolagem(){
+        if(!habilidadeRolagem) return 0;
+        return numRolagem(habilidadeRolagem.input.value) + numRolagem(habilidadeRolagem.mod()) + numRolagem(vantagensExtras.value);
+    }
+    function atualizarReducaoRolagem(){
+        aplicacaoFinal.textContent = reducaoRolagem();
+    }
     rolarHabilidadeBotao.forEach(botao =>{
         botao.addEventListener("click", function(){
-            let titulo = nomesHabilidades[botao.dataset.habilidade];
-            let inputHabilidade = document.getElementById(botao.dataset.habilidade);
-            let modHabilidade = vinculoHabilidadeAtributo[botao.dataset.habilidade];
-            valorHabilidadePopup.textContent = inputHabilidade.value;
+            const chave = botao.dataset.habilidade;
+            const inputHabilidade = document.getElementById(chave);
+            // habilidades sem atributo vinculado (ex.: Maldição, Explosivos) rolam com mod 0 em vez de quebrar
+            const modHabilidade = () => (vinculoHabilidadeAtributo[chave] ? vinculoHabilidadeAtributo[chave]() : 0) * multiplicadorNivel();
+            habilidadeRolagem = { input: inputHabilidade, mod: modHabilidade };
+            const m = numRolagem(modHabilidade());
+            valorHabilidadePopup.textContent = inputHabilidade.value || "0";
+            tituloRolagemHabilidade.textContent = "Rolar: " + (nomesHabilidades[chave] || chave);
+            tituloModHabilidade.textContent = (m >= 0 ? "+" : "") + m;
+            resultadoNatural.textContent = "?";
+            resultadoFinal.textContent = "?";
+            atualizarReducaoRolagem();
             rolagemHabilidadeCard.classList.add("ativo");
-            tituloRolagemHabilidade.textContent = "Rolar: " + titulo;
-            tituloModHabilidade.textContent = modHabilidade();
-            aplicacaoFinal.textContent = Number(inputHabilidade.value) + Number(modHabilidade()) + Number(vantagensExtras.value);
-            vantagensExtras.addEventListener("input", ()=>{
-                aplicacaoFinal.textContent = Number(inputHabilidade.value) + Number(modHabilidade()) + Number(vantagensExtras.value);
-            });
-            rolarHabilidade.addEventListener("click", function(){
-                let dadoNatural = rolarDado(100);
-                resultadoNatural.textContent = dadoNatural;
-                resultadoFinal.textContent = Number(dadoNatural) - Number(modHabilidade()) - Number(vantagensExtras.value) - Number(inputHabilidade.value);
-            });
         });
+    });
+    vantagensExtras.addEventListener("input", atualizarReducaoRolagem);
+    rolarHabilidade.addEventListener("click", function(){
+        if(!habilidadeRolagem) return;
+        const dadoNatural = rolarDado(100);
+        resultadoNatural.textContent = dadoNatural;
+        resultadoFinal.textContent = dadoNatural - reducaoRolagem();
     });
 
     fecharHabilidade.addEventListener("click", function(){
@@ -1762,6 +3337,37 @@
         nomeSorte.style="color: var(--tinta-fraca);";
         rolagemSorte.classList.add("usado");
     });
+
+    // Sorte também pode ser digitada à mão (ex.: ficha já existente)
+    sorte.addEventListener("input", function(){
+        nomeSorte.style.color = this.value === "" ? "rgba(189, 3, 3, 0.658)" : "var(--tinta-fraca)";
+    });
+
+    // ---- Descanso curto / longo: recupera os atributos vitais (regras rápidas de descanso) ----
+    // O texto do span é a fonte da verdade; o vitais.js observa a mudança e atualiza barra e campos ocultos.
+    function lerVitalSpan(span){
+        const p = span.textContent.split("/").map(v => parseInt(v.trim(), 10));
+        return { atual: p[0], max: p[1] };
+    }
+    function recuperarVital(span, nome, ganho){
+        const v = lerVitalSpan(span);
+        if(isNaN(v.atual) || isNaN(v.max)) return nome + ": não definido";
+        const novo = Math.min(v.max, v.atual + ganho);
+        span.textContent = novo + " / " + v.max;
+        return nome + " +" + (novo - v.atual) + " (" + novo + "/" + v.max + ")";
+    }
+    function somaDados(qtd, lados){ let s = 0; for(let i = 0; i < qtd; i++) s += rolarDado(lados); return s; }
+    function descansar(longo){
+        const linhas = [
+            recuperarVital(vida, "Vida", longo ? rolarDado(3) : 1),
+            recuperarVital(sanidade, "Sanidade", longo ? rolarDado(4) : rolarDado(2)),
+            recuperarVital(aura, "Aura", longo ? somaDados(4, 20) : rolarDado(20))
+        ];
+        mostrarPopup((longo ? "Descanso longo (6–8 h): " : "Descanso curto (1–2 h): ") + linhas.join(", ") +
+            ". Também voltam 10 pontos de atributo perdidos (sem sequela permanente): ajuste os atributos à mão.");
+    }
+    document.getElementById("descanso-curto").addEventListener("click", () => descansar(false));
+    document.getElementById("descanso-longo").addEventListener("click", () => descansar(true));
     
     botaoX.addEventListener("click", function(){
         rolagemCard.classList.remove("ativo");
@@ -1835,11 +3441,7 @@
 
     //Atributos
 
-    // CORREÇÃO: antes, "Espalhar Pontos" só descontava os 210 pontos gastos
-    // (30 x 7 atributos) quando pontosRestantes estivesse EXATAMENTE em 300.
-    // Se o usuário já tivesse mexido em qualquer atributo antes de clicar,
-    // essa condição falhava e o saldo ficava incorreto dali pra frente.
-    // Agora o saldo é sempre recalculado a partir dos valores reais dos campos.
+    // "Espalhar Pontos": o saldo é sempre recalculado a partir dos valores reais dos campos.
     espalharPontos.addEventListener("click", function(){
         constituicao.value=30;
         modConstituicao.value=Math.floor(30/10);
@@ -1875,7 +3477,7 @@
 
         primeiraMudancaProfissao = 0;
 
-        pontosHabilidadeRestantes = (Number(nivelMundano.value || 1) * Number(be.value || 0)) + 15;
+        pontosHabilidadeRestantes = (Number(nivelMundano.value || 1) * Number(be.value || 0)) + 15 + extraHabilidades + ajusteHabilidades;
         pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
 
         atualizarHabilidadesMod();
@@ -1906,8 +3508,9 @@
 
             if (funcaoModificador) {
 
+                // mod do atributo vinculado × fator do nível mundano
                 const valorModificador =
-                    funcaoModificador();
+                    funcaoModificador() * multiplicadorNivel();
 
                 const linha =
                     habilidade.closest(".habilidade-linha");
@@ -1923,18 +3526,9 @@
         });
     }
 
-    // CORREÇÃO GERAL DOS 7 LISTENERS ABAIXO:
-    // Antes, cada atributo tinha sua própria variável "valorXAnterior" que
-    // precisava ser devolvida e re-debitada manualmente a cada input, e
-    // recalculada à mão em outros pontos do código (espalhar pontos, troca
-    // de porte físico, preencher-teste). Bastava um desses lugares esquecer
-    // de atualizar a variável certa para o saldo de pontos entrar em
-    // dessincronia com a soma real dos atributos - foi aí que o usuário
-    // começou a "perder" pontos sem motivo aparente.
-    // Agora cada listener só valida o novo valor e chama
-    // recalcularPontosAtributos(), que sempre recalcula o saldo do zero
-    // a partir da soma atual dos 7 campos. Não existe mais estado
-    // duplicado para dessincronizar.
+    // Cada listener abaixo só valida o novo valor e chama
+    // recalcularPontosAtributos(), que recalcula o saldo do zero
+    // a partir da soma atual dos 7 campos (sem estado duplicado).
 
     forca.addEventListener("input", () => {
         const somaOutros =
@@ -1947,10 +3541,10 @@
         } else {
             const valorAtual = Number(forca.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 forca.value = valorForcaTexto;
-                modForca.value = forca.value === "" ? "" : Math.floor(Number(forca.value)/10);
+                definirModAuto("forca", forca, modForca);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -1959,7 +3553,7 @@
             valorForcaTexto = forca.value;
         }
 
-        modForca.value = forca.value === "" ? "" : Math.floor(Number(forca.value)/10);
+        definirModAuto("forca", forca, modForca);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -1975,10 +3569,10 @@
         } else {
             const valorAtual = Number(destreza.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 destreza.value = valorDestrezaTexto;
-                modDestreza.value = destreza.value === "" ? "" : Math.floor(Number(destreza.value)/10);
+                definirModAuto("destreza", destreza, modDestreza);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -1987,7 +3581,7 @@
             valorDestrezaTexto = destreza.value;
         }
 
-        modDestreza.value = destreza.value === "" ? "" : Math.floor(Number(destreza.value)/10);
+        definirModAuto("destreza", destreza, modDestreza);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2003,10 +3597,10 @@
         } else {
             const valorAtual = Number(constituicao.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 constituicao.value = valorConstituicaoTexto;
-                modConstituicao.value = constituicao.value === "" ? "" : Math.floor(Number(constituicao.value)/10);
+                definirModAuto("constituicao", constituicao, modConstituicao);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -2015,7 +3609,7 @@
             valorConstituicaoTexto = constituicao.value;
         }
 
-        modConstituicao.value = constituicao.value === "" ? "" : Math.floor(Number(constituicao.value)/10);
+        definirModAuto("constituicao", constituicao, modConstituicao);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2031,11 +3625,11 @@
         } else {
             const valorAtual = Number(conhecimento.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 conhecimento.value = valorConhecimentoTexto;
-                modConhecimento.value = conhecimento.value === "" ? "" : Math.floor(Number(conhecimento.value)/10);
-                be.value = modConhecimento.value;
+                definirModAuto("conhecimento", conhecimento, modConhecimento);
+                if(be.value === "") be.value = modConhecimento.value;
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -2044,10 +3638,11 @@
             valorConhecimentoTexto = conhecimento.value;
         }
 
-        modConhecimento.value = conhecimento.value === "" ? "" : Math.floor(Number(conhecimento.value)/10);
-        be.value = modConhecimento.value;
-        pontosHabilidadeRestantes = (nivelMundano.value*be.value)+15;
-        pontosHabilidadeRestantesTexto.textContent = "Pontos restantes: " + pontosHabilidadeRestantes;
+        const modAntes = modConhecimento.value;
+        definirModAuto("conhecimento", conhecimento, modConhecimento);
+        // o BE só acompanha o Conhecimento se não foi ajustado à mão (ou está vazio)
+        if(be.value === "" || be.value === modAntes) be.value = modConhecimento.value;
+        recalcularPontosHabilidade();
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2063,10 +3658,10 @@
         } else {
             const valorAtual = Number(percepcao.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 percepcao.value = valorPercepcaoTexto;
-                modPercepcao.value = percepcao.value === "" ? "" : Math.floor(Number(percepcao.value)/10);
+                definirModAuto("percepcao", percepcao, modPercepcao);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -2075,7 +3670,7 @@
             valorPercepcaoTexto = percepcao.value;
         }
 
-        modPercepcao.value = percepcao.value === "" ? "" : Math.floor(Number(percepcao.value)/10);
+        definirModAuto("percepcao", percepcao, modPercepcao);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2091,10 +3686,10 @@
         } else {
             const valorAtual = Number(alma.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 alma.value = valorAlmaTexto;
-                modAlma.value = alma.value === "" ? "" : Math.floor(Number(alma.value)/10);
+                definirModAuto("alma", alma, modAlma);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -2103,7 +3698,7 @@
             valorAlmaTexto = alma.value;
         }
 
-        modAlma.value = alma.value === "" ? "" : Math.floor(Number(alma.value)/10);
+        definirModAuto("alma", alma, modAlma);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2119,10 +3714,10 @@
         } else {
             const valorAtual = Number(carisma.value);
 
-            if((somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
+            if(!modoLivre() && (somaOutros + valorAtual) > PONTOS_TOTAL_ATRIBUTOS){
                 mostrarPopup("Pontos insuficientes! Você tem apenas " + (PONTOS_TOTAL_ATRIBUTOS - somaOutros) + " pontos disponíveis.");
                 carisma.value = valorCarismaTexto;
-                modCarisma.value = carisma.value === "" ? "" : Math.floor(Number(carisma.value)/10);
+                definirModAuto("carisma", carisma, modCarisma);
                 recalcularPontosAtributos();
                 atualizarHabilidadesMod();
                 return;
@@ -2131,7 +3726,7 @@
             valorCarismaTexto = carisma.value;
         }
 
-        modCarisma.value = carisma.value === "" ? "" : Math.floor(Number(carisma.value)/10);
+        definirModAuto("carisma", carisma, modCarisma);
         recalcularPontosAtributos();
         atualizarHabilidadesMod();
     });
@@ -2210,9 +3805,9 @@
             constituicao.value=constituicao.value-10;
             destreza.value = Number(destreza.value)+20;
             forca.value=forca.value-10;
-            modForca.value = Math.floor(forca.value/10);
-            modDestreza.value = Math.floor(destreza.value/10);
-            modConstituicao.value = Math.floor(constituicao.value/10);
+            modForca.value = modDeAtributo(forca.value);
+            modDestreza.value = modDeAtributo(destreza.value);
+            modConstituicao.value = modDeAtributo(constituicao.value);
             if(forca.value<10){
                 forca.value=10;
             }
@@ -2242,9 +3837,9 @@
             destreza.value=destreza.value-10;
             forca.value = Number(forca.value)+10;
             constituicao.value = Number(constituicao.value)+10;
-            modForca.value = Math.floor(forca.value/10);
-            modDestreza.value = Math.floor(destreza.value/10);
-            modConstituicao.value = Math.floor(constituicao.value/10);
+            modForca.value = modDeAtributo(forca.value);
+            modDestreza.value = modDeAtributo(destreza.value);
+            modConstituicao.value = modDeAtributo(constituicao.value);
             if(forca.value>75){
                 forca.value=75;
             }
@@ -2280,9 +3875,9 @@
             if(constituicao.value > 75) constituicao.value = 75;
             if(destreza.value < 10) destreza.value = 10;
 
-            modForca.value = Math.floor(forca.value/10);
-            modConstituicao.value = Math.floor(constituicao.value/10);
-            modDestreza.value = Math.floor(destreza.value/10);
+            modForca.value = modDeAtributo(forca.value);
+            modConstituicao.value = modDeAtributo(constituicao.value);
+            modDestreza.value = modDeAtributo(destreza.value);
 
             valorForcaTexto = forca.value;
             valorConstituicaoTexto = constituicao.value;
@@ -2310,9 +3905,9 @@
             if(forca.value < 10) forca.value = 10;
             if(constituicao.value < 10) constituicao.value = 10;
 
-            modDestreza.value = Math.floor(destreza.value/10);
-            modForca.value = Math.floor(forca.value/10);
-            modConstituicao.value = Math.floor(constituicao.value/10);
+            modDestreza.value = modDeAtributo(destreza.value);
+            modForca.value = modDeAtributo(forca.value);
+            modConstituicao.value = modDeAtributo(constituicao.value);
 
             valorDestrezaTexto = destreza.value;
             valorForcaTexto = forca.value;
@@ -2340,10 +3935,10 @@
             if(constituicao.value < 10) constituicao.value = 10;
             if(conhecimento.value > 75) conhecimento.value = 75;
 
-            modForca.value = Math.floor(forca.value/10);
-            modDestreza.value = Math.floor(destreza.value/10);
-            modConstituicao.value = Math.floor(constituicao.value/10);
-            modConhecimento.value = Math.floor(conhecimento.value/10);
+            modForca.value = modDeAtributo(forca.value);
+            modDestreza.value = modDeAtributo(destreza.value);
+            modConstituicao.value = modDeAtributo(constituicao.value);
+            modConhecimento.value = modDeAtributo(conhecimento.value);
             be.value = modConhecimento.value;
 
             valorForcaTexto = forca.value;
@@ -2376,17 +3971,17 @@
             experienciaMundana.removeAttribute("readonly", false);
         }
 
-        // Todo ajuste de atributo feito acima (Magro, Musculoso, Gordo,
-        // Infantil, Idoso, Comum) altera os campos diretamente sem passar
-        // pelos listeners de "input". Antes disso deixava pontosRestantes
-        // desatualizado até o próximo clique manual em algum atributo.
-        // Agora recalculamos aqui, uma única vez, no fim do bloco.
+        // Todo ajuste de atributo feito acima altera os campos diretamente sem
+        // passar pelos listeners de "input"; recalculamos aqui, uma única vez.
         recalcularPontosAtributos();
 
         profissao.value = "Selecione";
-        checkDistribuir = 0;
-        camposDistribuicaoNiveis.innerHTML = "";
-        pontosHabilidadeRestantes = (1 * Number(be.value || 0)) + 15;
+
+        // Troca de porte reinicia o nível para 1: reinicia a distribuição de níveis
+        niveisProfissao = [];
+        sincronizarNiveisProfissao();
+
+        pontosHabilidadeRestantes = (1 * Number(be.value || 0)) + 15 + extraHabilidades + ajusteHabilidades;
         pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
         atualizarHabilidadesMod();
     });
@@ -2469,10 +4064,31 @@
         return rolarDado(4) + Math.ceil(mod/2);
     }
 
-    nivelMundano.addEventListener("input", () => {
+    // Um atributo vital conta como "definido" quando foi rolado (botão marcado como "usado")
+    // OU quando já tem valores preenchidos (atual e máximo numéricos, máximo > 0),
+    // mesmo que tenham sido digitados/ajustados à mão, sem rolagem de dados.
+    function vitalDefinido(botaoRolagem, spanId, atualId, maximoId){
+        if(botaoRolagem.classList.contains("usado")){
+            return true;
+        }
 
-        checkDistribuir = 0;
-        camposDistribuicaoNiveis.innerHTML = "";
+        const partes = document.getElementById(spanId).textContent
+            .split("/")
+            .map(v => parseInt(v.trim(), 10));
+
+        let atual = partes[0];
+        let maximo = partes[1];
+
+        // se o texto da barra ainda está como "? / ?", confere os campos ocultos
+        if(isNaN(atual) || isNaN(maximo)){
+            atual = parseInt(document.getElementById(atualId).value, 10);
+            maximo = parseInt(document.getElementById(maximoId).value, 10);
+        }
+
+        return !isNaN(atual) && !isNaN(maximo) && maximo > 0;
+    }
+
+    nivelMundano.addEventListener("input", () => {
 
         let novoNivel = Number(nivelMundano.value);
 
@@ -2490,28 +4106,28 @@
         }
 
         let totalNovo =
-            (novoNivel * valorBE) + bonusInicial;
+            (novoNivel * valorBE) + bonusInicial + extraHabilidades + ajusteHabilidades;
 
-        if (novoNivel > nivelAnterior) {
+        if (!modoLivre() && novoNivel > nivelAnterior) {
 
             let faltando = [];
 
-            if (!rolagemVida.classList.contains("usado")) {
+            if (!vitalDefinido(rolagemVida, "vida", "vida_atual", "vida_maxima")) {
                 faltando.push("Vida");
             }
 
-            if (!rolagemSanidade.classList.contains("usado")) {
+            if (!vitalDefinido(rolagemSanidade, "sanidade", "sanidade_atual", "sanidade_maxima")) {
                 faltando.push("Sanidade");
             }
 
-            if (!rolagemAura.classList.contains("usado")) {
+            if (!vitalDefinido(rolagemAura, "aura", "aura_atual", "aura_maxima")) {
                 faltando.push("Aura");
             }
 
             if (faltando.length > 0) {
 
                 mostrarPopup(
-                    "Você precisa rolar " +
+                    "Você precisa rolar ou preencher " +
                     faltando.join(", ") +
                     " antes de aumentar o Nível Mundano."
                 );
@@ -2523,6 +4139,7 @@
         }
 
         if (
+            !modoLivre() &&
             novoNivel < nivelAnterior &&
             totalNovo < pontosHabilidadeGastos
         ) {
@@ -2687,6 +4304,10 @@
 
         nivelAnterior = novoNivel;
 
+        // A distribuição de níveis acompanha o novo nível mundano
+        // (preserva as escolhas já feitas e completa/corta o restante)
+        sincronizarNiveisProfissao();
+
         experienciaMundana.value = "";
 
         atualizarExperienciaTexto();
@@ -2702,17 +4323,65 @@
     xpMaximo = 20 + ((nivelAnterior - 1) * 30);
     xpAtual = Number("{{ $personagem->experiencia_mundana ?? 0 }}");
     let pontosHabilidadeGastosSalvos = @json(array_sum(array_map('intval', $habilidadesSalvas)));
-    // CORREÇÃO: o bônus inicial de pontos de habilidade é 30 quando o agente já
-    // tem uma profissão escolhida (15 base + 15 da profissão) e 15 quando não tem,
-    // exatamente como no listener de "nivelMundano". Antes essa conta sempre
-    // somava só 15, então ao abrir uma ficha salva com profissão definida os
-    // pontos apareciam 15 a menos (podendo até ficar negativos, ex: -15).
+    // O bônus inicial de pontos de habilidade é 30 quando o agente já tem uma
+    // profissão escolhida (15 base + 15 da profissão) e 15 quando não tem.
     let bonusInicialSalvo = (profissao.value !== "Selecione") ? 30 : 15;
-    let pontosHabilidadeRestantes = (Number(nivelMundano.value) * Number(be.value || 0)) + bonusInicialSalvo - pontosHabilidadeGastosSalvos;
+    let pontosHabilidadeRestantes = (Number(nivelMundano.value) * Number(be.value || 0)) + bonusInicialSalvo + extraHabilidades + ajusteHabilidades - pontosHabilidadeGastosSalvos;
     pontosHabilidadeGastos = pontosHabilidadeGastosSalvos;
+
+    // ---- BE editável: recalcula o saldo de habilidades do zero, preservando os pontos já gastos ----
+    function recalcularPontosHabilidade(){
+        const bonus = (profissao.value !== "Selecione") ? 30 : 15;
+        pontosHabilidadeRestantes = (Number(nivelMundano.value || 1) * Number(be.value || 0)) + bonus + extraHabilidades + ajusteHabilidades - pontosHabilidadeGastos;
+        pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
+    }
+    be.addEventListener("input", function(){
+        if(this.value !== "" && Number(this.value) < 0) this.value = 0;
+        recalcularPontosHabilidade();
+    });
     pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
     experienciaMundana.value = xpAtual || "";
     atualizarExperienciaTexto();
+
+    // Preenche o campo oculto da distribuição de níveis com o estado inicial
+    // (ficha salva ou ficha nova), mesmo que o popup nunca seja aberto.
+    sincronizarNiveisProfissao();
+
+    // ---- Campos de pontos extras ----
+    const campoExtraAtributos   = document.getElementById("pontos-extras-atributos");
+    const campoExtraHabilidades = document.getElementById("pontos-extras-habilidades");
+
+    campoExtraAtributos.addEventListener("input", function(){
+        this.value = this.value.replace(/\D/g, "").slice(0, 3);
+        const novo = Number(this.value || 0);
+
+        const gasto = (PONTOS_TOTAL_ATRIBUTOS - pontosRestantes);
+        if(!modoLivre() && PONTOS_BASE_ATRIBUTOS + novo < gasto){
+            mostrarPopup("Você já gastou " + gasto + " pontos em atributos. Reduza algum atributo antes de diminuir os pontos extras.");
+            this.value = extraAtributos || "";
+            return;
+        }
+
+        extraAtributos = novo;
+        PONTOS_TOTAL_ATRIBUTOS = PONTOS_BASE_ATRIBUTOS + extraAtributos;
+        recalcularPontosAtributos();
+    });
+
+    campoExtraHabilidades.addEventListener("input", function(){
+        this.value = this.value.replace(/\D/g, "").slice(0, 5);
+        const novo = Number(this.value || 0);
+        const delta = novo - extraHabilidades;
+
+        if(!modoLivre() && pontosHabilidadeRestantes + delta < 0){
+            mostrarPopup("Você já gastou esses pontos em habilidades. Reduza alguma habilidade antes de diminuir os pontos extras.");
+            this.value = extraHabilidades || "";
+            return;
+        }
+
+        extraHabilidades = novo;
+        pontosHabilidadeRestantes += delta;
+        pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
+    });
 
     const vinculoHabilidadeAtributo = {
         "luta": () => Math.max(Number(modForca.value), Number(modDestreza.value)),
@@ -2730,6 +4399,7 @@
         "olfato": () => Number(modPercepcao.value),
         "audicao": () => Number(modPercepcao.value),
 
+        "maldicao": () => Number(modAlma.value),
         "precisao": () => Math.max(Number(modDestreza.value), Number(modPercepcao.value)),
         "investigacao": () => Math.max(Number(modConhecimento.value), Number(modPercepcao.value)),
         "sobrevivencia": () => Number(modConhecimento.value),
@@ -2743,6 +4413,7 @@
         "primeiros-socorros": () => Number(modDestreza.value),
         "culinaria": () => Number(modConhecimento.value),
         "dirigir": () => Number(modConhecimento.value),
+        "explosivos": () => Number(modConhecimento.value),
 
         "fotografia": () => Number(modCarisma.value),
         "labia": () => Number(modCarisma.value),
@@ -2755,10 +4426,16 @@
         "detectar-mentira": () => Math.max(Number(modCarisma.value), Number(modConhecimento.value))
     };
 
+    // Ao abrir a ficha, os mods das habilidades já refletem os mods dos atributos
+    // (antes só eram calculados quando algum atributo era editado, então ficavam em +0 ao carregar)
+    atualizarHabilidadesMod();
+    // o fator por nível muda quando o nível mundano muda
+    nivelMundano.addEventListener("input", atualizarHabilidadesMod);
+
     habilidades.forEach(input => {
         input.dataset.anterior = "0";
         input.addEventListener("input", function(){
-            this.value = this.value.replace(/\D/g, "").slice(0, 2);
+            this.value = this.value.replace(/\D/g, "").slice(0, 4);
             let anterior = Number(this.dataset.anterior);
             let novoValor = 0;
             pontosHabilidadeRestantes += anterior;
@@ -2768,7 +4445,7 @@
             }else {
                 novoValor = Number(this.value);
             }
-            if(novoValor > pontosHabilidadeRestantes){
+            if(!modoLivre() && novoValor > pontosHabilidadeRestantes){
                 mostrarPopup("Pontos insuficientes!");
                 this.value = this.dataset.anterior === "0" ? "" : this.dataset.anterior;
                 pontosHabilidadeRestantes -= anterior;
@@ -2823,59 +4500,389 @@
         primeiraMudancaProfissao = 1;
     });
 
-    //Talentos Mundanos
+    //Talentos Mundanos (painel próprio) e Técnicas de arte (Hexomancia / Fisiomancia em abas). Mesma mecânica, listas separadas.
     const talentosMundanosCard = document.getElementById("talentos-mundanos-card");
-    const talentosMundanos = document.getElementById("talentos-mundanos");
-    const fecharTalentos = document.getElementById("fechar-talentos");
-    const adicionarTalentos = document.getElementById("adicionar-talento");
-    const listaTalentos = document.getElementById("lista-talentos");
+    const talentosArteCard = document.getElementById("talentos-arte-card");
+    document.getElementById("talentos-mundanos").addEventListener("click", () => talentosMundanosCard.classList.add("ativo"));
+    document.getElementById("fechar-talentos").addEventListener("click", () => talentosMundanosCard.classList.remove("ativo"));
+    document.getElementById("talentos-arte-abrir").addEventListener("click", () => talentosArteCard.classList.add("ativo"));
+    document.getElementById("fechar-talentos-arte").addEventListener("click", () => talentosArteCard.classList.remove("ativo"));
 
-    talentosMundanos.addEventListener("click", function(){
-        talentosMundanosCard.classList.add("ativo");
+    // ---- Talentos Mundanos: custo de Aura, ativação e pastas ----
+    // Ativar gasta a Aura na hora. Desativar NÃO devolve a Aura (reativar gasta de novo).
+    function gastarAuraTalento(custo){
+        if(custo <= 0) return true;
+        const auraEl = document.getElementById("aura");
+        const partes = auraEl.textContent.split("/").map(v => parseInt(v.trim(), 10));
+        const atual = partes[0];
+        const maximo = partes[1];
+        if(isNaN(atual) || isNaN(maximo)){
+            mostrarPopup("Defina sua Aura antes de ativar um talento.");
+            return false;
+        }
+        // Pode ativar mesmo sem Aura suficiente: o valor fica negativo (exibido em vermelho)
+        const novo = atual - custo;
+        auraEl.textContent = novo + " / " + maximo;
+        const campo = document.getElementById("aura_atual");
+        campo.value = novo;
+
+        const barra = document.querySelector(".barra-aura");
+        if(barra && maximo > 0){
+            barra.style.width = Math.max(0, Math.min(100, (novo / maximo) * 100)) + "%";
+        }
+        campo.dispatchEvent(new Event("input", { bubbles: true }));
+        return true;
+    }
+
+    // Monta uma lista de talentos (cfg: tipo, pastaTipo, lista, barra, botaoAdicionar, vazio, contador, aoMudar)
+    function montarTalentos(cfg){
+    const listaTalentos = cfg.lista;
+    const adicionarTalentos = cfg.botaoAdicionar;
+
+    function cardsTalentos(){
+        return Array.from(listaTalentos.querySelectorAll(".talento-card"));
+    }
+
+    // Hexomancia/Fisiomancia (ehArte) ganham eficiência e aprimoramentos; mundano fica como era.
+    const ehArte = cfg.tipo !== "mundano";
+    const nomeItem = ehArte ? "técnica" : "talento";
+
+    function custoBrutoTalento(card){
+        return Math.max(0, parseInt(card.querySelector(".talento-custo").value, 10) || 0);
+    }
+    function eficienciaTalento(card){
+        return ehArte ? Math.max(0, parseInt(card.dataset.eficiencia, 10) || 0) : 0;
+    }
+    function aprimsTalento(card){
+        if(!ehArte) return [];
+        try { const a = JSON.parse(card.dataset.aprims || "[]"); return Array.isArray(a) ? a : []; } catch(err){ return []; }
+    }
+    // Item no formato do objeto compartilhado Aprimoramentos (custo, eficiência, aprimoramentos, gerais, grátis)
+    function itemDoCard(card){
+        let g = {};
+        try { g = JSON.parse(card.dataset.gerais || "{}"); } catch(err){ g = {}; }
+        return Aprimoramentos.normalizarItem({
+            custo: custoBrutoTalento(card),
+            eficiencia: eficienciaTalento(card),
+            aprimoramentos: aprimsTalento(card),
+            gerais: g,
+            gratis_disponiveis: card.dataset.gratisDisp
+        });
+    }
+    function gravarItemCard(card, item){
+        card.dataset.aprims = JSON.stringify(item.aprimoramentos);
+        card.dataset.gerais = JSON.stringify(item.gerais);
+        card.dataset.gratisDisp = String(item.gratis_disponiveis);
+    }
+    // custo base efetivo = max(0, custo - eficiência) + aprimoramentos (a eficiência não reduz os aprimoramentos)
+    function custoDoTalento(card){
+        if(!ehArte) return custoBrutoTalento(card);
+        return Aprimoramentos.custoTotal(itemDoCard(card));
+    }
+
+    function avisarMudancaTalentos(){
+        document.getElementById("talentos").dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    // Lê os campos do modo de edição para o dataset (eficiência e linhas de aprimoramento)
+    function lerEdicaoArte(card){
+        if(!ehArte) return;
+        card.dataset.eficiencia = String(Math.max(0, parseInt(card.querySelector(".talento-eficiencia-input").value, 10) || 0));
+        const lista = [];
+        card.querySelectorAll(".talento-aprim-form .tecnica-aprim-linha").forEach(function(l){
+            const texto = l.querySelector(".tec-aprim-texto").value.trim();
+            if(texto === "") return;
+            lista.push({
+                texto: texto,
+                custo: Math.max(0, parseInt(l.querySelector(".tec-aprim-custo-input").value, 10) || 0),
+                acumulativo: l.querySelector(".tec-aprim-acum").checked,
+                qtd: parseInt(l.dataset.qtd, 10) || 0,
+                gratis: parseInt(l.dataset.gratis, 10) || 0
+            });
+        });
+        card.dataset.aprims = JSON.stringify(Aprimoramentos.normalizarLista(lista));
+    }
+
+    function linhaAprimTalento(card, a){
+        a = a || {};
+        const linha = document.createElement("div");
+        linha.className = "tecnica-aprim-linha";
+        linha.dataset.qtd = String(a.qtd || 0);
+        linha.dataset.gratis = String(a.gratis || 0);
+        linha.innerHTML = Aprimoramentos.linhaEdicaoHtml();
+        linha.querySelector(".tec-aprim-texto").value = a.texto || "";
+        linha.querySelector(".tec-aprim-custo-input").value = (a.custo === undefined || a.custo === null || a.custo === "") ? "" : a.custo;
+        linha.querySelector(".tec-aprim-acum").checked = !!a.acumulativo;
+        card.querySelector(".talento-aprim-form").appendChild(linha);
+    }
+
+    // Depois de confirmado: aprimoramentos personalizados e gerais (checkbox ou − n +), com grátis
+    function renderizarAprimsTalento(card){
+        const item = itemDoCard(card);
+        gravarItemCard(card, item);
+        Aprimoramentos.redesenhar(card, item);
+    }
+
+    function textoCustoTalento(card, ativo){
+        const s = ehArte ? Aprimoramentos.textoCusto(itemDoCard(card)) : "Custo: " + custoBrutoTalento(card) + " Aura";
+        return s + (ativo ? " · Ativo" : "");
+    }
+
+    function atualizarVisualTalento(card){
+        const ativo = card.dataset.ativo === "1";
+        card.classList.toggle("talento-ativo", ativo);
+        card.querySelector(".talento-toggle").textContent = ativo ? "Desativar" : "Ativar";
+        card.querySelector(".talento-custo-tag").textContent = textoCustoTalento(card, ativo);
+    }
+
+    function atualizarSelectsTalentos(){
+        cardsTalentos().forEach(function(card){
+            card.querySelector(".pasta-select").innerHTML = PastasFicha.opcoes(cfg.pastaTipo, card.dataset.pasta || "");
+        });
+    }
+
+    function aplicarFiltroTalentos(){
+        let visiveis = 0;
+        const cards = cardsTalentos();
+        cards.forEach(function(card){
+            const ok = card.dataset.confirmado !== "1" || PastasFicha.visivel(cfg.pastaTipo, card.dataset.pasta || "");
+            card.style.display = ok ? "" : "none";
+            if(ok) visiveis++;
+        });
+        const vazio = cfg.vazio;
+        vazio.style.display = visiveis === 0 ? "block" : "none";
+        vazio.textContent = cards.length === 0
+            ? (ehArte ? "Você ainda não tem técnicas de arte. Clique em “+ Adicionar técnica” para criar a primeira."
+                      : "Você ainda não tem talentos. Clique em “+ Adicionar Talento” para criar o primeiro.")
+            : (ehArte ? "Nenhuma técnica nesta pasta." : "Nenhum talento nesta pasta.");
+    }
+
+    function depoisDeMudarTalentos(){
+        const qtd = cardsTalentos().filter(c => c.dataset.confirmado === "1").length;
+        cfg.contador.textContent = qtd > 0 ? qtd : "";
+        if(cfg.aoMudar) cfg.aoMudar();
+        PastasFicha.atualizar(cfg.pastaTipo);
+        aplicarFiltroTalentos();
+    }
+
+    PastasFicha.registrar(cfg.pastaTipo, {
+        barra: cfg.barra,
+        usadas: () => cardsTalentos().filter(c => c.dataset.confirmado === "1").map(c => c.dataset.pasta || ""),
+        aoFiltrar: aplicarFiltroTalentos,
+        aoRenomear: function(antigo, novo){
+            cardsTalentos().forEach(c => { if(c.dataset.pasta === antigo) c.dataset.pasta = novo; });
+        },
+        aoExcluir: function(nome){
+            cardsTalentos().forEach(c => { if(c.dataset.pasta === nome) c.dataset.pasta = ""; });
+        },
+        aoMudarPastas: atualizarSelectsTalentos
     });
 
-    fecharTalentos.addEventListener("click", function(){
-        talentosMundanosCard.classList.remove("ativo");
-    });
+    // O input do título some e o texto digitado vira o cabeçalho; custo vira uma etiqueta
+    function confirmarCardTalento(card){
+        const titulo = card.querySelector(".talento-titulo");
+        const exibido = card.querySelector(".talento-titulo-exibido");
+        exibido.textContent = titulo.value.trim();
+        exibido.style.display = "block";
+        titulo.style.display = "none";
+
+        card.dataset.confirmado = "1";
+        card.querySelector(".talento-descricao").readOnly = true;
+        card.querySelector(".talento-custo-edicao").style.display = "none";
+        if(ehArte){
+            lerEdicaoArte(card);
+            card.querySelector(".talento-aprim-edicao").style.display = "none";
+            card.querySelector(".talento-rodape-arte").style.display = "flex";
+            card.querySelector(".talento-eficiencia-card").value = eficienciaTalento(card);
+            card.querySelector(".aprim-gratis-disp").value = String(Aprimoramentos.nat(card.dataset.gratisDisp, 99));
+            renderizarAprimsTalento(card);
+        }
+        card.querySelector(".talento-custo-tag").style.display = "inline";
+        card.querySelector(".talento-toggle").style.display = "inline-block";
+        card.querySelector(".talento-confirmar").style.display = "none";
+        atualizarVisualTalento(card);
+    }
+
+    function criarCardTalento(t, confirmado, noTopo){
+        listaTalentos.insertAdjacentHTML(noTopo ? "afterbegin" : "beforeend", `
+            <div class="talento-card">
+                <div class="talento-topo">
+                    <h4 class="talento-titulo-exibido" style="display:none;"></h4>
+                    <input class="talento-titulo" placeholder="Nome ${ehArte ? 'da técnica' : 'do talento'}">
+                    <button type="button" class="botao-fechar talento-remover" title="Remover ${nomeItem}" aria-label="Remover ${nomeItem}">✕</button>
+                </div>
+                <div class="item-pasta">
+                    <label>📁 Pasta</label>
+                    <select class="pasta-select"></select>
+                </div>
+                <textarea class="talento-descricao" placeholder="Descrição ${ehArte ? 'da técnica' : 'do talento'}"></textarea>
+                <div class="talento-custo-edicao">
+                    <label>Custo (Aura)</label>
+                    <input type="number" min="0" class="talento-custo" placeholder="0">
+                    ${ehArte ? '<label title="Aura abatida do custo base. Não afeta o custo dos aprimoramentos.">Eficiência</label><input type="number" min="0" class="talento-eficiencia-input" placeholder="0">' : ''}
+                </div>
+                ${ehArte ? `
+                <div class="talento-aprim-edicao">
+                    <div class="talento-aprim-form"></div>
+                    <button type="button" class="button talento-aprim-add">+ Aprimoramento</button>
+                </div>
+                <div class="aprim-bloco talento-aprim-view"></div>
+                <div class="tecnica-rodape talento-rodape-arte" style="display:none;">
+                    <label class="tecnica-eficiencia talento-eficiencia-view" title="Aura abatida do custo base (não afeta aprimoramentos)">⚡ Eficiência <input type="number" min="0" class="talento-eficiencia-card" value="0"></label>
+                    ${Aprimoramentos.rodapeHtml(Aprimoramentos.normalizarItem({}))}
+                </div>` : ''}
+                <span class="talento-custo-tag" style="display:none;"></span>
+                <div class="talento-acoes">
+                    <button type="button" class="talento-toggle" style="display:none;" title="Ativar gasta a Aura na hora; desativar não devolve">Ativar</button>
+                    <button class="button talento-confirmar" type="button">Adicionar</button>
+                </div>
+            </div>
+        `);
+        const card = noTopo ? listaTalentos.firstElementChild : listaTalentos.lastElementChild;
+        card.querySelector(".talento-titulo").value = t.titulo || "";
+        card.querySelector(".talento-descricao").value = t.descricao || "";
+        card.querySelector(".talento-custo").value = (t.custo === undefined || t.custo === null) ? "" : t.custo;
+        card.dataset.ativo = t.ativo ? "1" : "0";
+        card.dataset.tipo = cfg.tipo;
+        if(ehArte){
+            card.querySelector(".talento-eficiencia-input").value = t.eficiencia ? t.eficiencia : "";
+            Aprimoramentos.normalizarLista(t.aprimoramentos).forEach(function(a){
+                if(a.texto.trim() !== ""){ a.texto = a.texto.trim(); linhaAprimTalento(card, a); }
+            });
+            card.dataset.gerais = JSON.stringify(Aprimoramentos.normalizarGerais(t.gerais));
+            card.dataset.gratisDisp = String(Aprimoramentos.nat(t.gratis_disponiveis, 99));
+            lerEdicaoArte(card);
+        }
+        card.dataset.pasta = typeof t.pasta === "string" ? t.pasta : PastasFicha.filtroAtual(cfg.pastaTipo);
+        card.querySelector(".pasta-select").innerHTML = PastasFicha.opcoes(cfg.pastaTipo, card.dataset.pasta);
+        if(confirmado) confirmarCardTalento(card);
+        return card;
+    }
 
     adicionarTalentos.addEventListener("click", function(){
-        listaTalentos.innerHTML+=`
-            <div class="talento-card">
-                <button class="botao-fechar" style="max-width:20%">X</button>
-                <h4 class="talento-titulo-exibido" style="display:none;"></h4>
-                <input class="talento-titulo" placeholder="Nome do talento">
-                <textarea class="talento-descricao" placeholder="Descrição do talento"></textarea>
-                <button class="button" type="button">Adicionar</button>
-            </div>
-        `;
+        const card = criarCardTalento({}, false, true);
+        depoisDeMudarTalentos();
+        card.querySelector(".talento-titulo").focus();
     });
+
+    // Aprimoramentos do card confirmado: caixas (change), botões − / + (click) e campo de grátis (input)
+    function aplicarAprimoramento(e){
+        const card = e.target.closest(".talento-card");
+        if(!card || card.dataset.confirmado !== "1") return false;
+        const item = itemDoCard(card);
+        if(!Aprimoramentos.tratar(e, item)) return false;
+        gravarItemCard(card, item);
+        Aprimoramentos.redesenhar(card, item);
+        atualizarVisualTalento(card);
+        avisarMudancaTalentos();
+        return true;
+    }
+
+    listaTalentos.addEventListener("change", function(e){
+        if(ehArte && aplicarAprimoramento(e)) return;
+        if(!e.target.classList.contains("pasta-select")) return;
+        e.target.closest(".talento-card").dataset.pasta = e.target.value;
+        depoisDeMudarTalentos();
+    });
+
+    if(ehArte){
+        listaTalentos.addEventListener("input", function(e){
+            const card = e.target.closest(".talento-card");
+            if(!card) return;
+            if(aplicarAprimoramento(e)) return;
+            if(e.target.classList.contains("talento-eficiencia-card")){
+                card.dataset.eficiencia = String(Math.max(0, parseInt(e.target.value, 10) || 0));
+                atualizarVisualTalento(card);
+                avisarMudancaTalentos();
+            } else if(card.dataset.confirmado !== "1" &&
+                      (e.target.classList.contains("talento-eficiencia-input") || e.target.closest(".talento-aprim-form"))){
+                lerEdicaoArte(card);
+            }
+        });
+    }
 
     listaTalentos.addEventListener("click", function(e){
-        if(e.target.classList.contains("botao-fechar")){
-            e.target.closest(".talento-card").remove();
+        const card = e.target.closest(".talento-card");
+        if(!card) return;
+
+        if(ehArte && aplicarAprimoramento(e)) return;
+        if(ehArte && e.target.classList.contains("talento-aprim-add")){
+            linhaAprimTalento(card, {});
             return;
         }
-        if(e.target.classList.contains("button")){
-            const card = e.target.closest(".talento-card");
-            const adicionar = card.querySelector(".button");
-            const titulo = card.querySelector(".talento-titulo");
-            const descricao = card.querySelector(".talento-descricao");
-            const tituloExibido = card.querySelector(".talento-titulo-exibido");
+        if(ehArte && e.target.classList.contains("tec-aprim-remover")){
+            e.target.closest(".tecnica-aprim-linha").remove();
+            lerEdicaoArte(card);
+            avisarMudancaTalentos();
+            return;
+        }
 
-            if(titulo.value.trim() === ""){
-                mostrarPopup("Digite um nome para o talento antes de adicionar.");
+        if(e.target.classList.contains("botao-fechar")){
+            if(card.dataset.confirmado === "1" && !confirm("Remover " + (ehArte ? "esta técnica" : "este talento") + "?")) return;
+            card.remove();
+            depoisDeMudarTalentos();
+            return;
+        }
+
+        if(e.target.classList.contains("talento-toggle")){
+            if(card.dataset.ativo === "1"){
+                card.dataset.ativo = "0";
+            } else {
+                if(!gastarAuraTalento(custoDoTalento(card))) return;
+                card.dataset.ativo = "1";
+            }
+            atualizarVisualTalento(card);
+            return;
+        }
+
+        if(e.target.classList.contains("talento-confirmar")){
+            if(card.querySelector(".talento-titulo").value.trim() === ""){
+                mostrarPopup("Digite um nome para " + (ehArte ? "a técnica" : "o talento") + " antes de adicionar.");
                 return;
             }
-
-            // O input do título some e o texto digitado vira o cabeçalho do card
-            tituloExibido.textContent = titulo.value.trim();
-            tituloExibido.style.display = "block";
-            titulo.style.display = "none";
-
-            descricao.readOnly = true;
-            adicionar.style.display = "none";
+            confirmarCardTalento(card);
+            depoisDeMudarTalentos();
         }
     });
+
+    return {
+        carregar: function(t){ criarCardTalento(t, true, false); },
+        atualizar: depoisDeMudarTalentos
+    };
+    }
+
+    function atualizarContadorTalentosArte(){
+        const qtd = talentosArteCard.querySelectorAll('.talento-card[data-confirmado="1"]').length;
+        document.getElementById("cont-talentos-arte").textContent = qtd > 0 ? qtd : "";
+    }
+
+    const gruposTalentos = {
+        mundano: montarTalentos({
+            tipo: "mundano", pastaTipo: "talentos",
+            lista: document.getElementById("lista-talentos"), barra: document.getElementById("pastas-talentos"),
+            botaoAdicionar: document.getElementById("adicionar-talento"), vazio: document.getElementById("talentos-vazio"),
+            contador: document.getElementById("cont-talentos")
+        }),
+        hexomancia: montarTalentos({
+            tipo: "hexomancia", pastaTipo: "talentos_hexomancia",
+            lista: document.getElementById("lista-talentos-hexomancia"), barra: document.getElementById("pastas-talentos-hexomancia"),
+            botaoAdicionar: document.getElementById("adicionar-talento-hexomancia"), vazio: document.getElementById("talentos-hexomancia-vazio"),
+            contador: document.getElementById("cont-talentos-hexomancia"), aoMudar: atualizarContadorTalentosArte
+        }),
+        fisiomancia: montarTalentos({
+            tipo: "fisiomancia", pastaTipo: "talentos_fisiomancia",
+            lista: document.getElementById("lista-talentos-fisiomancia"), barra: document.getElementById("pastas-talentos-fisiomancia"),
+            botaoAdicionar: document.getElementById("adicionar-talento-fisiomancia"), vazio: document.getElementById("talentos-fisiomancia-vazio"),
+            contador: document.getElementById("cont-talentos-fisiomancia"), aoMudar: atualizarContadorTalentosArte
+        })
+    };
+
+    // Recria os talentos salvos já confirmados (com custo, estado ativo, pasta e tipo), cada um na sua lista
+    @json($talentosSalvos).forEach(function(t){
+        const grupo = (t && gruposTalentos[t.tipo]) || gruposTalentos.mundano;
+        grupo.carregar(t);
+    });
+    Object.values(gruposTalentos).forEach(g => g.atualizar());
 
     const cardTalento = document.getElementById("card-talento");
 
@@ -2910,6 +4917,8 @@
         //Maldições
 
     const CATALOGO_MALDICOES = @json(config('maldicoes', []));
+    // Maldições que este usuário pode escolher: sem a chave do mestre, as não catalogadas ficam de fora
+    const LISTA_MALDICOES = @json(\App\Support\AcessoMaldicoes::lista(auth()->user()));
     const CUSTOM_MALDICAO = "__custom__";
 
     const cardMaldicao = document.getElementById("maldicao-card");
@@ -3114,10 +5123,12 @@
     // ---------- seletor ----------
     function montarSeletorCatalogo(){
         let opcoes = '<option value="">Selecione uma maldição</option>';
-        for(const slug in CATALOGO_MALDICOES){
-            const c = CATALOGO_MALDICOES[slug];
-            opcoes += '<option value="' + esc(slug) + '">' + esc(c.nome) + " (" + esc(c.raridade) + ")</option>";
-        }
+        LISTA_MALDICOES.forEach(function(item, i){
+            const c = item.slug ? CATALOGO_MALDICOES[item.slug] : null;
+            const valor = c ? item.slug : "lista:" + i;
+            const extra = c ? c.raridade : item.apelido;
+            opcoes += '<option value="' + esc(valor) + '">' + esc(item.nome) + (extra ? " (" + esc(extra) + ")" : "") + "</option>";
+        });
         opcoes += '<option value="' + CUSTOM_MALDICAO + '">Outra (personalizada)</option>';
         catalogoSelect.innerHTML = opcoes;
     }
@@ -3126,7 +5137,10 @@
         const v = catalogoSelect.value;
         maldicaoCustom.classList.toggle("visivel", v === CUSTOM_MALDICAO);
 
-        if(v && v !== CUSTOM_MALDICAO){
+        if(v && v.indexOf("lista:") === 0){
+            const item = LISTA_MALDICOES[Number(v.slice(6))] || {};
+            maldicaoPrevia.textContent = [item.categoria, item.orgao, item.apelido].filter(Boolean).join(" · ") + " · sem página detalhada";
+        } else if(v && v !== CUSTOM_MALDICAO){
             const c = CATALOGO_MALDICOES[v];
             const n = (c.tecnicas || []).length;
             maldicaoPrevia.textContent = c.raridade + " · " + (c.ameacas || []).length +
@@ -3153,6 +5167,14 @@
             }
             adicionarEntrada({ slug: null, nome: nome, ameaca: ameaca });
             maldicaoNomeCustom.value = "";
+        } else if(escolha.indexOf("lista:") === 0){
+            const item = LISTA_MALDICOES[Number(escolha.slice(6))];
+            if(!item) return;
+            if(maldicoesAdicionadas.some(m => (m.nome || "").toLowerCase() === item.nome.toLowerCase())){
+                mostrarPopup("Essa maldição já foi adicionada.");
+                return;
+            }
+            adicionarEntrada({ slug: null, nome: item.nome, ameaca: ameaca });
         } else {
             if(maldicoesAdicionadas.some(m => m.slug === escolha)){
                 mostrarPopup("Essa maldição já foi adicionada.");
@@ -3254,19 +5276,22 @@ const listaItens = document.getElementById("lista-itens");
 
         const itensAdicionadosTitulo = document.getElementById("itens-adicionados-titulo");
 
-    adicionarItem.addEventListener("click", function(){
-        if(itemNome.value.trim() === ""){
-            mostrarPopup("Digite um nome para o item antes de adicionar.");
-            return;
-        }
+    function escaparHtmlItem(texto){
+        return String(texto == null ? "" : texto)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
 
-        const nome = itemNome.value.trim();
-        const categoria = itemCategoria.value === "Selecione" ? "" : itemCategoria.value;
-        const qtdDados = Number(itemQtdDados.value) || 0;
-        const ladosDado = Number(itemDado.value) || 0;
-        const valorFixo = Number(itemValorFixo.value) || 0;
-        const descricao = itemDescricao.value.trim();
-        const modificacoes = itemModificacoes.value.trim();
+    // Monta o card de um item (usado ao adicionar e ao recarregar a ficha salva).
+    // Todos os campos ficam no dataset do card, de onde sincronizarItens() os lê.
+    function criarCardItem(item){
+        const nome = item.nome || "";
+        const categoria = item.categoria || "";
+        const qtdDados = Number(item.qtd_dados) || 0;
+        const ladosDado = Number(item.lados_dado) || 0;
+        const valorFixo = Number(item.valor_fixo) || 0;
+        const descricao = item.descricao || "";
+        const modificacoes = item.modificacoes || "";
 
         let textoDano = "";
         if(qtdDados > 0 && ladosDado > 0){
@@ -3280,19 +5305,23 @@ const listaItens = document.getElementById("lista-itens");
 
         const card = document.createElement("div");
         card.className = "item-card";
+        card.dataset.nome = nome;
+        card.dataset.categoria = categoria;
+        card.dataset.descricao = descricao;
+        card.dataset.modificacoes = modificacoes;
         card.dataset.qtdDados = qtdDados;
         card.dataset.ladosDado = ladosDado;
         card.dataset.valorFixo = valorFixo;
 
         card.innerHTML = `
             <div class="item-card-topo">
-                <span class="item-card-nome">${nome}</span>
-                ${categoria ? `<span class="item-tag">${categoria}</span>` : ""}
+                <span class="item-card-nome">${escaparHtmlItem(nome)}</span>
+                ${categoria ? `<span class="item-tag">${escaparHtmlItem(categoria)}</span>` : ""}
                 <button class="botao-remover-item" type="button" title="Remover item">Remover</button>
             </div>
-            ${textoDano ? `<div class="item-card-dano">Dano/Valor: ${textoDano}</div>` : ""}
-            ${descricao ? `<div class="item-card-descricao">${descricao}</div>` : ""}
-            ${modificacoes ? `<div class="item-card-modificacoes"><strong>Modificações:</strong> ${modificacoes}</div>` : ""}
+            ${textoDano ? `<div class="item-card-dano"><span class="item-rotulo">Dano/Valor</span><span class="item-dano-valor">${textoDano}</span></div>` : ""}
+            ${descricao ? `<div class="item-card-descricao">${escaparHtmlItem(descricao)}</div>` : ""}
+            ${modificacoes ? `<div class="item-card-modificacoes"><strong>Modificações:</strong> ${escaparHtmlItem(modificacoes)}</div>` : ""}
             <div class="item-card-rodape">
                 <button class="botao-rolar-item" type="button" ${(qtdDados > 0 && ladosDado > 0) || valorFixo !== 0 ? "" : "disabled"}>Rolar</button>
                 <span class="item-card-resultado"></span>
@@ -3301,6 +5330,26 @@ const listaItens = document.getElementById("lista-itens");
 
         listaItens.appendChild(card);
         itensAdicionadosTitulo.style.display = "block";
+    }
+
+    // Recria os itens salvos ao abrir a ficha
+    @json($itensSalvos).forEach(criarCardItem);
+
+    adicionarItem.addEventListener("click", function(){
+        if(itemNome.value.trim() === ""){
+            mostrarPopup("Digite um nome para o item antes de adicionar.");
+            return;
+        }
+
+        criarCardItem({
+            nome: itemNome.value.trim(),
+            categoria: itemCategoria.value === "Selecione" ? "" : itemCategoria.value,
+            qtd_dados: Number(itemQtdDados.value) || 0,
+            lados_dado: Number(itemDado.value) || 0,
+            valor_fixo: Number(itemValorFixo.value) || 0,
+            descricao: itemDescricao.value.trim(),
+            modificacoes: itemModificacoes.value.trim()
+        });
 
         itemNome.value = "";
         itemCategoria.value = "Selecione";
@@ -3336,10 +5385,14 @@ const listaItens = document.getElementById("lista-itens");
                 total += rolado;
             }
 
-            resultadoSpan.textContent = detalhes.length > 0
-                ? "Resultado: " + total + " (" + detalhes.join(" + ") +
-                (valorFixo !== 0 ? " " + (valorFixo > 0 ? "+ " : "- ") + Math.abs(valorFixo) : "") + ")"
-                : "Resultado: " + total;
+            const detalheTexto = detalhes.length > 0
+                ? detalhes.join(" + ") + (valorFixo !== 0 ? " " + (valorFixo > 0 ? "+ " : "- ") + Math.abs(valorFixo) : "")
+                : "";
+
+            resultadoSpan.innerHTML =
+                '<span class="item-resultado-rotulo">Resultado</span>' +
+                '<strong class="item-resultado-total">' + total + '</strong>' +
+                (detalheTexto ? '<span class="item-resultado-detalhe">' + detalheTexto + '</span>' : '');
         }
     });
 
@@ -3412,7 +5465,74 @@ document.querySelectorAll("form button:not([type])").forEach(function(botao){
     botao.setAttribute("type", "button");
 });
 
-document.querySelector("form").addEventListener("submit", function(){
+// Enter dentro de um campo NÃO envia a ficha (só o botão "Salvar" envia).
+// Textareas continuam aceitando Enter para quebrar linha.
+document.getElementById("form-ficha").addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    const alvo = e.target;
+    if(alvo.tagName === "TEXTAREA" || alvo.tagName === "BUTTON") return;
+    if(alvo.tagName === "INPUT" && alvo.type === "submit") return;
+    e.preventDefault();
+});
+
+function sincronizarTalentos(){
+    const lista = [];
+    document.querySelectorAll(".lista-talentos .talento-card").forEach(function(card){
+        const titulo = card.querySelector(".talento-titulo").value.trim();
+        if(titulo === "") return;
+        const item = {
+            tipo: card.dataset.tipo || "mundano",
+            titulo: titulo,
+            descricao: card.querySelector(".talento-descricao").value,
+            custo: Math.max(0, parseInt(card.querySelector(".talento-custo").value, 10) || 0),
+            ativo: card.dataset.ativo === "1",
+            pasta: card.dataset.pasta || ""
+        };
+        if(item.tipo !== "mundano"){
+            let aprims = [];
+            try { aprims = JSON.parse(card.dataset.aprims || "[]"); } catch(err){ aprims = []; }
+            let gerais = {};
+            try { gerais = JSON.parse(card.dataset.gerais || "{}"); } catch(err){ gerais = {}; }
+            const norm = Aprimoramentos.normalizarItem({
+                custo: item.custo,
+                eficiencia: card.dataset.eficiencia,
+                aprimoramentos: aprims,
+                gerais: gerais,
+                gratis_disponiveis: card.dataset.gratisDisp
+            });
+            item.eficiencia = norm.eficiencia;
+            item.aprimoramentos = norm.aprimoramentos;
+            item.gerais = Aprimoramentos.serializarGerais(norm.gerais);
+            item.gratis_disponiveis = norm.gratis_disponiveis;
+        }
+        lista.push(item);
+    });
+    document.getElementById("talentos").value = JSON.stringify(lista);
+}
+
+function sincronizarItens(){
+    const lista = [];
+    document.querySelectorAll("#lista-itens .item-card").forEach(function(card){
+        lista.push({
+            nome: card.dataset.nome || "",
+            categoria: card.dataset.categoria || "",
+            qtd_dados: Math.max(0, Math.trunc(Number(card.dataset.qtdDados) || 0)),
+            lados_dado: Math.max(0, Math.trunc(Number(card.dataset.ladosDado) || 0)),
+            valor_fixo: Math.trunc(Number(card.dataset.valorFixo) || 0),
+            descricao: card.dataset.descricao || "",
+            modificacoes: card.dataset.modificacoes || ""
+        });
+    });
+    document.getElementById("itens").value = JSON.stringify(lista);
+}
+
+function prepararFichaParaSalvar(){
+    document.getElementById("pastas").value = PastasFicha.json();
+    sincronizarItens();
+    sincronizarTalentos();
+    sincronizarTecnicas();
+    sincronizarNiveisProfissao();
+
     const sync = (spanId, atualId, maximoId) => {
         const partes = document.getElementById(spanId).textContent.split("/").map(v => v.trim());
         document.getElementById(atualId).value = partes[0] !== "?" ? partes[0] : "";
@@ -3420,8 +5540,567 @@ document.querySelector("form").addEventListener("submit", function(){
     };
     sync("vida", "vida_atual", "vida_maxima");
     sync("sanidade", "sanidade_atual", "sanidade_maxima");
-    sync("aura", "aura_atual", "aura_maxima");
+        sync("aura", "aura_atual", "aura_maxima");
+}
+
+document.getElementById("form-ficha").addEventListener("submit", prepararFichaParaSalvar);
+
+// ==================== Salvamento automático ====================
+(function(){
+    if(!{{ $editando ? 'true' : 'false' }}) return;
+    if({{ $somenteLeitura ? 'true' : 'false' }}) return; // somente leitura: nada é salvo
+
+    const form = document.getElementById("form-ficha");
+    const ATRASO = 1000; // ms após a última alteração
+
+    let timer = null;
+    let timerAviso = null;
+    let salvando = false;
+    let pendente = false;
+    let sujo = false;
+
+    // ---- Indicador de status ----
+    const estilo = document.createElement("style");
+    estilo.textContent = `
+        #autosave-status {
+            position: fixed;
+            right: 16px;
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            z-index: 1000;
+            max-width: 280px;
+            padding: 6px 12px;
+            font-size: .8rem;
+            line-height: 1.3;
+            color: #fff;
+            background: rgba(0, 0, 0, .78);
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: 999px;
+            opacity: 0;
+            transform: translateY(6px);
+            pointer-events: none;
+            transition: opacity .2s, transform .2s;
+        }
+        #autosave-status.visivel { opacity: 1; transform: none; }
+        #autosave-status.ok { border-color: rgba(95, 167, 119, .7); }
+        #autosave-status.erro { border-color: rgba(220, 70, 70, .8); border-radius: 10px; }
+    `;
+    document.head.appendChild(estilo);
+
+    const aviso = document.createElement("div");
+    aviso.id = "autosave-status";
+    aviso.setAttribute("role", "status");
+    aviso.setAttribute("aria-live", "polite");
+    document.body.appendChild(aviso);
+
+    function mostrar(texto, classe, esconderEm){
+        clearTimeout(timerAviso);
+        aviso.textContent = texto;
+        aviso.className = "visivel " + (classe || "");
+        if(esconderEm){
+            timerAviso = setTimeout(() => { aviso.classList.remove("visivel"); }, esconderEm);
+        }
+    }
+
+    // ---- Salvamento ----
+    function agendar(ms){
+        sujo = true;
+        clearTimeout(timer);
+        timer = setTimeout(() => salvar(), ms || ATRASO);
+    }
+
+    async function salvar(opcoes){
+        clearTimeout(timer);
+        if(salvando){ pendente = true; return; }
+
+        salvando = true;
+        pendente = false;
+        sujo = false;
+        mostrar("Salvando…", "");
+
+        try{
+            prepararFichaParaSalvar();
+
+            const resp = await fetch(form.action, {
+                method: "POST",
+                body: new FormData(form), // já inclui _token e _method=PUT
+                headers: {
+                    "Accept": "application/json",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                credentials: "same-origin",
+                redirect: "manual",
+                keepalive: !!(opcoes && opcoes.keepalive)
+            });
+
+            if(resp.ok || resp.type === "opaqueredirect"){
+                mostrar("Salvo ✓", "ok", 2000);
+            } else if(resp.status === 422){
+                const json = await resp.json().catch(() => null);
+                const primeiro = json && json.errors ? Object.values(json.errors)[0][0] : "dados inválidos.";
+                mostrar("Não salvo: " + primeiro, "erro", 6000);
+            } else if(resp.status === 419){
+                mostrar("Sessão expirada. Recarregue a página.", "erro");
+            } else {
+                mostrar("Erro ao salvar (" + resp.status + ").", "erro", 6000);
+            }
+        } catch(erro){
+            mostrar("Sem conexão. Tentando novamente…", "erro");
+            agendar(5000);
+        } finally {
+            salvando = false;
+            if(pendente) agendar(300);
+        }
+    }
+
+    // ---- Gatilhos ----
+    form.addEventListener("input", () => agendar());
+    form.addEventListener("change", () => agendar());
+
+    // Botões que alteram a ficha (adicionar/remover itens, talentos etc.)
+    form.addEventListener("click", function(e){
+        const botao = e.target.closest("button");
+        if(!botao || botao.type === "submit") return;
+        if(botao.id === "preencher-teste") return;
+        if(/rolar/i.test(botao.className)) return;
+        agendar();
+    });
+
+    // Envio manual cancela o autosave pendente
+    form.addEventListener("submit", function(){
+        clearTimeout(timer);
+        sujo = false;
+    });
+
+    // Ao sair da página com alteração pendente, salva na hora
+    function descarregar(){
+        if(sujo && !salvando) salvar({ keepalive: true });
+    }
+    window.addEventListener("pagehide", descarregar);
+    document.addEventListener("visibilitychange", function(){
+        if(document.visibilityState === "hidden") descarregar();
+    });
+})();
+
+// ==================== Técnicas ====================
+let tecnicas = @json($tecnicasSalvas);
+if(!Array.isArray(tecnicas)) tecnicas = [];
+let proximoIdTecnica = 1;
+tecnicas.forEach(t => { t.id = proximoIdTecnica++; t.aprimoramentos = t.aprimoramentos || []; t.eficiencia = t.eficiencia || 0; Aprimoramentos.normalizarItem(t); t.pasta = typeof t.pasta === "string" ? t.pasta : ""; t.eficiencia = Math.max(0, parseInt(t.eficiencia, 10) || 0); t.tipo = t.tipo === "fisiomancia" ? "fisiomancia" : "hexomancia"; });
+
+const tecnicasCard = document.getElementById("tecnicas-card");
+const listaTecnicas = document.getElementById("lista-tecnicas");
+const tecAprimForm = document.getElementById("tec-aprimoramentos-form");
+
+document.getElementById("tecnicas-abrir").addEventListener("click", () => tecnicasCard.classList.add("ativo"));
+document.getElementById("fechar-tecnicas").addEventListener("click", () => tecnicasCard.classList.remove("ativo"));
+
+// Abas: Hexomancia (técnicas de maldição) e Fisiomancia (técnicas + propriedades fisiomantes). Cada técnica guarda o "tipo".
+function abaTecnicas(){
+    const b = tecnicasCard.querySelector(".aba-painel.ativo");
+    return b && b.dataset.aba === "fisiomancia" ? "fisiomancia" : "hexomancia";
+}
+function rotuloNivelTecnica(tipo){
+    return tipo === "fisiomancia" ? "Nível de arte requisitado" : "Nível de maldição requisitado";
+}
+tecnicasCard.addEventListener("aba-mudou", function(){ renderizarTecnicas(); });
+
+function sincronizarTecnicas(){
+    // gerais: só as chaves com qtd > 0 vão no JSON
+    document.getElementById("tecnicas").value = JSON.stringify(tecnicas.map(t => Object.assign({}, t, { gerais: Aprimoramentos.serializarGerais(t.gerais) })));
+}
+
+// Eficiência: Aura abatida do custo base (nunca abaixo de 0); os aprimoramentos não são afetados
+function custoBaseTecnica(t){
+    return Aprimoramentos.custoBase(t);
+}
+function custoTotalTecnica(t){
+    return Aprimoramentos.custoTotal(t);
+}
+
+// ---- linhas de aprimoramento no formulário ----
+function adicionarLinhaAprimoramento(){
+    const linha = document.createElement("div");
+    linha.className = "tecnica-aprim-linha";
+    linha.innerHTML = Aprimoramentos.linhaEdicaoHtml();
+    tecAprimForm.appendChild(linha);
+}
+
+document.getElementById("tec-add-aprimoramento").addEventListener("click", adicionarLinhaAprimoramento);
+
+tecAprimForm.addEventListener("click", function(e){
+    if(e.target.classList.contains("tec-aprim-remover")){
+        e.target.closest(".tecnica-aprim-linha").remove();
+    }
 });
+
+// ---- adicionar técnica ----
+document.getElementById("adicionar-tecnica").addEventListener("click", function(){
+    const nome = document.getElementById("tec-nome").value.trim();
+    if(nome === ""){
+        mostrarPopup("Digite um nome para a técnica antes de adicionar.");
+        return;
+    }
+
+    const aprimoramentos = [];
+    tecAprimForm.querySelectorAll(".tecnica-aprim-linha").forEach(function(l){
+        const texto = l.querySelector(".tec-aprim-texto").value.trim();
+        const custo = Math.max(0, parseInt(l.querySelector(".tec-aprim-custo-input").value, 10) || 0);
+        if(texto !== "" || custo > 0){
+            aprimoramentos.push({ texto: texto, custo: custo, acumulativo: l.querySelector(".tec-aprim-acum").checked, qtd: 0, gratis: 0, ativo: false });
+        }
+    });
+
+    tecnicas.push(Aprimoramentos.normalizarItem({
+        id: proximoIdTecnica++,
+        nome: nome,
+        descricao: document.getElementById("tec-descricao").value.trim(),
+        logica: document.getElementById("tec-logica").value.trim(),
+        nivel: Math.max(0, parseInt(document.getElementById("tec-nivel").value, 10) || 0),
+        custo: Math.max(0, parseInt(document.getElementById("tec-custo").value, 10) || 0),
+        eficiencia: Math.max(0, parseInt(document.getElementById("tec-eficiencia").value, 10) || 0),
+        processo: document.getElementById("tec-processo").value.trim(),
+        efeito: document.getElementById("tec-efeito").value.trim(),
+        pasta: document.getElementById("tec-pasta").value,
+        tipo: abaTecnicas(),
+        aprimoramentos: aprimoramentos,
+        gerais: {},
+        gratis_disponiveis: 0
+    }));
+
+    ["tec-nome","tec-descricao","tec-logica","tec-nivel","tec-custo","tec-eficiencia","tec-processo","tec-efeito"]
+        .forEach(id => document.getElementById(id).value = "");
+    tecAprimForm.innerHTML = "";
+
+    renderizarTecnicas();
+    document.getElementById("tecnica-novo").open = false;
+});
+
+// ---- renderização da lista ----
+function dadoTecnica(rotulo, valor){
+    return valor ? "<div><dt>" + esc(rotulo) + "</dt><dd>" + esc(valor) + "</dd></div>" : "";
+}
+
+// ---- pastas das técnicas ----
+function atualizarSelectNovaTecnica(){
+    const sel = document.getElementById("tec-pasta");
+    sel.innerHTML = PastasFicha.opcoes("tecnicas", PastasFicha.filtroAtual("tecnicas"));
+}
+
+PastasFicha.registrar("tecnicas", {
+    barra: document.getElementById("pastas-tecnicas"),
+    usadas: () => tecnicas.map(t => t.pasta || ""),
+    aoFiltrar: function(){ atualizarSelectNovaTecnica(); renderizarTecnicas(); },
+    aoRenomear: function(antigo, novo){ tecnicas.forEach(t => { if(t.pasta === antigo) t.pasta = novo; }); },
+    aoExcluir: function(nome){ tecnicas.forEach(t => { if(t.pasta === nome) t.pasta = ""; }); },
+    aoMudarPastas: function(){ atualizarSelectNovaTecnica(); }
+});
+
+function renderizarTecnicas(){
+    const aba = abaTecnicas();
+    document.getElementById("tec-nivel-rotulo").textContent = rotuloNivelTecnica(aba);
+    const daAba = tecnicas.filter(t => (t.tipo || "hexomancia") === aba);
+    const visiveis = daAba.filter(t => PastasFicha.visivel("tecnicas", t.pasta || ""));
+
+    listaTecnicas.innerHTML = visiveis.map(function(t){
+        return '<div class="tecnica-card" data-id="' + t.id + '">' +
+            "<h4>" + esc(t.nome) + "</h4>" +
+            '<div class="item-pasta"><label>📁 Pasta</label><select class="pasta-select">' +
+                PastasFicha.opcoes("tecnicas", t.pasta || "") + "</select></div>" +
+            "<dl>" +
+                dadoTecnica("Descrição", t.descricao) +
+                dadoTecnica("Lógica de obtenção", t.logica) +
+                dadoTecnica(rotuloNivelTecnica(t.tipo), String(t.nivel)) +
+                dadoTecnica("Processo", t.processo) +
+                dadoTecnica("Efeito", t.efeito) +
+            "</dl>" +
+            '<div class="aprim-bloco">' + Aprimoramentos.html(t) + "</div>" +
+            '<div class="tecnica-rodape">' +
+                '<span class="tecnica-total tec-total-texto">' + esc(Aprimoramentos.textoCusto(t)) + "</span>" +
+                '<label class="tecnica-eficiencia" title="Aura abatida do custo base (não afeta aprimoramentos)">⚡ Eficiência ' +
+                    '<input type="number" min="0" class="tec-eficiencia-card" value="' + (Number(t.eficiencia) || 0) + '"></label>' +
+                Aprimoramentos.rodapeHtml(t) +
+                '<button type="button" class="button botao-conjurar-tecnica">Conjurar</button>' +
+                '<button type="button" class="botao-remover-item botao-remover-tecnica">Remover</button>' +
+            "</div>" +
+        "</div>";
+    }).join("");
+
+    const vazio = document.getElementById("tecnicas-vazio");
+    vazio.style.display = visiveis.length === 0 ? "block" : "none";
+    vazio.textContent = daAba.length === 0
+        ? "Nenhuma técnica de " + (aba === "fisiomancia" ? "Fisiomancia" : "Hexomancia") + " ainda. Abra “Nova técnica” acima para criar a primeira."
+        : "Nenhuma técnica nesta pasta.";
+
+    document.getElementById("cont-tecnicas").textContent = tecnicas.length > 0 ? tecnicas.length : "";
+    ["hexomancia", "fisiomancia"].forEach(function(tipo){
+        const n = tecnicas.filter(t => (t.tipo || "hexomancia") === tipo).length;
+        document.getElementById("cont-tecnicas-" + tipo).textContent = n > 0 ? n : "";
+    });
+    PastasFicha.atualizar("tecnicas");
+    sincronizarTecnicas();
+}
+
+// ---- mover técnica de pasta ----
+listaTecnicas.addEventListener("change", function(e){
+    if(!e.target.classList.contains("pasta-select")) return;
+    const card = e.target.closest(".tecnica-card");
+    const t = tecnicas.find(x => String(x.id) === card.dataset.id);
+    if(!t) return;
+    t.pasta = e.target.value;
+    renderizarTecnicas();
+});
+
+// ---- aprimoramentos (caixas, − / +, grátis) e campo "Aprimoramentos grátis" ----
+function aplicarAprimoramentoTecnica(e){
+    const card = e.target.closest(".tecnica-card");
+    if(!card) return;
+    const t = tecnicas.find(x => String(x.id) === card.dataset.id);
+    if(!t || !Aprimoramentos.tratar(e, t)) return;
+    Aprimoramentos.redesenhar(card, t);
+    card.querySelector(".tec-total-texto").textContent = Aprimoramentos.textoCusto(t);
+    sincronizarTecnicas();
+}
+["click", "change", "input"].forEach(ev => listaTecnicas.addEventListener(ev, aplicarAprimoramentoTecnica));
+
+// ---- eficiência ajustada direto no card ----
+listaTecnicas.addEventListener("input", function(e){
+    if(!e.target.classList.contains("tec-eficiencia-card")) return;
+    const card = e.target.closest(".tecnica-card");
+    const t = tecnicas.find(x => String(x.id) === card.dataset.id);
+    if(!t) return;
+    t.eficiencia = Math.max(0, parseInt(e.target.value, 10) || 0);
+    card.querySelector(".tec-total-texto").textContent = Aprimoramentos.textoCusto(t);
+    sincronizarTecnicas();
+});
+
+// ---- conjurar / remover ----
+listaTecnicas.addEventListener("click", function(e){
+    const card = e.target.closest(".tecnica-card");
+    if(!card) return;
+    const t = tecnicas.find(x => String(x.id) === card.dataset.id);
+    if(!t) return;
+
+    if(e.target.classList.contains("botao-remover-tecnica")){
+        tecnicas = tecnicas.filter(x => x !== t);
+        renderizarTecnicas();
+        return;
+    }
+
+    if(e.target.classList.contains("botao-conjurar-tecnica")){
+        const req = Number(t.nivel) || 0;
+        if(req > Number(nivelHexomanteInput.value || 0)){
+            mostrarPopup((t.tipo === "fisiomancia" ? "Nível de arte insuficiente." : "Nível de Hexomante insuficiente.") + " Esta técnica exige nível " + req + ".");
+            return;
+        }
+
+        const partes = aura.textContent.split("/").map(v => parseInt(v.trim(), 10));
+        let atual = partes[0];
+        const maximo = partes[1];
+        if(isNaN(atual) || isNaN(maximo)){
+            mostrarPopup("Defina sua Aura antes de conjurar uma técnica.");
+            return;
+        }
+
+        // Pode conjurar mesmo sem Aura suficiente: o valor fica negativo (exibido em vermelho)
+        const custo = custoTotalTecnica(t);
+        atual -= custo;
+        aura.textContent = atual + " / " + maximo;
+        document.getElementById("aura_atual").value = atual;
+
+        const barraAura = document.querySelector(".barra-aura");
+        if(barraAura && maximo > 0){
+            barraAura.style.width = Math.max(0, Math.min(100, (atual / maximo) * 100)) + "%";
+        }
+
+        mostrarPopup(t.nome + " conjurada! -" + custo + " de Aura (restam " + atual + ")" + (atual < 0 ? " — Aura negativa!" : "."));
+    }
+});
+
+document.getElementById("tecnica-novo").open = tecnicas.length === 0;
+atualizarSelectNovaTecnica();
+renderizarTecnicas();
+
+// ==================== Propriedades fisiomânticas (Técnicas de arte > Fisiomancia > sub-aba) ====================
+// Catálogo completo em resources/data/propriedades_fisiomantes.json; as propriedades salvas na ficha vão no JSON
+// "propriedades_fisiomantes" (nome, fonte, ameaça, descrição e anotação). Pesquisa ignora acentos e maiúsculas.
+(function(){
+    const catalogo = @json($catalogoPropriedades);
+    const fontes = Array.isArray(catalogo.fontes) ? catalogo.fontes : [];
+    const grupos = (catalogo.grupos && typeof catalogo.grupos === "object") ? catalogo.grupos : {};
+    let minhas = @json($propriedadesSalvas);
+    if(!Array.isArray(minhas)) minhas = [];
+    minhas = minhas.filter(p => p && typeof p.nome === "string" && p.nome.trim() !== "").map(p => ({
+        nome: p.nome,
+        fonte: p.fonte || "",
+        ameaca: (p.ameaca === null || p.ameaca === undefined || p.ameaca === "") ? null : Number(p.ameaca),
+        descricao: p.descricao || "",
+        anotacao: p.anotacao || ""
+    }));
+
+    const campo = document.getElementById("propriedades-fisiomantes");
+    const listaMinhas = document.getElementById("prop-minhas-lista");
+    const vazioMinhas = document.getElementById("prop-minhas-vazio");
+    const busca = document.getElementById("prop-busca");
+    const selGrupo = document.getElementById("prop-grupo");
+    const descGrupo = document.getElementById("prop-grupo-descricao");
+    const cat = document.getElementById("prop-catalogo");
+    const vazioCat = document.getElementById("prop-catalogo-vazio");
+    if(!campo || !cat) return;
+
+    const escP = t => String(t == null ? "" : t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const norm = s => String(s == null ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    const temAmeaca = p => p.ameaca !== null && p.ameaca !== undefined && p.ameaca !== "";
+
+    // "Duro 2" em Pedras não repete o texto: a descrição vem da primeira fonte que a descreve (Metal)
+    const porNome = {};
+    fontes.forEach(f => (f.propriedades || []).forEach(p => {
+        const k = norm(p.nome).replace(/\s+inverso$/, "");
+        if(p.descricao && !/^consulte/i.test(p.descricao) && !porNome[k]) porNome[k] = { fonte: f.nome, texto: p.descricao };
+    }));
+    function textoDe(p){
+        if(p.descricao) return { texto: p.descricao, ref: "" };
+        const r = porNome[norm(p.nome).replace(/\s+inverso$/, "")];
+        return r ? { texto: r.texto, ref: "Descrição de " + r.fonte + (/inverso$/i.test(p.nome) ? " (aqui com reversão)" : "") } : { texto: "", ref: "" };
+    }
+
+    function sincronizar(avisar){
+        campo.value = JSON.stringify(minhas);
+        document.getElementById("cont-propriedades").textContent = minhas.length > 0 ? minhas.length : "";
+        if(avisar) campo.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function renderMinhas(){
+        listaMinhas.innerHTML = minhas.map(function(p, i){
+            return '<div class="prop-card" data-i="' + i + '">' +
+                '<div class="prop-item-cab"><strong>' + escP(p.nome) + '</strong>' +
+                    (p.fonte ? '<span class="prop-ameaca">' + escP(p.fonte) + '</span>' : '') +
+                    '<button type="button" class="botao-remover-item prop-remover">Remover</button></div>' +
+                (p.descricao ? '<p>' + escP(p.descricao) + '</p>' : '') +
+                '<div class="prop-card-linha">' +
+                    '<label>Ameaça <input type="number" class="prop-ameaca-input" value="' + (p.ameaca === null ? '' : escP(p.ameaca)) + '" placeholder="—"></label>' +
+                    '<input type="text" class="prop-anotacao-input" maxlength="2000" placeholder="Anotação (alvo, duração, origem…)" value="' + escP(p.anotacao) + '">' +
+                '</div></div>';
+        }).join("");
+        vazioMinhas.style.display = minhas.length === 0 ? "block" : "none";
+    }
+
+    function renderGrupos(){
+        Object.keys(grupos).forEach(function(k){
+            const o = document.createElement("option");
+            o.value = k;
+            o.textContent = grupos[k].nome || k;
+            selGrupo.appendChild(o);
+        });
+    }
+
+    function renderCatalogo(){
+        const termo = norm(busca.value.trim());
+        const grupo = selGrupo.value;
+        descGrupo.textContent = grupo && grupos[grupo] ? (grupos[grupo].descricao || "") : "";
+        // O catálogo só mostra resultados de uma pesquisa (2+ letras); o grupo apenas filtra esses resultados
+        if(termo.length < 2){
+            cat.innerHTML = "";
+            vazioCat.textContent = "Digite o nome de uma propriedade, material ou efeito para pesquisar.";
+            vazioCat.style.display = "block";
+            return;
+        }
+        vazioCat.textContent = "Nenhuma propriedade encontrada.";
+        let total = 0;
+        cat.innerHTML = fontes.map(function(f, fi){
+            if(grupo && f.categoria !== grupo) return "";
+            const fonteBate = termo !== "" && norm(f.nome).includes(termo);
+            const props = (f.propriedades || []).map((p, pi) => ({ p: p, pi: pi })).filter(function(x){
+                if(termo === "" || fonteBate) return true;
+                const d = textoDe(x.p);
+                return norm(x.p.nome).includes(termo) || norm(d.texto).includes(termo) || norm(x.p.ganho).includes(termo);
+            });
+            if(props.length === 0) return "";
+            total += props.length;
+            const aberto = termo !== "" || f.categoria === "pessoal" || f.categoria === "variavel";
+            return '<details class="prop-fonte"' + (aberto ? " open" : "") + '><summary>' + escP(f.nome) +
+                ' <span class="prop-qtd">' + props.length + (props.length === 1 ? " propriedade" : " propriedades") + '</span></summary>' +
+                (f.descricao ? '<p class="prop-fonte-descricao">' + escP(f.descricao) + '</p>' : '') +
+                props.map(function(x){
+                    const d = textoDe(x.p);
+                    return '<div class="prop-item"><div class="prop-item-cab"><strong>' + escP(x.p.nome) + '</strong>' +
+                        (temAmeaca(x.p) ? '<span class="prop-ameaca">Ameaça ' + escP(x.p.ameaca) + '</span>' : '') +
+                        '<button type="button" class="button prop-salvar" data-f="' + fi + '" data-p="' + x.pi + '">Salvar</button></div>' +
+                        (x.p.ganho ? '<p><em>Ganho de ameaça:</em> ' + escP(x.p.ganho) + '</p>' : '') +
+                        (d.texto ? '<p>' + escP(d.texto) + '</p>' : '') +
+                        (d.ref ? '<p class="prop-ref">' + escP(d.ref) + '</p>' : '') +
+                    '</div>';
+                }).join("") + '</details>';
+        }).join("");
+        vazioCat.style.display = total === 0 ? "block" : "none";
+    }
+
+    busca.addEventListener("input", renderCatalogo);
+    selGrupo.addEventListener("change", renderCatalogo);
+
+    cat.addEventListener("click", function(e){
+        const b = e.target.closest(".prop-salvar");
+        if(!b) return;
+        const f = fontes[Number(b.dataset.f)];
+        const p = f && f.propriedades ? f.propriedades[Number(b.dataset.p)] : null;
+        if(!p) return;
+        const d = textoDe(p);
+        minhas.unshift({
+            nome: p.nome,
+            fonte: f.nome,
+            ameaca: (typeof p.ameaca === "number") ? p.ameaca : null,
+            descricao: ((p.ganho ? "Ganho de ameaça: " + p.ganho + " " : "") + d.texto).trim(),
+            anotacao: ""
+        });
+        renderMinhas();
+        sincronizar(true);
+        b.textContent = "Salva ✓";
+        setTimeout(function(){ b.textContent = "Salvar"; }, 1200);
+    });
+
+    listaMinhas.addEventListener("click", function(e){
+        if(!e.target.classList.contains("prop-remover")) return;
+        const i = Number(e.target.closest(".prop-card").dataset.i);
+        if(!minhas[i] || !confirm("Remover “" + minhas[i].nome + "” das suas propriedades?")) return;
+        minhas.splice(i, 1);
+        renderMinhas();
+        sincronizar(true);
+    });
+
+    listaMinhas.addEventListener("input", function(e){
+        const card = e.target.closest(".prop-card");
+        if(!card) return;
+        const p = minhas[Number(card.dataset.i)];
+        if(!p) return;
+        if(e.target.classList.contains("prop-ameaca-input")) p.ameaca = e.target.value === "" ? null : (parseInt(e.target.value, 10) || 0);
+        if(e.target.classList.contains("prop-anotacao-input")) p.anotacao = e.target.value;
+        sincronizar(true);
+    });
+
+    document.getElementById("prop-pers-salvar").addEventListener("click", function(){
+        const nome = document.getElementById("prop-pers-nome").value.trim();
+        if(nome === ""){
+            mostrarPopup("Digite um nome para a propriedade.");
+            return;
+        }
+        const am = document.getElementById("prop-pers-ameaca").value;
+        minhas.unshift({
+            nome: nome,
+            fonte: document.getElementById("prop-pers-fonte").value.trim(),
+            ameaca: am === "" ? null : (parseInt(am, 10) || 0),
+            descricao: document.getElementById("prop-pers-descricao").value.trim(),
+            anotacao: ""
+        });
+        ["prop-pers-nome", "prop-pers-fonte", "prop-pers-ameaca", "prop-pers-descricao"].forEach(id => document.getElementById(id).value = "");
+        document.getElementById("prop-personalizada").open = false;
+        renderMinhas();
+        sincronizar(true);
+    });
+
+    renderGrupos();
+    renderMinhas();
+    renderCatalogo();
+    sincronizar(false);
+})();
 
 // ==================== Preenchimento Rápido (Teste) ====================
 const botaoPreencherTeste = document.getElementById("preencher-teste");
@@ -3454,9 +6133,11 @@ botaoPreencherTeste.addEventListener("click", function(){
     rolagemAura.click();
     rolagemSorte.click();
 
-    // Libera bastante pontos de habilidade só pra esse preenchimento de teste
-    pontosHabilidadeRestantes = 9999;
-    pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
+    // Libera bastante pontos de habilidade só pra esse preenchimento de teste.
+    // Usa o campo oficial de pontos extras, assim o total fica consistente
+    // em qualquer recálculo posterior (antes ficava negativo ao mexer no nível).
+    campoExtraHabilidades.value = "500";
+    campoExtraHabilidades.dispatchEvent(new Event("input"));
 
     habilidades.forEach(function(input){
         input.value = String(Math.floor(Math.random() * 10) + 1);
@@ -3482,6 +6163,295 @@ botaoPreencherTeste.addEventListener("click", function(){
 
     mostrarPopup("Ficha preenchida com dados de teste! Já pode salvar.");
 });
+
+// ==================== Armaduras e resistências (aba dentro de Atributos Vitais) ====================
+// Cálculo puro (sem DOM) entre os marcadores; carregado por deploy/tests/dano.test.mjs.
+/*DANO-INICIO*/
+const Dano = {
+    TIPOS: ["cortante", "perfurante", "impacto", "explosivo", "flamejante", "congelante", "eletrizante", "tóxico", "amaldiçoado", "queda"],
+    IGNORAM: ["amaldiçoado", "queda", "flamejante", "congelante", "eletrizante", "tóxico"],
+    inteiro: function(v){ const n = parseInt(v, 10); return isNaN(n) ? 0 : n; },
+    // Primeira peça equipada cujo alcance cobre o número d
+    pecaAtingida: function(pecas, d){
+        for(let i = 0; i < pecas.length; i++){
+            const p = pecas[i];
+            if(p.equipada && Dano.inteiro(p.alcance_min) <= d && d <= Dano.inteiro(p.alcance_max)) return p;
+        }
+        return null;
+    },
+    // entrada: { valor, tipo, peca|null, natural, usarRes, resistencias[], imunidades[] }
+    calcular: function(e){
+        const valor = Math.max(0, Dano.inteiro(e.valor));
+        const ignora = Dano.IGNORAM.indexOf(e.tipo) >= 0;
+        let defesa = 0, contra = 0, natural = 0;
+        if(!ignora){
+            if(e.peca){
+                defesa = Math.max(0, Dano.inteiro(e.peca.defesa));
+                if(e.tipo === "cortante" || e.tipo === "impacto") contra = Math.max(0, Dano.inteiro(e.peca.contra_corte_impacto));
+            }
+            natural = Math.max(0, Dano.inteiro(e.natural));
+        }
+        const reduzido = Math.max(0, valor - defesa - contra - natural);
+        let final = reduzido, efeito = "";
+        if(e.usarRes){
+            if((e.imunidades || []).indexOf(e.tipo) >= 0){ final = 0; efeito = "imunidade"; }
+            else if((e.resistencias || []).indexOf(e.tipo) >= 0){ final = Math.floor(reduzido / 2); efeito = "resistência"; }
+        }
+        return { valor: valor, defesa: defesa, contra: contra, natural: natural, reduzido: reduzido, final: final, efeito: efeito, ignora: ignora };
+    }
+};
+/*DANO-FIM*/
+
+(function(){
+    const hidden = document.getElementById("armaduras");
+    if(!hidden) return;
+    const somenteLeitura = {{ $somenteLeitura ? 'true' : 'false' }};
+    const dados = @json($armaduraSalva);
+    const tipos = Dano.TIPOS;
+    const num = Dano.inteiro;
+
+    let pecas = (Array.isArray(dados.pecas) ? dados.pecas : []).map(normalizar);
+    let resistencias = (Array.isArray(dados.resistencias) ? dados.resistencias : []).filter(t => tipos.indexOf(t) >= 0);
+    let imunidades = (Array.isArray(dados.imunidades) ? dados.imunidades : []).filter(t => tipos.indexOf(t) >= 0 && resistencias.indexOf(t) < 0);
+    let natural = Math.max(0, num(dados.armadura_natural));
+    const editando = new Set();
+    const logs = [];
+
+    function normalizar(p){
+        p = p || {};
+        const peso = parseFloat(String(p.peso).replace(",", "."));
+        return {
+            nome: String(p.nome || ""), descricao: String(p.descricao || ""), tamanho: String(p.tamanho || ""),
+            alcance_min: num(p.alcance_min), alcance_max: num(p.alcance_max), defesa: num(p.defesa),
+            contra_corte_impacto: num(p.contra_corte_impacto), defesa_base: num(p.defesa_base),
+            penalidade_destreza: Math.abs(num(p.penalidade_destreza)), peso: isNaN(peso) ? 0 : peso, equipada: !!p.equipada,
+            _id: Math.random().toString(36).slice(2)
+        };
+    }
+    function esc(s){ return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function fmtPeso(n){ return (Math.round(n * 100) / 100).toString().replace(".", ","); }
+    function cap(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+
+    function sincronizar(silencioso){
+        hidden.value = JSON.stringify({
+            pecas: pecas.map(p => { const c = Object.assign({}, p); delete c._id; return c; }),
+            armadura_natural: natural, resistencias: resistencias, imunidades: imunidades
+        });
+        if(!silencioso) hidden.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function atualizarResumo(){
+        const eq = pecas.filter(p => p.equipada);
+        const base = eq.reduce((s, p) => s + p.defesa_base, 0);
+        const pen = eq.reduce((s, p) => s + p.penalidade_destreza, 0);
+        const peso = eq.reduce((s, p) => s + p.peso, 0);
+        document.getElementById("armadura-resumo").textContent =
+            "Defesa base +" + base + " · Penalidade de destreza −" + pen + " · Peso " + fmtPeso(peso) + " kg";
+        // sobreposição de faixas entre equipadas
+        const sobrepoe = [];
+        for(let i = 0; i < eq.length; i++) for(let j = i + 1; j < eq.length; j++){
+            if(eq[i].alcance_min <= eq[j].alcance_max && eq[j].alcance_min <= eq[i].alcance_max) sobrepoe.push((eq[i].nome || "?") + " e " + (eq[j].nome || "?"));
+        }
+        const aviso = document.getElementById("armadura-aviso");
+        aviso.style.display = sobrepoe.length ? "" : "none";
+        aviso.textContent = sobrepoe.length ? "Atenção: faixas de d100 sobrepostas entre peças equipadas (" + sobrepoe.join("; ") + "). Vale a primeira da lista." : "";
+    }
+
+    const campos = [
+        ["nome", "Nome", "text", true], ["tamanho", "Tamanho", "text", false],
+        ["alcance_min", "d100 de", "number", false], ["alcance_max", "d100 até", "number", false],
+        ["defesa", "Defesa", "number", false], ["contra_corte_impacto", "Contra corte/impacto", "number", false],
+        ["defesa_base", "Defesa base", "number", false], ["penalidade_destreza", "Penal. destreza", "number", false],
+        ["peso", "Peso (kg)", "number", false]
+    ];
+
+    function htmlPeca(p){
+        const id = esc(p._id);
+        const edit = editando.has(p._id);
+        let h = '<div class="arm-peca' + (p.equipada ? " equipada" : "") + '" data-id="' + id + '">';
+        h += '<div class="arm-peca-topo"><span class="arm-peca-nome">' + esc(p.nome || "(sem nome)") + '</span>' +
+             '<span class="arm-faixa">d100: ' + p.alcance_min + '–' + p.alcance_max + '</span></div>';
+        if(edit){
+            h += '<div class="arm-edit">';
+            campos.forEach(function(c){
+                h += '<label class="' + (c[3] ? "larga" : "") + '">' + c[1] + '<input type="' + c[2] + '" data-campo="' + c[0] + '"' +
+                     (c[2] === "number" ? ' step="' + (c[0] === "peso" ? "0.1" : "1") + '"' : "") + ' value="' + esc(p[c[0]]) + '"></label>';
+            });
+            h += '<label class="larga">Descrição<textarea rows="2" data-campo="descricao">' + esc(p.descricao) + '</textarea></label></div>';
+        } else {
+            h += '<div class="arm-peca-stats"><span>Defesa +' + p.defesa + '</span><span>Corte/impacto +' + p.contra_corte_impacto + '</span>' +
+                 '<span>Defesa base ' + p.defesa_base + '</span><span>Penal. destreza −' + p.penalidade_destreza + '</span>' +
+                 '<span>' + fmtPeso(p.peso) + ' kg</span>' + (p.tamanho ? '<span>' + esc(p.tamanho) + '</span>' : "") + '</div>';
+            if(p.descricao) h += '<div class="arm-peca-desc">' + esc(p.descricao) + '</div>';
+        }
+        h += '<div class="arm-peca-acoes"><label><input type="checkbox" data-acao="equipar"' + (p.equipada ? " checked" : "") + '> Equipada</label>' +
+             '<button type="button" class="arm-mini" data-acao="editar">' + (edit ? "Concluir" : "Editar") + '</button>' +
+             '<button type="button" class="arm-mini" data-acao="remover">Remover</button></div></div>';
+        return h;
+    }
+
+    function renderizarLista(){
+        const lista = document.getElementById("armadura-lista");
+        lista.innerHTML = pecas.length ? pecas.map(htmlPeca).join("") : '<p class="vazio-lista">Nenhuma peça de armadura.</p>';
+        if(somenteLeitura){
+            lista.querySelectorAll("input, textarea").forEach(el => { if(el.type === "checkbox") el.disabled = true; else el.readOnly = true; });
+            lista.querySelectorAll("button").forEach(b => { b.disabled = true; });
+        }
+        atualizarResumo();
+    }
+
+    function renderizarChips(){
+        function montar(id, atuais, outro, tipo){
+            const el = document.getElementById(id);
+            el.innerHTML = tipos.map(t => '<button type="button" class="arm-chip' + (atuais.indexOf(t) >= 0 ? " ativo" : "") + '" data-tipo="' + t + '">' + cap(t) + '</button>').join("");
+            if(somenteLeitura) el.querySelectorAll("button").forEach(b => { b.disabled = true; });
+        }
+        montar("armadura-chips-res", resistencias);
+        montar("armadura-chips-imu", imunidades);
+    }
+
+    function achar(el){ const c = el.closest(".arm-peca"); return c ? pecas.find(p => p._id === c.dataset.id) : null; }
+
+    const lista = document.getElementById("armadura-lista");
+    lista.addEventListener("input", function(e){
+        const p = achar(e.target), campo = e.target.dataset.campo;
+        if(!p || !campo) return;
+        const v = e.target.value;
+        if(campo === "nome" || campo === "descricao" || campo === "tamanho") p[campo] = v;
+        else if(campo === "peso"){ const n = parseFloat(String(v).replace(",", ".")); p.peso = isNaN(n) ? 0 : Math.max(0, n); }
+        else if(campo === "penalidade_destreza") p[campo] = Math.abs(num(v));
+        else p[campo] = num(v);
+        atualizarResumo();
+        sincronizar();
+    });
+    lista.addEventListener("change", function(e){
+        const p = achar(e.target);
+        if(p && e.target.dataset.acao === "equipar"){
+            p.equipada = e.target.checked;
+            e.target.closest(".arm-peca").classList.toggle("equipada", p.equipada);
+            atualizarResumo(); sincronizar();
+        }
+    });
+    lista.addEventListener("click", function(e){
+        const b = e.target.closest("button[data-acao]");
+        if(!b || somenteLeitura) return;
+        const p = achar(b);
+        if(!p) return;
+        if(b.dataset.acao === "editar"){
+            if(editando.has(p._id)) editando.delete(p._id); else editando.add(p._id);
+            renderizarLista();
+        } else if(b.dataset.acao === "remover"){
+            if(!confirm("Remover a peça \"" + (p.nome || "sem nome") + "\"?")) return;
+            pecas = pecas.filter(x => x !== p);
+            editando.delete(p._id);
+            renderizarLista(); sincronizar();
+        }
+    });
+
+    document.getElementById("armadura-nova").addEventListener("click", function(){
+        if(somenteLeitura) return;
+        const p = normalizar({ nome: "", alcance_min: 0, alcance_max: 0 });
+        pecas.push(p);
+        editando.add(p._id);
+        renderizarLista(); sincronizar();
+    });
+
+    const campoNatural = document.getElementById("armadura-natural");
+    campoNatural.value = natural;
+    campoNatural.addEventListener("input", function(){ natural = Math.max(0, num(campoNatural.value)); sincronizar(); });
+
+    function aoClicarChip(id, alvo, outro){
+        document.getElementById(id).addEventListener("click", function(e){
+            const b = e.target.closest(".arm-chip");
+            if(!b || somenteLeitura) return;
+            const t = b.dataset.tipo;
+            const lst = alvo(), oposta = outro();
+            const i = lst.indexOf(t);
+            if(i >= 0) lst.splice(i, 1);
+            else { lst.push(t); const j = oposta.indexOf(t); if(j >= 0) oposta.splice(j, 1); }
+            renderizarChips(); sincronizar();
+        });
+    }
+    aoClicarChip("armadura-chips-res", () => resistencias, () => imunidades);
+    aoClicarChip("armadura-chips-imu", () => imunidades, () => resistencias);
+
+    function rolarD100(){ return Math.floor(Math.random() * 100) + 1; }
+
+    document.getElementById("armadura-rolar-local").addEventListener("click", function(){
+        const d = rolarD100();
+        const p = Dano.pecaAtingida(pecas, d);
+        lista.querySelectorAll(".arm-peca.atingida").forEach(c => c.classList.remove("atingida")); // sem re-renderizar (vale também na leitura)
+        if(p){
+            const c = lista.querySelector('.arm-peca[data-id="' + p._id + '"]');
+            if(c){ c.classList.add("atingida"); c.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+        }
+        document.getElementById("armadura-rolar-res").textContent = "Rolou " + d + " → " + (p ? (p.nome || "peça sem nome") : "sem armadura");
+    });
+
+    document.getElementById("armadura-aplicar-dano").addEventListener("click", function(){
+        if(somenteLeitura) return;
+        const vidaEl = document.getElementById("vida");
+        const partes = vidaEl.textContent.split("/").map(v => parseInt(v.trim(), 10));
+        const atual = partes[0], maximo = partes[1];
+        if(isNaN(atual) || isNaN(maximo)){ mostrarPopup("Defina sua Vida antes de aplicar dano."); return; }
+        const tipo = document.getElementById("armadura-dano-tipo").value;
+        const valor = Math.max(0, num(document.getElementById("armadura-dano-valor").value));
+        const d = rolarD100();
+        const peca = Dano.pecaAtingida(pecas, d);
+        const usarRes = document.getElementById("armadura-dano-usar").checked;
+        const r = Dano.calcular({ valor: valor, tipo: tipo, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades });
+
+        const novo = atual - r.final;
+        vidaEl.textContent = novo + " / " + maximo;
+        const campo = document.getElementById("vida_atual");
+        campo.value = novo;
+        const barra = document.querySelector(".barra-vida");
+        if(barra && maximo > 0) barra.style.width = Math.max(0, Math.min(100, (novo / maximo) * 100)) + "%";
+        campo.dispatchEvent(new Event("input", { bubbles: true }));
+
+        let txt = "Rolou " + d + " → " + (peca ? (peca.nome || "peça").replace(/ de armadura$/i, "") : "sem armadura") + " · " + valor + " (" + tipo + ")";
+        if(r.ignora) txt += " (ignora armadura)";
+        else {
+            if(peca) txt += " − " + r.defesa + " (defesa)";
+            if(r.contra) txt += " − " + r.contra + " (corte/impacto)";
+            if(r.natural) txt += " − " + r.natural + " (armadura natural)";
+        }
+        txt += " = " + r.reduzido;
+        if(r.efeito) txt += " · " + r.efeito + ": " + r.final;
+        txt += " · PV " + atual + " → " + novo;
+        logs.unshift(txt);
+        logs.length = Math.min(logs.length, 5);
+        const log = document.getElementById("armadura-log");
+        log.innerHTML = logs.map(l => "<div>" + esc(l) + "</div>").join("");
+    });
+
+    renderizarLista();
+    renderizarChips();
+    sincronizar(true);
+})();
+
+@if ($somenteLeitura)
+// ==================== Somente leitura (mestre vendo a ficha de um jogador) ====================
+// Tudo é mostrado como na ficha normal, mas os campos ficam travados e nada é salvo.
+// Continuam funcionando: abrir/fechar painéis, recolher seções, filtrar pastas e rolar habilidades/dados.
+(function(){
+    const form = document.getElementById("form-ficha");
+    form.addEventListener("submit", function(e){ e.preventDefault(); });
+
+    form.querySelectorAll("input, select, textarea").forEach(function(el){
+        if(el.type === "hidden" || el.id === "prop-busca" || el.id === "prop-grupo") return; // a pesquisa do catálogo continua livre
+        if(el.tagName === "SELECT" || ["checkbox", "file", "color", "range", "number"].includes(el.type)) el.disabled = true;
+        else el.readOnly = true;
+    });
+
+    form.querySelectorAll("button").forEach(function(b){
+        const marca = (b.id || "") + " " + (b.className || "");
+        const permitido = /abrir|fechar|ocultar|botao-rolar-habilidade|rolar-dado|armadura-rolar-local|rolarD100|pasta-chip|pasta-link|aba-painel/i.test(marca)
+            || b.closest(".popup");
+        if(!permitido) b.disabled = true;
+    });
+})();
+@endif
 
 </script>
 @endsection

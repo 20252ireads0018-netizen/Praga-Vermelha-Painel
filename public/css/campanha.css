@@ -1,0 +1,898 @@
+/* ==========================================================
+   Campanhas — estilo das páginas index e show
+   Herda fonte e cor de texto do layout; usa fundos translúcidos
+   para funcionar sobre o fundo escuro atual do site.
+   ========================================================== */
+
+.camp-wrap {
+    --camp-borda: rgba(255, 255, 255, .10);
+    --camp-borda-forte: rgba(255, 255, 255, .22);
+    --camp-fundo-card: rgba(0, 0, 0, .28);
+    --camp-fundo-campo: rgba(0, 0, 0, .35);
+    --camp-fundo-hover: rgba(255, 255, 255, .06);
+    --camp-fundo-lista: #151211;
+    --camp-texto-suave: rgba(255, 255, 255, .62);
+    --camp-acento: #9b2226;
+    --camp-acento-hover: #b22a2f;
+    --camp-ok: #5fa777;
+    --camp-raio: 8px;
+
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* ---------- Cabeçalho ---------- */
+
+.camp-topo h1 {
+    margin: 0 0 .35rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .6rem;
+}
+
+.camp-voltar {
+    display: inline-block;
+    margin-bottom: .6rem;
+    font-size: .9rem;
+    color: var(--camp-texto-suave);
+    text-decoration: none;
+}
+.camp-voltar:hover { color: inherit; text-decoration: underline; }
+
+.camp-sub { margin: 0; line-height: 1.5; }
+
+.camp-codigo {
+    padding: .1rem .5rem;
+    border: 1px dashed var(--camp-borda-forte);
+    border-radius: 4px;
+    letter-spacing: .08em;
+    user-select: all;
+}
+
+.camp-dica {
+    font-size: .85rem;
+    color: var(--camp-texto-suave);
+}
+.camp-topo .camp-dica { margin: .25rem 0 0; }
+
+/* ---------- Cards ---------- */
+
+.camp-card {
+    padding: 1.25rem 1.25rem 1.1rem;
+    background: var(--camp-fundo-card);
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+}
+
+.camp-card h2 {
+    margin: 0;
+    padding-bottom: .6rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--camp-borda);
+}
+
+.camp-vazio {
+    margin: 0;
+    font-size: .92rem;
+    color: var(--camp-texto-suave);
+}
+
+/* ---------- Linhas e itens de lista ---------- */
+
+.camp-linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1rem;
+    padding: .65rem 0;
+    border-bottom: 1px solid var(--camp-borda);
+}
+.camp-linha:last-of-type { border-bottom: 0; }
+.camp-linha > div:first-child { min-width: 0; }
+.camp-linha a { color: inherit; }
+
+/* Linha cujo conteúdo principal é clicável (fichas e tabletops) */
+.camp-linha-clicavel {
+    padding: .35rem 0;
+}
+.camp-linha-clicavel > .camp-clicavel { flex: 1 1 auto; min-width: 0; }
+
+.camp-clicavel {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: .6rem .8rem;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    text-decoration: none;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+    cursor: pointer;
+    transition: background-color .15s, border-color .15s, transform .15s, box-shadow .15s;
+}
+.camp-clicavel:hover {
+    background: var(--camp-fundo-hover);
+    border-color: var(--camp-acento);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+    transform: translateY(-1px);
+}
+.camp-clicavel:active { transform: translateY(0); box-shadow: none; }
+
+.camp-clicavel-info {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.camp-clicavel-info strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.camp-seta {
+    flex: 0 0 auto;
+    font-size: 1.3rem;
+    line-height: 1;
+    color: var(--camp-texto-suave);
+    transition: transform .15s, color .15s;
+}
+.camp-clicavel:hover .camp-seta {
+    color: var(--camp-acento-hover);
+    transform: translateX(3px);
+}
+
+/* Miniatura redonda ao lado do nome da ficha */
+.camp-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    overflow: hidden;
+    font-weight: 600;
+    color: var(--camp-texto-suave);
+    background: var(--camp-fundo-campo);
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 50%;
+}
+.camp-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.camp-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem .9rem;
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+    transition: background-color .15s, border-color .15s;
+}
+.camp-item:hover {
+    background: var(--camp-fundo-hover);
+    border-color: var(--camp-borda-forte);
+}
+
+.camp-acoes {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+.camp-acoes form { margin: 0; }
+
+/* ---------- Badges ---------- */
+
+.camp-badge {
+    display: inline-block;
+    padding: .15rem .6rem;
+    font-size: .75rem;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+    color: var(--camp-texto-suave);
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 999px;
+}
+.camp-badge-on {
+    color: var(--camp-ok);
+    border-color: color-mix(in srgb, var(--camp-ok) 55%, transparent);
+    background: color-mix(in srgb, var(--camp-ok) 12%, transparent);
+}
+
+/* ---------- Botões ---------- */
+
+.camp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: 2.25rem;
+    padding: .4rem .95rem;
+    font: inherit;
+    font-size: .9rem;
+    line-height: 1.2;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color .15s, border-color .15s, color .15s;
+}
+.camp-btn:hover { background: var(--camp-fundo-hover); }
+.camp-btn:active { transform: translateY(1px); }
+
+.camp-btn-primario {
+    color: #fff;
+    background: var(--camp-acento);
+    border-color: var(--camp-acento);
+}
+.camp-btn-primario:hover {
+    background: var(--camp-acento-hover);
+    border-color: var(--camp-acento-hover);
+}
+
+.camp-btn-perigo {
+    color: #ff8a8a;
+    border-color: rgba(255, 110, 110, .4);
+}
+.camp-btn-perigo:hover {
+    color: #fff;
+    background: #a12626;
+    border-color: #a12626;
+}
+
+.camp-btn:disabled,
+.camp-btn[disabled] {
+    opacity: .4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* <summary> usado como botão */
+.camp-detalhes > summary { list-style: none; width: fit-content; }
+.camp-detalhes > summary::-webkit-details-marker { display: none; }
+.camp-detalhes[open] > summary { margin-bottom: .9rem; }
+
+/* ---------- Formulários ---------- */
+
+.camp-form {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+    margin: 0;
+}
+.camp-form label {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    font-size: .88rem;
+    color: var(--camp-texto-suave);
+}
+
+.camp-form-linha {
+    flex-direction: row;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+.camp-form-linha > input,
+.camp-form-linha > select { flex: 1 1 14rem; width: auto; }
+
+.camp-wrap input[type="text"],
+.camp-wrap select,
+.camp-wrap textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 2.25rem;
+    padding: .45rem .7rem;
+    font: inherit;
+    font-size: .92rem;
+    color: inherit;
+    background-color: var(--camp-fundo-campo);
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 6px;
+}
+.camp-wrap textarea { resize: vertical; line-height: 1.5; }
+.camp-wrap ::placeholder { color: var(--camp-texto-suave); opacity: .75; }
+
+/* ---------- Seletor (select) ---------- */
+
+.camp-wrap select {
+    -webkit-appearance: none;
+    appearance: none;
+    color-scheme: dark;
+    cursor: pointer;
+    padding-right: 2.4rem;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23d8d2c8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right .85rem center;
+    background-size: 12px 8px;
+    transition: border-color .15s, background-color .15s;
+}
+.camp-wrap select:hover {
+    border-color: var(--camp-acento);
+    background-color: rgba(255, 255, 255, .05);
+}
+
+/* Lista aberta: fundo escuro e texto claro (Chrome/Edge/Firefox) */
+.camp-wrap select option {
+    color: #f2ede4;
+    background: var(--camp-fundo-lista);
+}
+.camp-wrap select option:checked,
+.camp-wrap select option:hover {
+    color: #fff;
+    background: var(--camp-acento);
+}
+
+/* Navegadores com seletor personalizável (Chrome 135+): controle total da lista */
+@supports (appearance: base-select) {
+    .camp-wrap select,
+    .camp-wrap select::picker(select) {
+        appearance: base-select;
+    }
+    .camp-wrap select { background-image: none; padding-right: .7rem; }
+    .camp-wrap select::picker-icon { color: var(--camp-texto-suave); transition: rotate .15s; }
+    .camp-wrap select:open::picker-icon { rotate: 180deg; }
+
+    .camp-wrap select::picker(select) {
+        padding: .3rem;
+        margin-top: .25rem;
+        background: var(--camp-fundo-lista);
+        border: 1px solid var(--camp-borda-forte);
+        border-radius: var(--camp-raio);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+    }
+    .camp-wrap select option {
+        padding: .5rem .7rem;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    .camp-wrap select option:hover,
+    .camp-wrap select option:focus-visible {
+        background: var(--camp-fundo-hover);
+        outline: none;
+    }
+    .camp-wrap select option:checked {
+        background: var(--camp-acento);
+        color: #fff;
+    }
+    .camp-wrap select option::checkmark { display: none; }
+}
+
+/* Botão "Escolher arquivo" do input file */
+.camp-wrap input[type="file"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .35rem;
+    font: inherit;
+    font-size: .88rem;
+    color: var(--camp-texto-suave);
+    background: var(--camp-fundo-campo);
+    border: 1px dashed var(--camp-borda-forte);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.camp-wrap input[type="file"]::file-selector-button {
+    margin-right: .8rem;
+    padding: .4rem .9rem;
+    font: inherit;
+    font-size: .88rem;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color .15s, border-color .15s;
+}
+.camp-wrap input[type="file"]::file-selector-button:hover {
+    background: var(--camp-fundo-hover);
+    border-color: rgba(255, 255, 255, .4);
+}
+
+/* ---------- Painel de som ---------- */
+
+.camp-som-painel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .75rem 1.25rem;
+    padding: .8rem .9rem;
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+}
+.camp-vol {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .88rem;
+    color: var(--camp-texto-suave);
+}
+.camp-vol input[type="range"] { width: 8rem; accent-color: var(--camp-acento); }
+
+/* ---------- Miniatura da ficha (diálogo) ---------- */
+
+.camp-ficha-modal {
+    width: min(92vw, 340px);
+    padding: 0;
+    overflow: hidden;
+    color: inherit;
+    background: var(--camp-fundo-lista);
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .65);
+}
+.camp-ficha-modal::backdrop { background: rgba(0, 0, 0, .72); }
+
+.camp-ficha-foto {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    font-size: 4rem;
+    font-weight: 600;
+    color: var(--camp-texto-suave);
+    background: var(--camp-fundo-campo);
+}
+.camp-ficha-foto img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camp-ficha-corpo {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    padding: 1rem 1.1rem 1.1rem;
+}
+.camp-ficha-corpo h3 { margin: 0; font-size: 1.25rem; line-height: 1.2; }
+
+.camp-pv-rotulo {
+    display: flex;
+    justify-content: space-between;
+    font-size: .85rem;
+    color: var(--camp-texto-suave);
+}
+.camp-pv-rotulo strong { color: inherit; }
+.camp-pv-barra {
+    height: .55rem;
+    overflow: hidden;
+    background: var(--camp-fundo-campo);
+    border: 1px solid var(--camp-borda);
+    border-radius: 999px;
+}
+.camp-pv-barra > span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--camp-acento);
+    transition: width .3s;
+}
+
+.camp-ficha-acoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+.camp-ficha-acoes form { margin: 0; }
+
+/* ---------- Alertas (partial _alertas) ---------- */
+
+.camp-alerta {
+    padding: .7rem .95rem;
+    font-size: .92rem;
+    border: 1px solid var(--camp-borda-forte);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: var(--camp-fundo-card);
+}
+.camp-alerta-ok { border-color: var(--camp-ok); background: color-mix(in srgb, var(--camp-ok) 12%, transparent); }
+.camp-alerta-erro { border-color: #c0392b; background: rgba(192, 57, 43, .14); }
+
+/* ---------- Acessibilidade e responsivo ---------- */
+
+.camp-wrap a:focus-visible,
+.camp-wrap button:focus-visible,
+.camp-wrap input:focus-visible,
+.camp-wrap select:focus-visible,
+.camp-wrap textarea:focus-visible,
+.camp-wrap summary:focus-visible {
+    outline: 2px solid var(--camp-acento-hover);
+    outline-offset: 2px;
+}
+
+.camp-stats { display: grid; gap: .6rem; }
+.camp-barra-pv span       { background: #c0392b; }
+.camp-barra-aura span     { background: #8e44ad; }
+.camp-barra-sanidade span { background: #2980b9; }
+
+@media (max-width: 560px) {
+    .camp-wrap { padding: 1rem .75rem 2.5rem; }
+    .camp-card { padding: 1rem; }
+    .camp-linha { flex-direction: column; align-items: flex-start; }
+    .camp-linha-clicavel > .camp-clicavel { width: 100%; }
+    .camp-item { flex-direction: column; align-items: flex-start; }
+    .camp-form-linha { flex-direction: column; }
+    .camp-form-linha > input,
+    .camp-form-linha > select { flex-basis: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .camp-wrap * { transition: none !important; }
+}
+
+/* ==========================================================
+   Página da campanha (show) — layout em colunas
+   Usa a classe .camp-wrap-larga; a listagem (index) continua
+   com a largura estreita original.
+   ========================================================== */
+
+.camp-wrap-larga {
+    max-width: 1240px;
+    transition: margin .2s ease, max-width .2s ease;
+}
+
+/* ---------- Banner do topo ---------- */
+
+.camp-topo-banner {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid var(--camp-borda);
+    border-radius: calc(var(--camp-raio) + 4px);
+    background: linear-gradient(135deg, rgba(155, 34, 38, .22), rgba(0, 0, 0, .28) 62%);
+}
+.camp-topo-info { flex: 1 1 320px; min-width: 0; }
+
+.camp-topo-meta { display: flex; flex-wrap: wrap; gap: .75rem; }
+.camp-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    min-width: 5.5rem;
+    padding: .55rem .9rem;
+    background: rgba(0, 0, 0, .25);
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+}
+.camp-meta-rotulo {
+    font-size: .7rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--camp-texto-suave);
+}
+.camp-meta-item strong { font-size: 1.05rem; line-height: 1.2; overflow-wrap: anywhere; }
+
+/* ---------- Grade principal: conteúdo + lateral ---------- */
+
+.camp-grade {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+.camp-coluna {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+/* ---------- Cabeçalho de card (título + contagem) ---------- */
+
+.camp-card-cab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding-bottom: .6rem;
+    border-bottom: 1px solid var(--camp-borda);
+}
+.camp-card-cab h2 { padding: 0; border-bottom: 0; }
+
+.camp-contagem {
+    min-width: 1.6rem;
+    padding: .1rem .55rem;
+    font-size: .78rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--camp-texto-suave);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--camp-borda);
+    border-radius: 999px;
+}
+
+.camp-btn-pequeno { min-height: 1.9rem; padding: .25rem .7rem; font-size: .82rem; }
+
+/* ---------- Fichas e tabletops em grade de cartões ---------- */
+
+.camp-fichas-grade,
+.camp-mesas-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: .85rem;
+}
+.camp-fichas-grade > .camp-vazio,
+.camp-mesas-grade > .camp-vazio { grid-column: 1 / -1; }
+
+.camp-ficha-item {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: .45rem;
+    padding: 0;
+    border-bottom: 0;
+}
+.camp-ficha-item > .camp-clicavel {
+    flex: 1 1 auto;
+    padding: .8rem .9rem;
+    background: rgba(255, 255, 255, .035);
+}
+.camp-ficha-item .camp-avatar { width: 3rem; height: 3rem; font-size: 1.1rem; }
+.camp-ficha-item > form { display: flex; justify-content: flex-end; margin: 0; }
+
+.camp-mesa-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .45rem;
+    padding: 0;
+    border-bottom: 0;
+}
+.camp-mesa-item > form { display: flex; justify-content: flex-end; margin: 0; }
+.camp-mesa-item > .camp-mesa-nome {
+    padding: .8rem .9rem;
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+    background: rgba(255, 255, 255, .03);
+}
+
+/* Formulários lado a lado (criar / vincular) */
+.camp-forms-duplos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: .85rem;
+}
+.camp-forms-duplos .camp-form-linha { flex-wrap: nowrap; }
+.camp-forms-duplos .camp-form-linha > input,
+.camp-forms-duplos .camp-form-linha > select { flex: 1 1 0; min-width: 0; }
+
+/* ---------- Lateral: jogadores e sons ---------- */
+
+.camp-jogador,
+.camp-som {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .6rem .75rem;
+}
+.camp-jogador .camp-avatar { width: 2.1rem; height: 2.1rem; font-size: .85rem; }
+.camp-jogador-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+.camp-jogador-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camp-som-info { flex: 1 1 8rem; min-width: 0; display: flex; flex-direction: column; }
+.camp-som-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.camp-lateral-botao { align-self: flex-start; }
+
+/* ---------- Efeitos sonoros: grade compacta e recolhível ---------- */
+.camp-sons summary { list-style: none; display: inline-flex; cursor: pointer; align-items: center; gap: .4rem; }
+.camp-sons summary::-webkit-details-marker { display: none; }
+.camp-sons-seta { font-size: .75rem; opacity: .7; transition: transform .15s; }
+.camp-sons[open] .camp-sons-seta { transform: rotate(180deg); }
+.camp-sons-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .4rem; margin-top: .55rem; }
+.camp-som-chip { display: flex; gap: .25rem; align-items: stretch; min-width: 0; }
+.camp-som-chip form { margin: 0; display: flex; }
+.camp-som-tocar { flex: 1; min-width: 0; justify-content: flex-start; text-align: left; }
+.camp-som-tocar, .camp-som-chip .camp-som-tocar { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; line-height: 1.6; }
+.camp-som-x { padding: .25rem .5rem; min-width: 0; }
+.camp-sons-grade .camp-vazio { grid-column: 1 / -1; }
+
+/* ---------- Aviso de atualização ao vivo ---------- */
+
+@keyframes camp-flash-anim {
+    0%   { box-shadow: 0 0 0 0 rgba(241, 196, 15, .85); background-color: rgba(241, 196, 15, .18); }
+    100% { box-shadow: 0 0 0 12px rgba(241, 196, 15, 0); background-color: transparent; }
+}
+.camp-flash { animation: camp-flash-anim 2.4s ease-out; }
+.js-ficha-atualizada[hidden] { display: none !important; }
+
+#camp-sync-aviso {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .6rem .9rem;
+    border: 1px solid rgba(241, 196, 15, .6);
+    border-radius: var(--camp-raio);
+    background: rgba(241, 196, 15, .1);
+}
+#camp-sync-aviso[hidden] { display: none !important; }
+
+/* ---------- Pilha de miniaturas de fichas abertas ---------- */
+
+#camp-ficha-pilha {
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    width: 300px;
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+#camp-ficha-pilha:empty { display: none; }
+
+#camp-ficha-pilha dialog.camp-ficha-modal {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    flex-shrink: 0;
+    pointer-events: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+}
+#camp-ficha-pilha dialog.camp-ficha-modal:not([open]) { display: none !important; }
+#camp-ficha-pilha dialog.camp-ficha-modal .camp-ficha-foto { height: 160px; aspect-ratio: auto; overflow: hidden; }
+#camp-ficha-pilha dialog.camp-ficha-modal .camp-ficha-foto img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Telas largas: o conteúdo desloca para a direita enquanto há miniaturas abertas,
+   assim a pilha não cobre a página. */
+@media (min-width: 1201px) {
+    .camp-wrap-larga:has(#camp-ficha-pilha dialog[open]) {
+        margin-left: 340px;
+        max-width: min(1240px, calc(100vw - 360px));
+    }
+}
+/* Telas estreitas: a pilha fica embaixo, centralizada */
+@media (max-width: 1200px) {
+    #camp-ficha-pilha {
+        top: auto;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        max-height: 70vh;
+    }
+}
+
+/* ---------- Responsivo da página da campanha ---------- */
+
+@media (max-width: 980px) {
+    .camp-grade { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+    .camp-topo-banner { padding: 1rem; }
+    .camp-topo-meta { width: 100%; }
+    .camp-meta-item { flex: 1 1 0; min-width: 0; }
+    .camp-fichas-grade,
+    .camp-mesas-grade { grid-template-columns: minmax(0, 1fr); }
+    .camp-forms-duplos .camp-form-linha { flex-wrap: wrap; }
+    /* a regra global empilha .camp-linha; jogadores e sons seguem em linha */
+    .camp-jogador, .camp-som { flex-direction: row; align-items: center; }
+}
+
+/* ===== Banner com imagem de fundo (enviada pelo mestre) ===== */
+.camp-topo-banner.camp-topo-com-banner {
+    background-size: cover;
+    background-position: center;
+    min-height: 280px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, .85);
+}
+.camp-topo-banner.camp-topo-com-banner .camp-meta-item { background: rgba(0, 0, 0, .55); }
+
+/* ===== Miniatura da ficha: edição dos vitais (mestre ou dono) ===== */
+.camp-stat-editar { display: flex; align-items: center; gap: .3rem; margin-top: .3rem; }
+/* os campos seguem exatamente o tom dos botões .camp-btn (fundo transparente, borda clara, mesmo raio) */
+.camp-stat-editar input {
+    width: 4.4rem; min-width: 0; min-height: 1.9rem; padding: .25rem .4rem;
+    font: inherit; font-size: .82rem; line-height: 1.2; text-align: center; color: inherit;
+    background: transparent; border: 1px solid var(--camp-borda-forte); border-radius: 6px;
+    -moz-appearance: textfield; appearance: textfield;
+    transition: background-color .15s, border-color .15s;
+}
+.camp-stat-editar input:hover { background: var(--camp-fundo-hover); }
+.camp-stat-editar input:focus { outline: none; border-color: var(--camp-acento); background: var(--camp-fundo-campo); }
+.camp-stat-editar input::-webkit-inner-spin-button,
+.camp-stat-editar input::-webkit-outer-spin-button { -webkit-appearance: none; display: none; margin: 0; }
+.camp-stat-editar .camp-btn { padding: .15rem .55rem; min-width: 2rem; min-height: 1.9rem; line-height: 1.2; }
+.camp-stat-editar .camp-dica { opacity: .55; }
+.camp-stat-salvando { opacity: .6; }
+/* ---------- Disputa de catálogo ---------- */
+
+#camp-catalogo .cat-rotulo-linha { display: flex; justify-content: space-between; gap: .5rem; }
+#camp-catalogo .cat-palavras { font-size: .78rem; opacity: .75; }
+#camp-catalogo textarea { resize: vertical; min-height: 6rem; }
+#camp-catalogo { overflow: hidden; }
+
+.cat-barra {
+    display: block; flex: 1 1 auto; min-width: 0; height: .5rem;
+    background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 99px; overflow: hidden;
+}
+.cat-barra-fill { display: block; height: 100%; border-radius: 99px; transition: width .35s; }
+.cat-baixo { background: #9b2226; }
+.cat-medio { background: #c98a2b; }
+.cat-alto  { background: #5fa777; }
+.cat-txt-baixo { color: #e0605f; }
+.cat-txt-medio { color: #e0a64a; }
+.cat-txt-alto  { color: #6fc08a; }
+
+.cat-resultado {
+    margin-top: .85rem; padding: .8rem; border-radius: 8px;
+    background: rgba(0, 0, 0, .25); border: 1px solid rgba(220, 70, 70, .35);
+}
+.cat-res-topo { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; }
+.cat-res-pct { font-size: 2.4rem; font-weight: 700; line-height: 1; }
+.cat-res-info { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+
+.cat-detalhes { display: flex; flex-direction: column; gap: .35rem; }
+.cat-det-linha { display: flex; align-items: center; gap: .5rem; font-size: .82rem; }
+.cat-det-rotulo { flex: 0 0 6.2rem; opacity: .8; }
+.cat-det-valor { flex: 0 0 2.6rem; text-align: right; }
+
+.cat-lista { display: flex; flex-direction: column; gap: .4rem; margin-top: .85rem; }
+.cat-item {
+    background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10);
+    border-radius: 8px; min-width: 0;
+}
+.cat-item.meu { border-color: rgba(220, 70, 70, .4); }
+.cat-item.aberto { border-color: rgba(255, 255, 255, .22); }
+.cat-item-cab {
+    display: flex; flex-direction: column; gap: .35rem; width: 100%;
+    background: none; border: 0; color: inherit; font: inherit; text-align: left;
+    padding: .5rem .65rem; cursor: pointer;
+}
+.cat-item-linha1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .5rem; min-width: 0; }
+.cat-jogador { font-weight: 600; overflow-wrap: anywhere; }
+.cat-maldicao { opacity: .85; overflow-wrap: anywhere; }
+.cat-quando { margin-left: auto; font-size: .75rem; opacity: .6; }
+.cat-item-linha2 { display: flex; align-items: center; gap: .6rem; }
+.cat-pct { flex: 0 0 2.6rem; text-align: right; font-weight: 700; }
+.cat-item-corpo { padding: .2rem .65rem .65rem; display: flex; flex-direction: column; gap: .6rem; }
+.cat-texto {
+    white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem;
+    padding: .55rem; border-radius: 6px; background: rgba(0, 0, 0, .3);
+    max-height: 14rem; overflow-y: auto;
+}
+
+@media (max-width: 480px) {
+    .cat-det-rotulo { flex-basis: 5.2rem; }
+    .cat-res-pct { font-size: 2rem; }
+}
+
+.cat-det-penalidades { margin: 6px 0 0; font-size: .78rem; color: #ff8a8a; opacity: .9; }

@@ -1,6 +1,10 @@
 @php
     $valorMaldicoes = old('maldicoes', $personagem->maldicoes ?? '');
-    $slugsCatalogo  = array_keys(config('maldicoes', []));
+    $usuarioAtual   = auth()->user();
+    $listaMaldicoes = collect(\App\Support\AcessoMaldicoes::lista($usuarioAtual))->values()->all();
+    $podeVerRestr   = \App\Support\AcessoMaldicoes::podeVerRestritas($usuarioAtual);
+    $nomesLista     = array_map(fn ($i) => ['nome' => $i['nome'] ?? '', 'slug' => $i['slug'] ?? null], $listaMaldicoes);
+    $campoSoLeitura = !empty($somenteLeitura ?? false);
 @endphp
 
 <style>
@@ -91,6 +95,16 @@
         letter-spacing: .5px;
         opacity: .7;
     }
+
+    .maldicoes-adicionar{ display: flex; gap: 8px; flex-wrap: wrap; }
+    .maldicoes-adicionar select{ flex: 1 1 180px; min-width: 0; }
+    .maldicoes-add{
+        cursor: pointer; background: rgba(0,0,0,.25);
+        border: 1px solid rgba(255,255,255,.14); border-radius: 8px;
+        padding: 6px 14px; color: var(--tinta);
+    }
+    .maldicoes-add:hover{ border-color: #8b1a1a; }
+    .campo-maldicoes .campo-dica a{ color: var(--tinta-fraca); text-decoration: underline; }
 </style>
 
 <div class="campo campo-maldicoes">
@@ -111,7 +125,10 @@
 (function(){
     const input   = document.getElementById("maldicoes");
     const preview = document.getElementById("maldicoes-preview");
-    const catalogo = new Set(@json($slugsCatalogo));
+    const itens = @json($nomesLista);
+    const comPagina = new Set(itens.filter(function(i){ return i.slug; }).map(function(i){ return slugify(i.nome); }));
+    const escolha = document.getElementById("maldicoes-escolha");
+    const botaoAdd = document.getElementById("maldicoes-add");
 
     function slugify(texto){
         return texto
@@ -137,7 +154,7 @@
             }
 
             const chip = document.createElement("span");
-            chip.className = "maldicao-chip" + (catalogo.has(slugify(nome)) ? "" : " sem-ficha");
+            chip.className = "maldicao-chip" + (comPagina.has(slugify(nome)) ? "" : " sem-ficha");
 
             const rotulo = document.createElement("span");
             rotulo.textContent = nome;
@@ -151,6 +168,17 @@
             }
 
             preview.appendChild(chip);
+        });
+    }
+
+    if(botaoAdd && escolha){
+        botaoAdd.addEventListener("click", function(){
+            const nome = escolha.value;
+            if(!nome) return;
+            const atual = input.value.trim().replace(/[;,\s]+$/, "");
+            input.value = (atual === "" || atual.toLowerCase() === "nenhuma" ? "" : atual + "; ") + nome + " (Ameaça 0)";
+            escolha.value = "";
+            input.dispatchEvent(new Event("input", { bubbles: true }));
         });
     }
 

@@ -1,0 +1,1643 @@
+{
+    "grupos": {
+        "pessoal": {
+            "nome": "Propriedades Pessoais Naturais (PPN)",
+            "descricao": "São as características pessoais da personalidade, crenças e ideais de um ser, racional ou não. Você pode amplificá-las, mitigá-las e fazer tudo que é possível com Hexomancia, inclusive manipular características de outros seres e objetos. Cada característica tem um medidor de Ameaça que começa em 0 (ameaça 0 = sem efeito). Você tem pontos iguais ao seu nível mundano +1 para distribuir em ameaça, seja para conseguir novas características ou aumentar as que já possui. Receber a forma Inversa de uma propriedade dá +1 ponto para distribuir em outras propriedades (limite de 5 vezes); a forma Inversa inverte para negativo qualquer valor numérico ou efeito descrito."
+        },
+        "pmn": {
+            "nome": "Propriedades Materiais Naturais (PMN)",
+            "descricao": "Características de objetos, que podem ser manipuladas como Características de maldições ou características pessoais (de seres vivos). Que característica se pode tirar do metal? Da borracha? Do fogo? Cada elemento descrito possuem características que podem ser amplificadas, mitigadas, revertidas ou até imbuídas em outros elementos. Ao lado do nome de cada característica, existe um número que mostra quantas ameaça inicial o elemento tem na mesma. Por exemplo, metal possui Duro 5. Isso quer dizer que, sem amplificar ou mitigar, considere que ao interagir com metal, você pode interagir com aquela característica com ameaça 5. Por exemplo, se você imbuir metal a si, a característica duro, a qual ele tem 5, lhe dará 35 em armadura natural caso você não a amplifique. Toda vez que você imbuir as características de um PMN em um alvo, este PMN em questão é consumido e desaparece."
+        },
+        "especifico": {
+            "nome": "Animais, objetos e elementos específicos",
+            "descricao": "Alguns animais, e elementos específicos e próprios do mundo possuem suas próprias características. Eles podem ter propriedades positivas, ou propriedades positivas invertidas, tornando-as negativas. Ao queimar um animal, ou qualquer coisa viva, ele não é consumido e não deixa de existir."
+        },
+        "variavel": {
+            "nome": "Propriedades variáveis",
+            "descricao": "Ao imbuir uma propriedade de fogo, você a adquiriu ao consumir a chama e sacar uma de suas propriedades. Sendo assim, ao consumir um material existente e físico. Porém, propriedades vão muito além disso. Um homem que acabou de pular pode receber Voando X a depender do quão alto saltou. Uma mulher grávida certamente tem a propriedade Grávida, e seu filho certamente tem Incubando. Segue uma lista de propriedades e o meio para determinar como são adquiridas e ganham ameaça."
+        }
+    },
+    "fontes": [
+        {
+            "categoria": "pessoal",
+            "nome": "Pessoais (PPN)",
+            "descricao": "Características de personalidade, crenças e ideais de seres vivos.",
+            "propriedades": [
+                {
+                    "nome": "Extrovertido",
+                    "ameaca": null,
+                    "descricao": "Você tem facilidade com comunicação. Para cada ameaça, você recebe -5 em vantagem para testes de carisma."
+                },
+                {
+                    "nome": "Forte",
+                    "ameaca": null,
+                    "descricao": "Você tem um corpo forte e resistente. Para cada ameaça, você recebe -5 em vantagem para testes de força e constituição."
+                },
+                {
+                    "nome": "Tenaz",
+                    "ameaca": null,
+                    "descricao": "Você é resiliente fisicamente. Para cada ameaça, você recebe +2 PVs. Estes PVs só podem ultrapassar o limite da raça humana (20 PVs) caso você esteja amplificando essa propriedade."
+                },
+                {
+                    "nome": "Rápido",
+                    "ameaca": null,
+                    "descricao": "Você é fisicamente rápido e consegue se mover com velocidade. Você tem vantagem de -5 em testes de destreza, ou deslocamento +2."
+                },
+                {
+                    "nome": "Inteligente",
+                    "ameaca": null,
+                    "descricao": "Você é inteligente e tem conhecimentos abrangentes e largos. Você tem vantagem de -5 em testes de conhecimento, ou BE +1."
+                },
+                {
+                    "nome": "Saudável",
+                    "ameaca": null,
+                    "descricao": "Seu corpo é resistente contra condições negativas naturais e inaturais. Doenças mundanas ou amaldiçoadas em você aumentam somente uma vez a cada Ameaça dias."
+                },
+                {
+                    "nome": "Atraente",
+                    "ameaca": null,
+                    "descricao": "Você é atraente romântica ou sexualmente. Seres de sexualidade cabível de atração por você lhe oferecem vantagem de -10 por ameaça."
+                },
+                {
+                    "nome": "Corajoso",
+                    "ameaca": null,
+                    "descricao": "Você consegue agir racionalmente apesar do medo. Você recebe Ameaça em armadura natural contra dano de sanidade e vantagem para resistir contra Provocado, Amedrontado ou Confuso."
+                },
+                {
+                    "nome": "Determinado",
+                    "ameaca": null,
+                    "descricao": "Você tem sua ameaça em pontos de vida negativos que você pode ficar até que entre em morrendo. Exemplo: Ameaça 3, você nega a condição morrendo se estiver com -3 ou mais PVs."
+                },
+                {
+                    "nome": "Criativo",
+                    "ameaca": null,
+                    "descricao": "Você é habilidoso com áreas imaginativas. Você tem -8 por ameaça em vantagem para habilidades como: Arte, Performance, Tecnologia."
+                },
+                {
+                    "nome": "Analítico",
+                    "ameaca": null,
+                    "descricao": "Você é habilidoso com raciocínio lógico e objetivo. Você tem -10 por ameaça em vantagem para testes de Raciocínio e Intuição."
+                },
+                {
+                    "nome": "Disciplinado",
+                    "ameaca": null,
+                    "descricao": "Você consegue realizar atividades repetitivas e difíceis por longos períodos e de forma eficiente. Diminua em valor igual a sua ameaça (não podendo diminuir a menos do que 1) o tempo de duração necessário para ler livros e realizar qualquer treino."
+                },
+                {
+                    "nome": "Confiante",
+                    "ameaca": null,
+                    "descricao": "Você inspira pessoas a agirem de forma confiante e decisiva. Aliados ou neutros em cena recebem sua ameaça quadruplicada em testes quaisquer."
+                },
+                {
+                    "nome": "Autoritário",
+                    "ameaca": null,
+                    "descricao": "Sua presença impõe respeito, as pessoas não gostam de te desobedecer. Ao fazer testes a fim de convencer alguém a cumprir uma ordem, você tem -12 em vantagem por ameaça."
+                },
+                {
+                    "nome": "Flexível",
+                    "ameaca": null,
+                    "descricao": "Você tem um corpo maleável e fácil de controlar. Você tem vantagem de -8 por ameaça em testes de desviar e acrobacias."
+                },
+                {
+                    "nome": "Preciso",
+                    "ameaca": null,
+                    "descricao": "Você tem uma coordenação motora excelente. Seus testes de precisão tem -10 em vantagem por ameaça."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": null,
+                    "descricao": "Seu corpo é rígido e duro de danificar. Você possui armadura natural igual a sua ameaça dobrada."
+                },
+                {
+                    "nome": "Pesado",
+                    "ameaca": null,
+                    "descricao": "Você tem um peso corporal avantajado. Aumente seus kg corporais em +1/5 do valor original, e seu mod de constituição em +1, tudo por ameaça. Seres com Pesado Inverso e ameaça 10 ou maior recebem resistência a dano de queda. Em ameaça 20 ou maior, imunidade."
+                },
+                {
+                    "nome": "Honesto",
+                    "ameaca": null,
+                    "descricao": "Você tem facilidade e é mais eficiente ao lidar com a verdade e justiça. Ao fazer algo que o mestre considere uma boa ação, testes envolvidos tem vantagem de -12 por ameaça."
+                },
+                {
+                    "nome": "Obediente",
+                    "ameaca": null,
+                    "descricao": "Você é ótimo em seguir ordens e eficiente ao executá-las. A critério do mestre, se você estiver fazendo algo a mando ou influência de outra pessoa, você tem vantagem de -12 por ameaça."
+                },
+                {
+                    "nome": "Orgulhoso",
+                    "ameaca": null,
+                    "descricao": "Você tem um ego inflado, e melhora sua confiança ao suceder. Sempre que suceder em um teste, acumula até o fim da cena sua ameaça em vantagem para testes quaisquer."
+                },
+                {
+                    "nome": "Sagaz",
+                    "ameaca": null,
+                    "descricao": "Você age rápido e eficientemente. Você tem +1 ação principal ou +2 ações de reflexo a cada 3 ameaças."
+                },
+                {
+                    "nome": "Bom Fisiomante",
+                    "ameaca": null,
+                    "descricao": "Você é habilidoso em manipular propriedades fisiomanticas. Você tem -10 em maldição por ameaça."
+                },
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": null,
+                    "descricao": "Você tem alguma habilidade específica e avantajada. Para cada ameaça, você recebe -15 em uma habilidade a sua escolha. (Limite de ameaça igual a metade do seu nível mundano)"
+                },
+                {
+                    "nome": "Curioso",
+                    "ameaca": null,
+                    "descricao": "Você é curioso e eficaz em desvendar enigmas. Você tem -12 em investigação por ameaça."
+                },
+                {
+                    "nome": "Inefável",
+                    "ameaca": null,
+                    "descricao": "Quando estiver em menor número, em ferida grave ou com sanidade inferior a 30, você recebe -8 por ameaça em testes quaisquer."
+                },
+                {
+                    "nome": "Grande",
+                    "ameaca": null,
+                    "descricao": "Você possui uma categoria de tamanho adicional para cada 4 em ameaça. Se for humano, você não pode ultrapassar Grande."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Fogo",
+            "descricao": "O fogo possui as seguintes características quando em tamanho médio, e dobra a ameaça de todas quando em tamanho grande, dobrando novamente em colossal.",
+            "propriedades": [
+                {
+                    "nome": "Quente",
+                    "ameaca": 4,
+                    "descricao": "Causa 1d4 em dano flamejante por ameaça. Ameaças adicionais podem, ao invés de aumentar número de dados, aumentar 1 passo."
+                },
+                {
+                    "nome": "Expansivo",
+                    "ameaca": 3,
+                    "descricao": "Fogo cresce se alastra. Efeitos imbuídos com fogo afetam todos os seres em um raio de metros igual a ameaça todo início de turno."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Metal",
+            "descricao": "O metal possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Duro",
+                    "ameaca": 5,
+                    "descricao": "Metal aumenta a armadura natural do que o possuir em +4 por ameaça. Superfícies não sólidas ou que não podem ser pisadas se tornam pisáveis quando imbuídas com Duro. A área que se torna pisável tem metros iguais a ameaça de Duro dobrada."
+                },
+                {
+                    "nome": "Condutividade",
+                    "ameaca": 1,
+                    "descricao": "Algo que possuir metal recebe dano eletrizante dobrado (+1 multiplicador a cada 3 ameaças)."
+                },
+                {
+                    "nome": "Peso",
+                    "ameaca": 4,
+                    "descricao": "Algo que possuir metal recebe uma desvantagem em testes de destreza pra cada 2 ameaças."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Pedras",
+            "descricao": "Pedras possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Duro",
+                    "ameaca": 2,
+                    "descricao": "Consulte Metal."
+                },
+                {
+                    "nome": "Peso",
+                    "ameaca": 2,
+                    "descricao": "Algo que possuir pedra recebe uma desvantagem em testes de destreza a cada 2 ameaças."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Borracha",
+            "descricao": "Borracha possui as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Maleabilidade",
+                    "ameaca": 4,
+                    "descricao": "Algo que possuir Borracha recebe vantagem em testes de destreza igual a -12 por ameaça."
+                },
+                {
+                    "nome": "Expelir",
+                    "ameaca": 3,
+                    "descricao": "Algo que possuir Borracha recebe resistência -7 a dano de impacto e queda por ameaça."
+                },
+                {
+                    "nome": "Incondução",
+                    "ameaca": null,
+                    "descricao": "Algo que possuir Borracha tem imunidade a dano eletrizante."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Toxinas",
+            "descricao": "Venenos médios possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Venenoso",
+                    "ameaca": 5,
+                    "descricao": "Ao ser consumido, o alvo imbuído com venenoso causa 1d2 tóxico irredutível a quem o consumiu. Aumente os dados ou o passo em +1 por ameaça."
+                },
+                {
+                    "nome": "Fedorento",
+                    "ameaca": 3,
+                    "descricao": "Elementos imbuídos com fedorento possuem desvantagem de +4 em testes de carisma por ameaça."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Madeira",
+            "descricao": "A Madeira possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Regeneração",
+                    "ameaca": 3,
+                    "descricao": "Todo descanso aumenta os PVs e aura recuperados em +1/2 por ameaça."
+                },
+                {
+                    "nome": "Fotossíntese",
+                    "ameaca": 2,
+                    "descricao": "Ao se expor a luz do sol durante 1 hora, regenera 1/5 da aura total e retira 1 acúmulo de marcas de exaustão. Quando exposto a luz do sol por 4 horas, recebe cinco vezes a ameaça como vantagem em qualquer teste."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Água",
+            "descricao": "A água possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Fluidez",
+                    "ameaca": 5,
+                    "descricao": "Água não pode ser atingida, cortada ou esmagada. Tudo que for imbuído com água recebe resistência a dano de impacto, cortante ou perfurante (ou imunidade em ameaça 8). Porém, fraqueza a dano eletrizante e tóxico."
+                },
+                {
+                    "nome": "Corrente",
+                    "ameaca": 5,
+                    "descricao": "A água escorre conforme é guiada pela gravidade. Tudo que é imbuído com água recebe a ameaça dobrada em deslocamento."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Ar",
+            "descricao": "O ar possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Leve",
+                    "ameaca": 7,
+                    "descricao": "Tudo que for imbuído com ar recebe a condição pessoal Pesado em ameaça igual a de leve, só que com Reversão de maldição ativa."
+                },
+                {
+                    "nome": "Invisível",
+                    "ameaca": 10,
+                    "descricao": "Tudo que for imbuído com ar se torna invisível, recebendo vantagem igual a ameaça vezes 10 em testes de furtividade."
+                },
+                {
+                    "nome": "Rápido",
+                    "ameaca": 3,
+                    "descricao": "Tudo que for imbuído com ar recebe a condição pessoal Rápido em ameaça igual."
+                },
+                {
+                    "nome": "Propulsão",
+                    "ameaca": 3,
+                    "descricao": "Tudo o que for imbuído com ar é arremessado em metros iguais a ameaça vezes 2 em alguma direção a critério do conjurador."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Gelo",
+            "descricao": "Gelo possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Duro",
+                    "ameaca": 2,
+                    "descricao": "Consulte metal."
+                },
+                {
+                    "nome": "Escorregadio",
+                    "ameaca": 5,
+                    "descricao": "Tudo que for imbuído com gelo, e que tiver um ser que comece seu turno acima dele, deve testar acrobacia (D60 -10 por ameaça). Se falhar, ficará caído e atordoado."
+                },
+                {
+                    "nome": "Frio",
+                    "ameaca": 6,
+                    "descricao": "Tudo o que for exposto a gelo durante 15 (-ameaça) rodadas recebe Ameaça pela metade em dano congelante."
+                },
+                {
+                    "nome": "Conservação",
+                    "ameaca": 10,
+                    "descricao": "Tudo que for imbuído com gelo é conservado. Permanecendo sem envelhecer durante minutos iguais a ameaça triplicada."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Eletricidade",
+            "descricao": "Eletricidade possui as seguintes características quando encontrada em trovões, e 1/4 das ameaças quando encontrado em dispositivos elétricos.",
+            "propriedades": [
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 20,
+                    "descricao": "A eletricidade é uma força volátil, rápida e difícil de domar. Todos os testes que opuserem algo imbuído com eletricidade tem desvantagem igual a ameaça dobrada. Afetar Eletricidade com Fisiomancia tem dificuldade aumentada em valor igual a ameaça vezes 5."
+                },
+                {
+                    "nome": "Ofensa elétrica",
+                    "ameaca": 15,
+                    "descricao": "Tudo o que for imbuído com eletricidade sofre 1d6 por ameaça em dano eletrizante, uma ameaça pode aumentar o passo de dano em +1 por valor."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Vidro",
+            "descricao": "Vidro possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Frágil",
+                    "ameaca": 10,
+                    "descricao": "Tudo que for imbuído com vidro recebe armadura natural -2 por ameaça."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Imãs",
+            "descricao": "Imãs tem as seguintes características quando encontrados em tamanho minúsculo, dobrando-as por tamanho subsequente.",
+            "propriedades": [
+                {
+                    "nome": "Atração",
+                    "ameaca": 1,
+                    "descricao": "Imãs são atraídos 0,5 metros por turno (+0,5 por ameaça) na direção de um imã de polaridade oposta contanto que estejam a no máximo 1 (+Ameaça duplicada) metros."
+                },
+                {
+                    "nome": "Retração",
+                    "ameaca": 1,
+                    "descricao": "Imãs são retraídos em direções opostas 0,5 metros por turno (+0,5 por ameaça) na direção oposta de um imã de polaridade igual contanto que estejam a no mínimo 1 (+Ameaça duplicada) metros."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Luz",
+            "descricao": "Luz possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Rápida",
+                    "ameaca": 50,
+                    "descricao": "Consulte rápido."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 60,
+                    "descricao": "Consulte eletricidade."
+                },
+                {
+                    "nome": "Revelação",
+                    "ameaca": 20,
+                    "descricao": "Alvos imbuídos com Luz tem desvantagem igual a ameaça triplicada em desvantagem."
+                },
+                {
+                    "nome": "Intangível",
+                    "ameaca": 1,
+                    "descricao": "A luz não é tocável. Elementos imbuídos com luz não podem sofrer ou causar dano físico. Não podem realizar ações físicas. Não podem equipar ou vestir itens."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Sombras",
+            "descricao": "Sombras possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Rápida",
+                    "ameaca": 50,
+                    "descricao": "Consulte rápido."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 60,
+                    "descricao": "Consulte eletricidade."
+                },
+                {
+                    "nome": "Ocultação",
+                    "ameaca": 20,
+                    "descricao": "Elementos imbuídos com Sombras tem vantagem igual a ameaça triplicada em testes de furtividade."
+                },
+                {
+                    "nome": "Intangível",
+                    "ameaca": 1,
+                    "descricao": "Consulte Luz."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Areia",
+            "descricao": "Areia possui as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Partícula",
+                    "ameaca": 0,
+                    "descricao": "Areia não pode ser esmagada, um soco ou pancada não a machuca. Elementos imbuídos com Areia não podem sofrer dano de impacto, cortante ou perfurante."
+                },
+                {
+                    "nome": "Irregular",
+                    "ameaca": 0,
+                    "descricao": "Elementos imbuídos com Areia não podem equipar ou vestir itens. O dano físico de areia é sempre nulo."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Tecido",
+            "descricao": "Tecido possui as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Leve",
+                    "ameaca": 4,
+                    "descricao": "Consulte Ar."
+                },
+                {
+                    "nome": "Maleabilidade",
+                    "ameaca": 2,
+                    "descricao": "Consulte Borracha."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Itens danosos",
+            "descricao": "Itens que causam dano em sua ficha tem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Dano",
+                    "ameaca": 0,
+                    "descricao": "Itens danosos causam dano igual ao descrito em sua ficha, com margem de crítico e multiplicadores iguais aos descritos. Também podem usar quaisquer efeitos mundanos ou cláusulas e custos amaldiçoados. Para cada ameaça, Aumente o dano em +1 dado, +3 em margem. E para cada 4 ameaças aumente o multiplicador em +1."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Itens afiados",
+            "descricao": "Facas, espadas, pontas quebradas de vidro. Itens afiados possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Afiado",
+                    "ameaca": 0,
+                    "descricao": "Elementos imbuídos com Afiado, sempre que causarem dano, podem mudar qualquer quantidade deste dano para Cortante."
+                },
+                {
+                    "nome": "Assustador",
+                    "ameaca": 2,
+                    "descricao": "Elementos imbuídos com Assustador recebem vantagem em testes de Intimidação igual a ameaça vezes 7."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 1,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 3,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Explosivos",
+            "descricao": "Explosivos possuem as seguintes características. Geralmente são de tamanho pequeno, e aumentam de ameaça em +3 por categoria de tamanho subsequente.",
+            "propriedades": [
+                {
+                    "nome": "Explodir",
+                    "ameaca": 4,
+                    "descricao": "Explosivos causam 1d4 em dano explosivo. Aumente em +1 os dados de dano, ou +1 no passo de dano ou +2 nos metros de alcance por ameaça."
+                },
+                {
+                    "nome": "Assustador",
+                    "ameaca": 5,
+                    "descricao": "Consulte Itens afiados."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Livros",
+            "descricao": "Livros possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Conhecimento",
+                    "ameaca": 0,
+                    "descricao": "Ao ser imbuído com conhecimento 0, o alvo recebedor recebe os conhecimentos nele. Narrativamente, qualquer informação adentra sua mente instantaneamente. Mecanicamente, se for um livro de Habilidade ou Talento, você recebe os bônus automaticamente mesmo sem gastar horas. Livros consumidos desta forma ainda contam para seus limites de livros."
+                },
+                {
+                    "nome": "Inspiração",
+                    "ameaca": 4,
+                    "descricao": "Seres imbuídos com Inspiração recebem um número de re-rolagens para testes quaisquer iguais a ameaça pela metade."
+                },
+                {
+                    "nome": "Duro Inverso",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 7,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Dinheiro",
+            "descricao": "Dinheiro em moeda ou contas digitais é consumido e gasto para aplicar as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Compra de propriedade",
+                    "ameaca": "X",
+                    "descricao": "A depender do valor gasto monetariamente, você pode \"comprar\" e consumir propriedades de itens como: Tecido, Metal, ou qualquer um que a quantidade consumida possa comprar."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 5,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Relógios",
+            "descricao": "Relógios possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Tempo",
+                    "ameaca": 6,
+                    "descricao": "um alvo imbuído com Tempo sofre os efeitos de uma técnica da Maldição Paradoxo com +1 aprimoramento para cada 2 em ameaça."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 18,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Mochilas",
+            "descricao": "Mochilas, bolsas, baús, todos possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Armazenamento",
+                    "ameaca": 5,
+                    "descricao": "Elementos imbuídos com Armazenamento, uma vez que utilizem Imbuir propriedades, ficam com elas armazenadas por horas iguais a ameaça dobrada. Eles podem utilizar imbuir propriedades com propriedades armazenadas sem ter que consumir os materiais."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Cofres",
+            "descricao": "Cofres possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 30,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 15,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Sangue",
+            "descricao": "Sangue possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Herança",
+                    "ameaca": 5,
+                    "descricao": "Seres que sejam imbuídos com Herança recebem algum talento (ou maldição, com ameaça e técnicas), e todas as propriedades do antigo portador do sangue por horas iguais a ameaça dobrada."
+                },
+                {
+                    "nome": "Fluidez",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Corrente",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Memória",
+                    "ameaca": 0,
+                    "descricao": "Consulte túmulos."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Carne crua",
+            "descricao": "Carne crua possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Herança",
+                    "ameaca": 3,
+                    "descricao": "Consulte Sangue."
+                },
+                {
+                    "nome": "Fedorento",
+                    "ameaca": 4,
+                    "descricao": "Consulte Toxinas"
+                },
+                {
+                    "nome": "Perecível",
+                    "ameaca": 4,
+                    "descricao": "Elementos imbuídos com Perecível envelhecem a ameaça dobrada em meses por turno, durante turnos iguais a metade da ameaça."
+                },
+                {
+                    "nome": "Memória",
+                    "ameaca": 0,
+                    "descricao": "Consulte túmulos."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Muletas",
+            "descricao": "Muletas, corrimãos, apoios corporais tem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Apoio",
+                    "ameaca": 6,
+                    "descricao": "Elementos imbuídos com apoio tem vantagem igual a ameaça vezes 5 em testes de destreza, ou vezes 7 para acrobacia."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 4,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Livro da constituição federal",
+            "descricao": "Livros de legislação possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Legalidade",
+                    "ameaca": 6,
+                    "descricao": "Seres imbuídos só podem fazer qualquer ação que quebre a lei do livro consumido se suceder em resiliência (D60 -5 por ameaça)."
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 2,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Bíblias e livros sagrados",
+            "descricao": "Bíblias e outros escritos sagrados possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 2,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Reza",
+                    "ameaca": 10,
+                    "descricao": "Elementos imbuídos com Reza recebem a ameaça triplicada em Religião e um talento mundano qualquer que tenha Religião como requisito. A partir de ameaça 15, o alvo imbuído não precisa cumprir requisitos do talento escolhido."
+                },
+                {
+                    "nome": "Sacrifício",
+                    "ameaca": 5,
+                    "descricao": "O alvo imbuído com Sacrifício pode sacrificar qualquer número de habilidades, que retornam ao normal ao fim de horas iguais a ameaça dobrada. Sacrificando-as, ele recebe os valores das habilidades sacrificadas pela metade em alguma outra habilidade de mesmo tipo pela duração."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 6,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Corajoso",
+                    "ameaca": null,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Confiante",
+                    "ameaca": 3,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Velas",
+            "descricao": "Velas possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Revelação",
+                    "ameaca": 6,
+                    "descricao": "Consulte luz."
+                },
+                {
+                    "nome": "Reza",
+                    "ameaca": 2,
+                    "descricao": "Consulte Bíblias"
+                },
+                {
+                    "nome": "Sacrifício",
+                    "ameaca": 2,
+                    "descricao": "Consulte Bíblias."
+                },
+                {
+                    "nome": "Confiante",
+                    "ameaca": 1,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Espantalhos",
+            "descricao": "Espantalhos possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 8,
+                    "descricao": "Intimidar."
+                },
+                {
+                    "nome": "Autoritário",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 3,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Itens protetivos",
+            "descricao": "Itens protetivos como escudos, armaduras e que possuem incremento de defesa.",
+            "propriedades": [
+                {
+                    "nome": "Proteção",
+                    "ameaca": 0,
+                    "descricao": "Itens protetivos fornecem o incremento de defesa como armadura natural ao que for imbuído com eles. Porém, fornecem também a penalidade de destreza."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Chaves",
+            "descricao": "Chaves possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Duro",
+                    "ameaca": 2,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Abertura",
+                    "ameaca": 7,
+                    "descricao": "Seres imbuídos com Abertura 7 tem partes do corpo abertas, sofrendo dano igual a ameaça dobrada. Se você tiver Tranca imbuída a você, os efeitos de abertura são negados e você perde o imbuir de Tranca."
+                },
+                {
+                    "nome": "Tranca",
+                    "ameaca": 0,
+                    "descricao": "Seres imbuídos com tranca tem alguma capacidade (escolha do conjurador) trancada. Selecione uma habilidade, talento ou propriedade fisiomantica. Se for habilidade, até o fim da cena ele falha em todos os testes feitos com ela. Se for um talento, até o fim da cena ele não pode mais usá-lo. Se for uma propriedade fisiomantica, ele não pode mais conjurar técnicas selecionando-a como alvo até o fim da cena. Se o alvo, no início de um turno, repetir um teste de resiliência contra maldição, ele cessa os efeitos a ele imbuídos. Imbuir Abertura a um alvo com Tranca cessa os efeitos."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Máscaras",
+            "descricao": "Máscaras possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Ocultação",
+                    "ameaca": 7,
+                    "descricao": "Consulte Sombras."
+                },
+                {
+                    "nome": "Despersonalização",
+                    "ameaca": 8,
+                    "descricao": "Seres que vejam algo imbuído com Ocultação devem suceder em um teste de detectar mentiras (D70 -5 por ameaça). Se falharem, são incapazes de associar o alvo a qualquer alvo que normalmente reconheceriam a ele. Exemplo: Pessoas que o conhecem não percebem que é você e o tratam como desconhecido."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Correntes",
+            "descricao": "Correntes possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Restritiva",
+                    "ameaca": 10,
+                    "descricao": "Um alvo com Restritiva deve suceder em um teste de resiliência (D70 -5 por ameaça) para realizar qualquer ação. Se falhar, a ação é cancelada e ele a perde junto com quaisquer custos envolvidos."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 8,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Coroa",
+            "descricao": "Coroas tem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 5,
+                    "descricao": "Lábia."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 4,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Bandeira",
+            "descricao": "Bandeiras possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Leve",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Maleabilidade",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Corajoso",
+                    "ameaca": 8,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Autoritário",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Portas",
+            "descricao": "Portas possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Atravessar",
+                    "ameaca": 7,
+                    "descricao": "Elementos imbuídos com Atravessar se tornam intangíveis. Outros seres podem ocupar o mesmo espaço que eles. Ele se torna imune a dano físico e incapaz de causá-lo. Não consegue mais vestir ou equipar itens e falha em todo teste físico que fizer."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Cadeados",
+            "descricao": "Cadeados possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Impedimento",
+                    "ameaca": 6,
+                    "descricao": "Seres quaisquer devem testar resiliência (D60 -10 por ameaça) para conseguir se mover através de uma área que tenha Impedimento imbuído. Ao imbuir Impedimento em um alvo, você determina uma ação: até que suceda no teste descrito acima (o qual pode repetir todo início de turno) ele não pode fazê-la. Ao inverter, você determina uma ordem, que se o alvo falhar no teste e for capaz de cumprir dentro de uma ação, é obrigado a cumprir."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Mapas",
+            "descricao": "Mapas possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Orientação",
+                    "ameaca": 6,
+                    "descricao": "Você recebe vantagem em testes de intuição igual a ameaça quintuplicada, porém, somente para adivinhar caminhos e informações sobre a estrutura de um lugar que você está."
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Dados",
+            "descricao": "Dados para jogos tem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Aleatório",
+                    "ameaca": 0,
+                    "descricao": "O alvo imbuído com Aleatoriedade recebe uma propriedade aleatória rolada pelo mestre."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Fotografia",
+            "descricao": "Fotografias digitais ou físicas possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Memória",
+                    "ameaca": 0,
+                    "descricao": "Um alvo imbuído com uma memória vive a cena imbuída a ela vividamente."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Rede",
+            "descricao": "Redes de conexão wi-fi ou Bluetooth são sinais materiais e perfeitamente naturais. Para interagir com eles, você pode selecionar roteadores ou aparelhos digitais como alvo. Se não, pode selecionar o ar de locais que tenham conexão, se fizer isso, adicione Dificuldade de interação 20. Eles possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Ofensa elétrica",
+                    "ameaca": 2,
+                    "descricao": "Consulte Eletricidade."
+                },
+                {
+                    "nome": "Comunicação",
+                    "ameaca": 12,
+                    "descricao": "Alvos imbuídos com Comunicação podem se comunicar telepaticamente com outros alvos que a tenham imbuída num raio de metros iguais a ameaça vezes 5."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Túmulos",
+            "descricao": "Túmulos, sepulturas, cinzas e cadáveres possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Memória",
+                    "ameaca": 0,
+                    "descricao": "Consulte fotografia."
+                },
+                {
+                    "nome": "Tristeza",
+                    "ameaca": 7,
+                    "descricao": "Alvos imbuídos com tristeza sofrem a ameaça em dano de sanidade."
+                },
+                {
+                    "nome": "Fedorento",
+                    "ameaca": 10,
+                    "descricao": "Consulte toxinas."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Remédios",
+            "descricao": "Remédios, Kits médicos e outras soluções medicinais possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Efeito de cura",
+                    "ameaca": 6,
+                    "descricao": "Aplique ao alvo imbuído os efeitos do item consumido. Se for um remédio, considere que ele o consumiu vezes iguais a 1/3 da ameaça. Se for um kit médico, ele sofre uma ação do kit para cada 3 ameaças."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Celulares",
+            "descricao": "Celulares possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Viciante",
+                    "ameaca": 1,
+                    "descricao": "Celulares são considerados viciantes, você pode imbuir este vício subitamente a um alvo. Assim que tiver ações válidas, Ele é obrigado a repetir sua última ação com mesmos custos, alvos e especificações se falhar em resiliência (D50 -Ameaça vezes 10.) ele é obrigado a repetir a ação vezes iguais a ameaça, o alvo pode repetir o teste toda vez que fosse repetir a ação."
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 1,
+                    "descricao": "Consulte Metal."
+                },
+                {
+                    "nome": "Condutividade",
+                    "ameaca": 2,
+                    "descricao": "Consulte Metal."
+                },
+                {
+                    "nome": "Conhecimento",
+                    "ameaca": 0,
+                    "descricao": "Consulte Livros."
+                },
+                {
+                    "nome": "Tempo",
+                    "ameaca": 3,
+                    "descricao": "Consulte relógio."
+                },
+                {
+                    "nome": "Orientação",
+                    "ameaca": 6,
+                    "descricao": "Consulte Mapas."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 25,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Rosas",
+            "descricao": "Flores de rosa possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 2,
+                    "descricao": "Lábia, por cheiro."
+                },
+                {
+                    "nome": "Intensificação emocional",
+                    "ameaca": 4,
+                    "descricao": "O ser imbuído com Intensificação emocional, uma vez que sofrer ou curar sanidade, cura a ameaça em valor adicional."
+                },
+                {
+                    "nome": "Espinhos",
+                    "ameaca": 1,
+                    "descricao": "O ser imbuído com Espinhos devolve a ameaça em Perda de PVs para seres que o atinjam com ataques corpo a corpo ou desarmados."
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 2,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Girassóis",
+            "descricao": "Girassóis possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Afinidade ao sol",
+                    "ameaca": 4,
+                    "descricao": "Todo início de turno sob a luz do sol, um alvo com Afinidade ao sol acumula vantagem em testes físicos igual a ameaça até o fim da cena ou até que saia da luz do sol."
+                },
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 2,
+                    "descricao": "Lábia"
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Cactos",
+            "descricao": "Cactos possuem as seguintes habilidades.",
+            "propriedades": [
+                {
+                    "nome": "Inefável",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Resistência a natureza",
+                    "ameaca": 0,
+                    "descricao": "O alvo imbuído recebe resistência a dano tóxico e acumula marcas de exaustão por fome, sede e sono no dobro do tempo necessário."
+                },
+                {
+                    "nome": "Reserva",
+                    "ameaca": 5,
+                    "descricao": "Seres imbuídos com Reserva 5 podem recuperar PVs, sanidade e aura acima de seus limites totais, usando o excedente como valores temporários por horas iguais a ameaça dobrada."
+                },
+                {
+                    "nome": "Espinhos",
+                    "ameaca": 3,
+                    "descricao": "Consulte Rosa."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Trepadeiras",
+            "descricao": "Trepadeiras possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Crescimento constante",
+                    "ameaca": 1,
+                    "descricao": "Seres imbuídos com Crescimento constante não tem mais limite de categoria de tamanho e acumulam marcas iguais a ameaça. Uma vez que atinjam seus mods de constituição em marcas, aumentam permanentemente suas categorias de tamanho em +1."
+                },
+                {
+                    "nome": "Restritiva",
+                    "ameaca": 2,
+                    "descricao": "Consulte Correntes."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Bambu",
+            "descricao": "Bambu possui as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Crescimento constante",
+                    "ameaca": 1,
+                    "descricao": "Consulte Trepadeiras."
+                },
+                {
+                    "nome": "Flexível",
+                    "ameaca": 4,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Cogumelos",
+            "descricao": "Cogumelos possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Expansivo",
+                    "ameaca": 3,
+                    "descricao": "Consulte fogo."
+                },
+                {
+                    "nome": "Alucinações",
+                    "ameaca": 7,
+                    "descricao": "Seres imbuídos com Alucinações devem suceder em resiliência (D60 -5 por ameaça) todo início de turno até que suceda vezes iguais a metade da ameaça."
+                },
+                {
+                    "nome": "Venenoso",
+                    "ameaca": 4,
+                    "descricao": "Consulte Toxinas."
+                },
+                {
+                    "nome": "Esporos",
+                    "ameaca": 3,
+                    "descricao": "Alvos imbuídos com Esporos precisam receber uma propriedade adicional imbuída pelo conjurador. Num raio de metros igual a ameaça, todo ser que comece seu turno no alcance deve testar resiliência (D60 -5 por ameaça) se for involuntário, se falhar, recebe a propriedade imbuída."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Lótus",
+            "descricao": "Lótus possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Calma",
+                    "ameaca": 4,
+                    "descricao": "Seres imbuídos com Lótus curam a ameaça em Sanidade."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Dente de leão",
+            "descricao": "Dentes de leão possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Permanência",
+                    "ameaca": 5,
+                    "descricao": "Você pode imbuir permanência em outras propriedades ou efeitos contínuos, se fizer isso, elas aumentam em horas iguais a ameaça dobrada. Se imbuir a um alvo ferido, os PVs dele não podem se recuperar até que horas iguais a ameaça dobrada se passem."
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 2,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Lavanda",
+            "descricao": "Lavandas possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Sono",
+                    "ameaca": 3,
+                    "descricao": "Elementos imbuídos com Sono devem testar resiliência (D60 -5 por ameaça), se falharem estão inconscientes. Se suceder em, estão exaustos."
+                },
+                {
+                    "nome": "Calma",
+                    "ameaca": 2,
+                    "descricao": "Consulte Lótus."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Urtiga",
+            "descricao": "Urtigas possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Irritação e incômodo",
+                    "ameaca": 3,
+                    "descricao": "Alvos imbuídos com Irritação e incômodo sofrem dano de sanidade igual a ameaça durante rodadas iguais a ameaça. Se a ameaça for superior a 6, eles recebem desvantagem igual a ameaça quadruplicada em testes quaisquer."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Coração",
+            "descricao": "Corações possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Batimento otimizado",
+                    "ameaca": 6,
+                    "descricao": "O alvo imbuído com batimento otimizado recebe vantagem em testes de constituição pra cada 3 em ameaça."
+                },
+                {
+                    "nome": "Carne",
+                    "ameaca": null,
+                    "descricao": "Corações possuem todas as propriedades de Carne."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Pulmões",
+            "descricao": "Pulmões possuem os seguintes efeitos.",
+            "propriedades": [
+                {
+                    "nome": "Respiração otimizada",
+                    "ameaca": 6,
+                    "descricao": "O alvo imbuído com Respiração otimizada recebe fator de cura de aura igual a ameaça por turno, mas perde constituição em valor igual. Transforme em valor igual a ameaça triplicada fora de combate."
+                },
+                {
+                    "nome": "Carne",
+                    "ameaca": null,
+                    "descricao": "Pulmões possuem todas as propriedades de Carne."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Olhos e Orelhas",
+            "descricao": "Olhos possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Hiper visão",
+                    "ameaca": 6,
+                    "descricao": "Alvos imbuídos sofrem os efeitos da maldição Hiper sensação com ameaça igual a metade da ameaça desta propriedade."
+                },
+                {
+                    "nome": "Carne",
+                    "ameaca": null,
+                    "descricao": "Olhos possuem todas as propriedades de Carne."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Cérebros",
+            "descricao": "Cérebros possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Raciocínio aprimorado",
+                    "ameaca": 6,
+                    "descricao": "Alvos imbuídos com Raciocínio aprimorado consideram-se como tendo BE adicional igual a Ameaça até o fim da cena."
+                },
+                {
+                    "nome": "Carne",
+                    "ameaca": null,
+                    "descricao": "Cérebros possuem todas as características de Carne."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Músculos",
+            "descricao": "Músculos possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Força absurda",
+                    "ameaca": 6,
+                    "descricao": "Alvos imbuídos com Músculos sofrem os efeitos da maldição Mil tendões sob ameaça igual a 1/2 da ameaça desta propriedade. Seus ataques corpo a corpo ou desarmados causam dano adicional extra de mesmo tipo igual a ameaça duplicada."
+                },
+                {
+                    "nome": "Carne",
+                    "ameaca": null,
+                    "descricao": "Músculos possuem todas as características de Carne."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Âncora",
+            "descricao": "Âncoras possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Pesado",
+                    "ameaca": 25,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 15,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Tenaz",
+                    "ameaca": 10,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Fator Âncora",
+                    "ameaca": 15,
+                    "descricao": "Alvos imbuídos com Fator Âncora devem suceder em Resiliência (D70 -5 por ameaça) para usarem ações de movimento ou se deslocarem de quaisquer formas. Se falharem, não conseguem e perdem as ações e custos envolvidos."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Sinos",
+            "descricao": "Sinos possuem as seguintes propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Duro",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Som",
+                    "ameaca": 4,
+                    "descricao": "Alvos imbuídos com Som produzem um som da escolha do conjurador durante rodadas iguais a metade da ameaça."
+                },
+                {
+                    "nome": "Alarde",
+                    "ameaca": 6,
+                    "descricao": "Um alvo imbuído com Alarde sofre uma condição imposta pelo conjurador, exemplo: Quando um alvo hostil surgir num alcance igual a ameaça. Quando esta condição for cumprida, o alvo emite um alarme de alto volume durante rodadas iguais a metade da ameaça."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Quebradiça",
+            "descricao": "Não é um item propriamente dito. Todo item, superfície ou estrutura que estiver considerada como Quebrada pode oferecer estas propriedades.",
+            "propriedades": [
+                {
+                    "nome": "Quebrado",
+                    "ameaca": 6,
+                    "descricao": "Elementos imbuídos com Quebrado recebem dano amaldiçoado irredutível em valor igual a ameaça vezes 2. Se entrarem em morrendo ou ferida grave, recebem a sequela permanente de osso quebrado. Se forem um item, automaticamente se tornam quebrados e inúteis."
+                }
+            ]
+        },
+        {
+            "categoria": "pmn",
+            "nome": "Jóia Fisiomante",
+            "descricao": "Jóias Fisiomantes possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Transformação Fisiomante",
+                    "ameaca": 5,
+                    "descricao": "Esta propriedade pode se transformar em qualquer propriedade da escolha do conjurador, usando o valor de ameaça de Transformação Fisiomante."
+                },
+                {
+                    "nome": "Destruição proprietária",
+                    "ameaca": 5,
+                    "descricao": "Alvos que interajam com quaisquer características providas de uma Jóia Fisiomante sofrem dano de sanidade total igual a ameaça vezes 2."
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Gavião",
+            "descricao": "Gaviões possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Rápido",
+                    "ameaca": 5,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Sagaz",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 4,
+                    "descricao": "Enxergar."
+                },
+                {
+                    "nome": "Tenaz Inverso",
+                    "ameaca": 4,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Porco",
+            "descricao": "Porcos possuem as seguintes características.",
+            "propriedades": [
+                {
+                    "nome": "Tenaz",
+                    "ameaca": 12,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Duro",
+                    "ameaca": 8,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Pesado",
+                    "ameaca": 10,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Louva Deus",
+            "descricao": "",
+            "propriedades": [
+                {
+                    "nome": "Grande Inverso",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Rápido",
+                    "ameaca": 9,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Habilidoso específico",
+                    "ameaca": 5,
+                    "descricao": "Precisão."
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 5,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Formiga",
+            "descricao": "",
+            "propriedades": [
+                {
+                    "nome": "Grande Inverso",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Forte",
+                    "ameaca": 15,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 12,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Barata",
+            "descricao": "",
+            "propriedades": [
+                {
+                    "nome": "Resistência a doenças",
+                    "ameaca": 6,
+                    "descricao": "Um alvo imbuído com Baratas se torna imune a doenças mundanas por dias iguais a 1/3 da ameaça."
+                },
+                {
+                    "nome": "Grande Inverso",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Inefável",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Duro inverso",
+                    "ameaca": 4,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "especifico",
+            "nome": "Planária",
+            "descricao": "",
+            "propriedades": [
+                {
+                    "nome": "Regeneração",
+                    "ameaca": 8,
+                    "descricao": "A cada turno em combate, um alvo imbuído com planária recupera metade da ameaça em PVs."
+                },
+                {
+                    "nome": "Grande Inverso",
+                    "ameaca": 5,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Inefável",
+                    "ameaca": 3,
+                    "descricao": ""
+                },
+                {
+                    "nome": "Dificuldade de interação",
+                    "ameaca": 6,
+                    "descricao": ""
+                }
+            ]
+        },
+        {
+            "categoria": "variavel",
+            "nome": "Variáveis",
+            "descricao": "Adquiridas por situações, não por materiais.",
+            "propriedades": [
+                {
+                    "nome": "Voando",
+                    "ameaca": null,
+                    "descricao": "Efeito: Se imbuída a um alvo que não estava voando, ele é arremessado em uma direção a sua escolha em deslocamento igual a ameaça dobrada.",
+                    "ganho": "Ao saltar, ser arremessado, ou usar deslocamento de vôo, o personagem acumula 1 em ameaça para cada 3 metros deslocados."
+                },
+                {
+                    "nome": "Incubando",
+                    "ameaca": null,
+                    "descricao": "Efeito: Se imbuída a um ser cujo corpo consiga engravidar, ele engravida em meses de gestação iguais a ameaça, perdendo pontos de constituição iguais a ameaça vezes 10. Essa propriedade falha ao ser aplicada em homens humanos e outros seres que não podem engravidar por seus sexos.",
+                    "ganho": "Mulheres grávidas, ovos, e outras formas de reprodução ganham 1 em ameaça por mês de gestação."
+                },
+                {
+                    "nome": "Condições",
+                    "ameaca": null,
+                    "descricao": "Efeito: Um ser imbuído recebe a condição em questão. Afetar Hexo-limitado, morrendo, ferida grave, hexo-fraco, feridas duradouras e qualquer derivado delas é restrito a fisiomantes de décimo quinto nível de arte.",
+                    "ganho": "Qualquer condição negativa ou positiva é uma propriedade fisiomante, e pode ser interagida como tal. A ameaça delas é sempre 0."
+                },
+                {
+                    "nome": "Ligado",
+                    "ameaca": null,
+                    "descricao": "Efeito: O alvo, se for apropriado, liga ou desliga quando sua ameaça for, respectivamente, 1 ou 0, ou caso seja revertido enquanto ligado ou vise-versa.",
+                    "ganho": "Itens ligados, como eletrodomésticos, e outros. Ameaça sempre 0 ou 1."
+                },
+                {
+                    "nome": "Insano",
+                    "ameaca": null,
+                    "descricao": "Efeito: O alvo fica com sanidade negativa igual a ameaça vezes 10 até o fim da cena.",
+                    "ganho": "Cada 10 pontos de sanidade negativa de um alvo acumulam 1 em ameaça"
+                }
+            ]
+        }
+    ]
+}

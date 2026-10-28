@@ -8,6 +8,8 @@
     const cfgEl = document.getElementById('tt-cfg');
     if (!cfgEl) return;
     const CFG = JSON.parse(cfgEl.textContent);
+    const SALA = CFG.sala || null;       // sala online aberta nesta mesa (null: modo normal, com autosave)
+    const DONO = !SALA || !!SALA.dono;   // quem abriu a sala; convidados não mexem em linhas, colunas, fundo e nome
 
     /* ---------- constantes e utilitários ---------- */
     const COR_OK = /^#[0-9a-fA-F]{6}$/;
@@ -37,6 +39,12 @@
     const imgOk = s => typeof s === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(s);
     const copia = o => JSON.parse(JSON.stringify(o));
     const inicial = p => Array.from(txt(p.nome).trim()).slice(0, 2).join('').toUpperCase();
+    /* Imagem dentro da peça: iz = zoom, ix/iy = deslocamento (em % do tamanho da peça). O limite impede que apareça fundo vazio. */
+    const tf = o => `translate(${num(o.ix)}%,${num(o.iy)}%) scale(${o.iz || 1})`;
+    function limPan(o) {
+        const k = (limitar(num(o.iz) || 1, 1, 5) - 1) * 50;
+        o.ix = r1(limitar(num(o.ix), -k, k)); o.iy = r1(limitar(num(o.iy), -k, k));
+    }
 
     /* ---------- estado ---------- */
     function normalizar(e) {
@@ -59,7 +67,7 @@
             p.tam = limitar(Math.round(num(p.tam)) || 1, 1, 4);
             p.x = limitar(Math.round(num(p.x)), 0, Math.max(0, e.cols - p.tam));
             p.y = limitar(Math.round(num(p.y)), 0, Math.max(0, e.rows - p.tam));
-            if (p.img && e.imgs[p.img]) p.iz = limitar(num(p.iz) || 1, 1, 5); else { delete p.img; delete p.iz; }
+            if (p.img && e.imgs[p.img]) { p.iz = limitar(num(p.iz) || 1, 1, 5); limPan(p); } else { delete p.img; delete p.iz; delete p.ix; delete p.iy; }
         });
         e.desenho = (Array.isArray(e.desenho) ? e.desenho : []).filter(it => it && ITENS.includes(it.t)).slice(0, MAX_DESENHO);
         e.modelos = (Array.isArray(e.modelos) ? e.modelos : []).filter(m => m && typeof m === 'object').slice(0, MAX_MODELOS);
@@ -70,6 +78,7 @@
             m.cor = COR_OK.test(m.cor || '') ? m.cor : '#a78bfa';
             m.tam = limitar(Math.round(num(m.tam)) || 1, 1, 4);
             m.iz = limitar(num(m.iz) || 1, 1, 5);
+            limPan(m);
             m.img = imgOk(m.img) ? m.img : '';
         });
         return e;
@@ -78,7 +87,7 @@
 
     /* estado só de interface (não vai para o servidor) */
     const U = {
-        sels: [],
+        sels: [], arrastando: false,
         novo: { nome: '', forma: 'circulo', cor: '#a78bfa', tam: 1, img: '' },
         des: { on: false, ferr: 'pincel', cor: '#f472b6', larg: 3, preencher: true, vivo: null, cx: null, cy: null, hist: [], refaz: [] },
     };
@@ -88,13 +97,15 @@
         svg: $('#tt-svg'), gDes: $('#tt-g-des'), gVivo: $('#tt-g-vivo'), pecas: $('#tt-pecas'), caixa: $('#tt-caixa'),
         status: $('#tt-status'), sel: $('#tt-sel'), prontas: $('#tt-prontas'), modelos: $('#tt-modelos'),
         novoPrev: $('#tt-novo-prev'), tirarImgNovo: $('#tt-tirar-img-novo'), tirarMapa: $('#tt-tirar-mapa'),
-        nomeMesa: $('#tt-nome-mesa'), desfazer: $('#tt-desfazer'), refazer: $('#tt-refazer'),
+        nomeMesa: $('#tt-nome-mesa'), salaOn: $('#tt-sala-on'), desfazer: $('#tt-desfazer'), refazer: $('#tt-refazer'),
     };
 
     /* ---------- salvar (autosave) ---------- */
-    let timer = null;
+    let timer = null, travado = false;
     function setStatus(s) {
-        const rot = { salvo: 'Salvo', pendente: 'Alterações pendentes…', salvando: 'Salvando…', erro: 'Erro ao salvar — tentando de novo' };
+        const rot = SALA
+            ? { salvo: 'Sincronizado', pendente: 'Sincronizando…', salvando: 'Sincronizando…', erro: 'Sem conexão — tentando de novo' }
+            : { salvo: 'Salvo', pendente: 'Alterações pendentes…', salvando: 'Salvando…', erro: 'Erro ao salvar — tentando de novo' };
         el.status.dataset.estado = s;
         el.status.textContent = rot[s] || '';
     }
@@ -107,20 +118,289 @@
         return fd;
     }
     function agendar() {
+        if (SALA) return agendarSala();
         setStatus('pendente');
         clearTimeout(timer);
         timer = setTimeout(gravar, 800);
     }
     function gravar() {
         clearTimeout(timer); timer = null;
+        if (travado) return Promise.resolve();
         setStatus('salvando');
         return fetch(CFG.urlSalvar, { method: 'POST', body: formData(), headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-            .then(r => { if (!r.ok) throw new Error(r.status); setStatus(timer ? 'pendente' : 'salvo'); })
+            .then(r => {
+                if (r.status === 409) { // outra aba abriu uma sala nesta mesa: gravar tudo apagaria o que os outros fizerem
+                    travado = true; setStatus('erro');
+                    return aviso('Esta mesa agora tem uma sala aberta. Recarregue a página para continuar.');
+                }
+                if (!r.ok) throw new Error(r.status);
+                setStatus(timer ? 'pendente' : 'salvo');
+            })
             .catch(() => { setStatus('erro'); clearTimeout(timer); timer = setTimeout(gravar, 4000); });
     }
-    const urgente = () => { if (timer && navigator.sendBeacon) { try { navigator.sendBeacon(CFG.urlSalvar, formData()); } catch (_) { /* ignora */ } } };
+    const urgente = () => {
+        if (SALA) {
+            const patch = diffSala();
+            if (patch && navigator.sendBeacon) { try { navigator.sendBeacon(SALA.url.alterar, formPatch(patch)); } catch (_) { /* ignora */ } }
+            return;
+        }
+        if (timer && navigator.sendBeacon) { try { navigator.sendBeacon(CFG.urlSalvar, formData()); } catch (_) { /* ignora */ } }
+    };
     document.addEventListener('visibilitychange', () => { if (document.hidden) urgente(); });
     window.addEventListener('pagehide', urgente);
+
+    /* ---------- sala online ----------
+       Sem WebSocket (hospedagem compartilhada não aguenta): cada jogador guarda uma "referência" R, o que o servidor tinha na
+       última conversa. O que mudou aqui (diferença entre E e R) vai como um patch pequeno, por id de peça e de traço, e o servidor
+       responde com o estado já somado ao de todo mundo. Na volta, o que NÃO mexi desde o envio é trocado pela versão do servidor;
+       o que mexi fica e vai no próximo patch. Quando não há nada a enviar, só pergunta "mudou?" (barato) a cada ~1 s. */
+    const chave = p => JSON.stringify([p.id, p.nome, p.x, p.y, p.tam, p.forma, p.cor, p.img || '', p.iz || 0, p.ix || 0, p.iy || 0]);
+    const S = {
+        v: SALA ? SALA.v : 0, mapaH: SALA ? (SALA.mapaH || '') : '', cid: uid().slice(0, 12),
+        meus: new Set(),            // ids dos traços que EU fiz: o "desfazer" não apaga os dos outros
+        semImg: new Set(),          // imagens que o servidor não tem (não adianta pedir de novo)
+        ocupado: false, denovo: false, timer: null, falhas: 0, parado: false, saindo: false,
+    };
+    let modelosRev = 0;          // sobe a cada mudança em "Minhas peças" (só o anfitrião sincroniza os modelos)
+    let R = SALA ? {
+        mrev: 0,
+        pecas: new Map(E.pecas.map(p => [p.id, chave(p)])), des: new Set(E.desenho.map(i => i.id)),
+        cols: E.cols, rows: E.rows, cel: E.cel, grade: E.grade, nomes: E.nomes, mapa: E.mapa, nome: CFG.nome,
+        imgs: new Set((SALA.imgs || []).map(String)),
+    } : null;
+
+    const instantaneo = () => ({
+        mrev: modelosRev,
+        pecas: new Map(E.pecas.map(p => [p.id, chave(p)])), des: new Set(E.desenho.map(i => i.id)), cols: E.cols, rows: E.rows,
+    });
+
+    function formPatch(patch) {
+        const fd = new FormData();
+        fd.append('_token', CFG.csrf);
+        fd.append('patch', JSON.stringify(patch));
+        fd.append('c', S.cid);
+        return fd;
+    }
+
+    /** O que mudou aqui em relação ao servidor: peças e traços por id; só o dono manda linhas, colunas, fundo e nome. */
+    function diffSala() {
+        const patch = {};
+        const up = [], del = [], ids = new Set();
+        E.pecas.forEach(p => { ids.add(p.id); if (R.pecas.get(p.id) !== chave(p)) up.push(p); });
+        R.pecas.forEach((_, id) => { if (!ids.has(id)) del.push(id); });
+        if (up.length || del.length) patch.pecas = { up, del };
+
+        const add = [], delD = [], dids = new Set();
+        E.desenho.forEach(i => { dids.add(i.id); if (!R.des.has(i.id)) add.push(i); });
+        R.des.forEach(id => { if (!dids.has(id)) delD.push(id); });
+        if (add.length || delD.length) patch.desenho = { add, del: delD };
+
+        const imgs = {};
+        up.forEach(p => { if (p.img && !R.imgs.has(p.img) && E.imgs[p.img]) imgs[p.img] = E.imgs[p.img]; });
+        if (Object.keys(imgs).length) patch.imgs = imgs;
+
+        if (DONO) {
+            const cfg = {};
+            ['cols', 'rows', 'cel', 'grade', 'nomes'].forEach(k => { if (E[k] !== R[k]) cfg[k] = E[k]; });
+            if (Object.keys(cfg).length) patch.cfg = cfg;
+            if (E.mapa !== R.mapa) patch.mapa = E.mapa;
+            if (CFG.nome !== R.nome) patch.nome = CFG.nome;
+            if (modelosRev !== R.mrev) patch.modelos = E.modelos;
+        }
+        return Object.keys(patch).length ? patch : null;
+    }
+
+    /** Soma o estado do servidor ao local. `snap` é o que eu tinha quando mandei (ou R, numa consulta simples). */
+    function fundirSala(s, snap) {
+        const preso = id => U.arrastando && U.sels.includes(id); // peça que estou arrastando agora não pode ser trocada no meio do gesto
+
+        const loc = new Map(E.pecas.map(p => [p.id, p])), srv = new Set(s.pecas.map(p => p.id));
+        const pecas = [];
+        s.pecas.forEach(sp => {
+            const lp = loc.get(sp.id);
+            if (lp) pecas.push((preso(sp.id) || snap.pecas.get(sp.id) !== chave(lp)) ? lp : sp); // mexi depois de mandar: mantém a minha
+            else if (!snap.pecas.has(sp.id)) pecas.push(sp);                                      // peça nova de outra pessoa
+            // existia quando mandei e sumiu daqui: apaguei depois, continua apagada (a exclusão vai no próximo patch)
+        });
+        loc.forEach((lp, id) => { if (!srv.has(id) && !snap.pecas.has(id)) pecas.push(lp); });    // criei depois de mandar
+        E.pecas = pecas;
+
+        const locD = new Map(E.desenho.map(i => [i.id, i])), srvD = new Set(s.desenho.map(i => i.id));
+        const des = [];
+        s.desenho.forEach(si => {
+            if (locD.has(si.id)) des.push(locD.get(si.id));   // traço não muda depois de feito: fica o objeto local
+            else if (!snap.des.has(si.id)) des.push(si);      // traço novo de outra pessoa
+        });
+        locD.forEach((li, id) => { if (!srvD.has(id) && !snap.des.has(id)) des.push(li); });
+        E.desenho = des;
+
+        ['cols', 'rows'].forEach(k => { if (E[k] === snap[k]) E[k] = s[k]; }); // só o dono muda; o dono com mudança pendente mantém
+    }
+
+    async function pesado(q) {
+        const u = new URL(SALA.url.pesado, location.origin);
+        Object.keys(q).forEach(k => u.searchParams.set(k, q[k]));
+        const r = await fetch(u, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+    }
+
+    async function aplicarResposta(r, snap, patch) {
+        if (r.on) mostrarOnline(r.on);
+        if (!r.estado) return;
+        const s = r.estado;
+        const sigP = E.pecas.map(chave).join('|'), sigD = E.desenho.map(i => i.id).join(','), colsAntes = E.cols, rowsAntes = E.rows;
+
+        fundirSala(s, snap);
+        S.v = r.v;
+        R = {
+            pecas: new Map(s.pecas.map(p => [p.id, chave(p)])), des: new Set(s.desenho.map(i => i.id)),
+            cols: s.cols, rows: s.rows, cel: s.cel, grade: s.grade, nomes: s.nomes,
+            mapa: R.mapa, nome: R.nome, imgs: new Set((r.imgs || []).map(String)),
+            mrev: (patch && patch.modelos !== undefined) ? snap.mrev : R.mrev,
+        };
+        if (patch && patch.nome !== undefined) R.nome = patch.nome;
+
+        // fundo do mapa
+        if (patch && patch.mapa !== undefined) {
+            S.mapaH = r.mapaH || '';
+            if (patch.mapa && !r.mapaH && E.mapa === patch.mapa) { E.mapa = ''; R.mapa = ''; renderGrade(); } // o servidor recusou a imagem
+            else R.mapa = patch.mapa;
+        } else if ((r.mapaH || '') !== S.mapaH && E.mapa === R.mapa) {
+            const d = await pesado({ mapa: 1 });
+            E.mapa = R.mapa = imgOk(d.mapa) ? d.mapa : '';
+            S.mapaH = r.mapaH || '';
+            renderGrade();
+        }
+
+        // imagens de peças que ainda não tenho
+        const faltam = [...new Set(E.pecas.map(p => p.img).filter(id => id && !E.imgs[id] && !S.semImg.has(id)))];
+        for (let i = 0; i < faltam.length; i += 10) {
+            const lote = faltam.slice(i, i + 10), d = await pesado({ imgs: lote.join(',') }), got = (d && d.imgs) || {};
+            lote.forEach(id => { if (imgOk(got[id])) E.imgs[id] = got[id]; else S.semImg.add(id); });
+        }
+
+        const sigP2 = E.pecas.map(chave).join('|');
+        if (E.cols !== colsAntes || E.rows !== rowsAntes) renderGrade();
+        else {
+            if (E.desenho.map(i => i.id).join(',') !== sigD) renderDesenho();
+            if (faltam.length || sigP2 !== sigP) renderPecas();
+        }
+        const vivas = U.sels.filter(id => achar(id)), perdeu = vivas.length !== U.sels.length;
+        if (perdeu) { U.sels = vivas; marcarSel(); }
+        if ((perdeu || sigP2 !== sigP) && !el.sel.contains(document.activeElement)) renderSel();
+    }
+
+    async function enviar(patch) {
+        const snap = instantaneo();
+        const r = await fetch(SALA.url.alterar, { method: 'POST', body: formPatch(patch), headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+        if (r.status === 404) return encerrada();
+        if (!r.ok) throw new Error(r.status);
+        await aplicarResposta(await r.json(), snap, patch);
+    }
+    async function consultar() {
+        const r = await fetch(`${SALA.url.estado}?v=${S.v}&c=${S.cid}`, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
+        if (r.status === 404) return encerrada();
+        if (!r.ok) throw new Error(r.status);
+        const j = await r.json();
+        await aplicarResposta(j, R, null);
+    }
+
+    /** Um passo de cada vez: se há o que mandar, manda (a resposta já traz as novidades); senão, só pergunta se mudou. */
+    async function ciclo() {
+        if (S.parado) return;
+        if (S.ocupado) { S.denovo = true; return; }
+        S.ocupado = true;
+        try {
+            do {
+                S.denovo = false;
+                const patch = diffSala();
+                if (patch) await enviar(patch); else await consultar();
+            } while (S.denovo && !S.parado);
+            S.falhas = 0;
+            if (!S.timer) setStatus('salvo');
+        } catch (_) {
+            S.falhas = Math.min(S.falhas + 1, 5);
+            setStatus('erro');
+        } finally { S.ocupado = false; }
+    }
+    function agendarSala() {
+        if (S.parado) return;
+        setStatus('pendente');
+        if (S.timer) return;
+        S.timer = setTimeout(() => { S.timer = null; ciclo(); }, 150); // no máximo ~7 envios por segundo, mesmo arrastando
+    }
+    function loopSala() {
+        if (S.parado) return;
+        const espera = S.falhas ? Math.min(12000, 1500 * 2 ** S.falhas) : (document.hidden ? 4000 : 1200);
+        setTimeout(async () => { await ciclo(); loopSala(); }, espera);
+    }
+    async function descarregar() { // espera o que está em andamento e manda o que ficou pendente
+        for (let i = 0; i < 30 && S.ocupado; i++) await new Promise(ok => setTimeout(ok, 100));
+        await ciclo();
+    }
+    function encerrada() {
+        if (S.saindo || S.parado) return;
+        S.parado = true;
+        aviso('A sala foi encerrada.');
+        location.href = SALA.url.sair;
+    }
+    function mostrarOnline(lista) {
+        if (!el.salaOn || !Array.isArray(lista)) return;
+        el.salaOn.textContent = Math.max(1, lista.length) + ' online';
+        el.salaOn.title = lista.map(x => x.n + (x.d ? ' (anfitrião)' : '')).join(', ');
+    }
+    /** Desfazer/refazer do desenho: na sala, devolve o meu estado anterior mas mantém os traços que são de outras pessoas. */
+    function restaurarDesenho(json) {
+        const alvo = JSON.parse(json);
+        if (!SALA) { E.desenho = alvo; return; }
+        const ids = new Set(alvo.map(i => i.id));
+        E.desenho = alvo.concat(E.desenho.filter(i => !ids.has(i.id) && !S.meus.has(i.id)));
+    }
+
+    async function salaAbrir() {
+        if (!CFG.urlSala) return aviso('A página não trouxe o endereço da sala. Atualize a página (Ctrl+F5) e confira se o show.blade.php foi atualizado.');
+        const b = document.querySelector('[data-acao="sala-abrir"]');
+        if (b) b.disabled = true;
+        try {
+            if (timer) await gravar(); // grava as pendências antes: depois disso a mesa passa a ser sincronizada por patches
+            if (el.status.dataset.estado === 'erro') throw new Error('salvar');
+            const fd = new FormData(); fd.append('_token', CFG.csrf);
+            const r = await fetch(CFG.urlSala, { method: 'POST', body: fd, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+            if (!r.ok) throw new Error(r.status);
+            location.reload();
+        } catch (err) {
+            if (b) b.disabled = false;
+            aviso('Não consegui abrir a sala agora (erro ' + (err && err.message ? err.message : '?') + '). Se for 500, confira storage/logs/laravel.log; se for 404/405, limpe as rotas (php artisan route:clear).');
+        }
+    }
+    async function salaEncerrar() {
+        if (!SALA || !DONO) return;
+        if (!confirm('Encerrar a sala? Quem está dentro será desconectado. A mesa continua como está agora.')) return;
+        S.saindo = true;
+        try {
+            await descarregar();
+            const fd = new FormData(); fd.append('_token', CFG.csrf); fd.append('_method', 'DELETE');
+            const r = await fetch(CFG.urlSala, { method: 'POST', body: fd, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+            if (!r.ok) throw new Error(r.status);
+            location.reload();
+        } catch (_) {
+            S.saindo = false;
+            aviso('Não consegui encerrar a sala agora. Tente de novo.');
+        }
+    }
+    async function salaSair() {
+        if (!SALA) return;
+        S.saindo = true;
+        await descarregar();
+        location.href = SALA.url.sair;
+    }
+    function salaCopiar(b) {
+        const t = SALA ? SALA.codigo : '';
+        const ok = () => { const o = b.textContent; b.textContent = 'Copiado!'; setTimeout(() => { b.textContent = o; }, 1500); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, () => window.prompt('Código da sala:', t));
+        else window.prompt('Código da sala:', t);
+    }
 
     /* ---------- peças: helpers ---------- */
     const achar = id => E.pecas.find(p => p.id === id);
@@ -166,7 +446,7 @@
         if (comImg && imgOk(comImg)) {
             const iid = 'i' + uid();
             E.imgs[iid] = comImg;
-            peca.img = iid; peca.iz = limitar(num(d.iz) || 1, 1, 5);
+            peca.img = iid; peca.iz = limitar(num(d.iz) || 1, 1, 5); peca.ix = num(d.ix); peca.iy = num(d.iy); limPan(peca);
         }
         E.pecas.push(peca);
         setSels([peca.id]);
@@ -193,7 +473,7 @@
             const src = p.img && E.imgs[p.img];
             return `<div class="tt-peca forma-${p.forma}${U.sels.includes(p.id) ? ' sel' : ''}" data-id="${esc(p.id)}" ` +
                 `style="left:${p.x * c}px;top:${p.y * c}px;width:${p.tam * c}px;height:${p.tam * c}px;--pc:${p.cor};">` +
-                `<span class="tt-fig">${src ? `<img src="${src}" alt="" draggable="false" style="transform:scale(${p.iz || 1})">` : `<b>${esc(inicial(p))}</b>`}</span>` +
+                `<span class="tt-fig">${src ? `<img src="${src}" alt="" draggable="false" style="transform:${tf(p)}">` : `<b>${esc(inicial(p))}</b>`}</span>` +
                 (E.nomes ? `<span class="tt-nome">${esc(p.nome)}</span>` : '') +
                 `</div>`;
         }).join('');
@@ -222,10 +502,12 @@
             `<label class="pv-btn pv-btn--ghost tt-btn-sm">Imagem<input type="file" accept="image/*" hidden data-arq="sel"></label>` +
             (comImg.length ? `<button type="button" class="pv-btn pv-btn--ghost tt-btn-sm" data-acao="tirar-img-sel">Tirar imagem</button>` : '') +
             `</div>` +
+            (comImg.length ? `<div class="tt-pan-wrap"><div class="tt-pan tt-pan--${um ? um.forma : (f || 'circulo')}" data-pan title="Arraste para mover a imagem dentro da peça">` +
+                `<img src="${E.imgs[comImg[0].img]}" alt="" draggable="false" style="transform:${tf(comImg[0])}"></div><small>Arraste para mover a imagem</small></div>` : '') +
             (comImg.length ? `<label class="tt-campo">Zoom da imagem<input type="range" min="1" max="5" step="0.1" value="${comImg[0].iz || 1}" data-sel="zoom"></label>` : '') +
             `<div class="tt-botoes">` +
             `<button type="button" class="pv-btn pv-btn--ghost tt-btn-sm" data-acao="duplicar">Duplicar</button>` +
-            `<button type="button" class="pv-btn pv-btn--ghost tt-btn-sm" data-acao="salvar-sel">Salvar em Minhas peças</button>` +
+            (SALA && !DONO ? '' : `<button type="button" class="pv-btn pv-btn--ghost tt-btn-sm" data-acao="salvar-sel">Salvar em Minhas peças</button>`) +
             `<button type="button" class="pv-btn pv-btn--outline tt-btn-sm" data-acao="excluir-sel">Excluir</button>` +
             `</div>`;
     }
@@ -240,7 +522,7 @@
         if (!E.modelos.length) { el.modelos.innerHTML = '<p class="tt-vazio">Nenhuma peça salva. Selecione peças no mapa e use "Salvar em Minhas peças".</p>'; return; }
         el.modelos.innerHTML = E.modelos.map(m =>
             `<div class="tt-modelo"><button type="button" class="tt-modelo__usar" data-acao="usar-modelo" data-id="${esc(m.id)}" title="Colocar no mapa">` +
-            `<span class="tt-mini forma-${m.forma}" style="${miniEstilo(m.forma, m.cor)}">${m.img ? `<img src="${m.img}" alt="" style="transform:scale(${m.iz || 1})">` : ''}</span>` +
+            `<span class="tt-mini forma-${m.forma}" style="${miniEstilo(m.forma, m.cor)}">${m.img ? `<img src="${m.img}" alt="" style="transform:${tf(m)}">` : ''}</span>` +
             `${esc(m.nome)} <small>${m.tam}×${m.tam}</small></button>` +
             `<button type="button" class="tt-modelo__del" data-acao="del-modelo" data-id="${esc(m.id)}" aria-label="Excluir ${esc(m.nome)}">×</button></div>`).join('');
     }
@@ -316,7 +598,7 @@
         if (atual.length) pedacos.push(atual);
         return tocou ? pedacos : null;
     }
-    const novoPincel = (base, pts) => ({ id: uid(), t: 'pincel', c: base.c, w: base.w, d: caminho(pts), p: pts.flat() });
+    const novoPincel = (base, pts) => { const id = uid(); S.meus.add(id); return { id, t: 'pincel', c: base.c, w: base.w, d: caminho(pts), p: pts.flat() }; };
 
     function tracoSvg(t) {
         if (!COR_OK.test(t.c || '') || !/^[MLQl0-9. -]+$/.test(t.d || '')) return '';
@@ -441,7 +723,8 @@
             } else {
                 if (!v || Math.hypot(v.x2 - v.x1, v.y2 - v.y1) < 3) { renderVivo(); return; }
                 gravarHist();
-                E.desenho.push({ id: uid(), ...v });
+                const idForma = uid(); S.meus.add(idForma);
+                E.desenho.push({ id: idForma, ...v });
             }
             renderDesenho(); agendar();
         };
@@ -460,18 +743,18 @@
         const d = U.des;
         if (!d.hist.length) return;
         d.refaz.push(JSON.stringify(E.desenho));
-        E.desenho = JSON.parse(d.hist.pop());
+        restaurarDesenho(d.hist.pop());
         renderDesenho(); renderDesUI(); agendar();
     }
     function desRefazer() {
         const d = U.des;
         if (!d.refaz.length) return;
         d.hist.push(JSON.stringify(E.desenho));
-        E.desenho = JSON.parse(d.refaz.pop());
+        restaurarDesenho(d.refaz.pop());
         renderDesenho(); renderDesUI(); agendar();
     }
     function desLimpar() {
-        if (!E.desenho.length || !confirm('Apagar todo o desenho deste mapa? As peças ficam.')) return;
+        if (!E.desenho.length || !confirm(SALA ? 'Apagar todo o desenho deste mapa para todos na sala? As peças ficam.' : 'Apagar todo o desenho deste mapa? As peças ficam.')) return;
         U.des.hist.push(JSON.stringify(E.desenho)); U.des.refaz = [];
         E.desenho = [];
         renderDesenho(); renderDesUI(); agendar();
@@ -491,6 +774,7 @@
         const grade = el.grade;
         grade.setPointerCapture?.(e.pointerId);
         const c = E.cel;
+        U.arrastando = true;
         const grupo = selecionadas().map(q => ({ q, x: q.x, y: q.y, t: q.tam }));
         const minDx = Math.max(...grupo.map(g => -g.x)), maxDx = Math.min(...grupo.map(g => E.cols - g.t - g.x));
         const minDy = Math.max(...grupo.map(g => -g.y)), maxDy = Math.min(...grupo.map(g => E.rows - g.t - g.y));
@@ -504,12 +788,13 @@
                 const n = noPeca(g.q.id);
                 if (n) { n.style.left = g.q.x * c + 'px'; n.style.top = g.q.y * c + 'px'; }
             });
-            if (dx || dy) moveu = true;
+            if (dx || dy) { moveu = true; if (SALA) agendarSala(); } // na sala, os outros veem a peça andando
         };
         const fim = () => {
             grade.removeEventListener('pointermove', mover);
             grade.removeEventListener('pointerup', fim);
             grade.removeEventListener('pointercancel', fim);
+            U.arrastando = false;
             if (moveu) agendar();
         };
         grade.addEventListener('pointermove', mover);
@@ -634,7 +919,7 @@
                 if (!alvos.length) return;
                 const src = await reduzir(arq, 256, 0.8, 'image/webp'), iid = 'i' + uid();
                 E.imgs[iid] = src;
-                alvos.forEach(p => { p.img = iid; p.iz = 1; });
+                alvos.forEach(p => { p.img = iid; p.iz = 1; p.ix = 0; p.iy = 0; });
                 limparImgs(); renderPecas(); renderSel(); agendar();
             }
         } catch (_) { aviso('Não consegui ler essa imagem.'); }
@@ -650,9 +935,10 @@
             forma: FORMAS.includes(d.forma) ? d.forma : 'circulo',
             cor: COR_OK.test(d.cor || '') ? d.cor : '#a78bfa',
             tam: limitar(Math.round(num(d.tam)) || 1, 1, 4),
-            iz: limitar(num(d.iz) || 1, 1, 5),
+            iz: limitar(num(d.iz) || 1, 1, 5), ix: num(d.ix), iy: num(d.iy),
             img: imgOk(src) ? src : '',
         };
+        limPan(dados);
         if (m) Object.assign(m, dados); else E.modelos.push(dados);
         return true;
     }
@@ -677,7 +963,7 @@
         'salvar-modelo-novo'() {
             const n = U.novo;
             if (!txt(n.nome).trim()) return aviso('Dê um nome à peça para salvar o modelo.');
-            if (gravarModelo(n, n.img)) { renderModelos(); agendar(); }
+            if (gravarModelo(n, n.img)) { modelosRev++; renderModelos(); agendar(); }
         },
         'tirar-img-novo'() { U.novo.img = ''; renderNovo(); },
         'tirar-mapa'() { E.mapa = ''; renderGrade(); agendar(); },
@@ -695,7 +981,7 @@
         },
         'excluir-sel': excluirSel,
         'tirar-img-sel'() {
-            selecionadas().forEach(p => { delete p.img; delete p.iz; });
+            selecionadas().forEach(p => { delete p.img; delete p.iz; delete p.ix; delete p.iy; });
             limparImgs(); renderPecas(); renderSel(); agendar();
         },
         'salvar-sel'() {
@@ -705,7 +991,7 @@
                 if (!gravarModelo(p, p.img ? E.imgs[p.img] : '')) break;
                 n++;
             }
-            if (n) { renderModelos(); agendar(); }
+            if (n) { modelosRev++; renderModelos(); agendar(); }
         },
         'usar-modelo'(b) {
             const m = E.modelos.find(x => x.id === b.dataset.id);
@@ -715,18 +1001,53 @@
             const m = E.modelos.find(x => x.id === b.dataset.id);
             if (!m || !confirm(`Excluir "${m.nome}" de Minhas peças? As peças que já estão no mapa continuam.`)) return;
             E.modelos = E.modelos.filter(x => x.id !== m.id);
-            renderModelos(); agendar();
+            modelosRev++; renderModelos(); agendar();
         },
         ferr(b) { ferramenta(b.dataset.ferr); },
         'des-desfazer': desDesfazer,
         'des-refazer': desRefazer,
         'des-limpar': desLimpar,
+        'sala-abrir': salaAbrir,
+        'sala-encerrar': salaEncerrar,
+        'sala-sair': salaSair,
+        'sala-copiar': salaCopiar,
     };
     el.page.addEventListener('click', e => {
         const b = e.target.closest('[data-acao]');
         if (!b || b.disabled) return;
         const f = ACOES[b.dataset.acao];
         if (f) f(b);
+    });
+
+    /* ---------- mover a imagem dentro da peça (arrastar o quadro de pré-visualização) ---------- */
+    function aplicarPan(lista) {
+        lista.forEach(p => {
+            const n = noPeca(p.id), im = n && n.querySelector('img');
+            if (im) im.style.transform = tf(p);
+        });
+        const pv = $('[data-pan] img', el.sel);
+        if (pv && lista[0]) pv.style.transform = tf(lista[0]);
+    }
+    el.sel.addEventListener('pointerdown', e => {
+        const box = e.target.closest('[data-pan]');
+        if (!box || e.button > 0) return;
+        const alvos = selecionadas().filter(p => p.img && E.imgs[p.img]);
+        if (!alvos.length) return;
+        e.preventDefault();
+        box.setPointerCapture?.(e.pointerId);
+        const w = box.getBoundingClientRect().width || 96, x0 = e.clientX, y0 = e.clientY, ix0 = num(alvos[0].ix), iy0 = num(alvos[0].iy);
+        const mover = ev => {
+            alvos.forEach(p => { p.ix = ix0 + (ev.clientX - x0) / w * 100; p.iy = iy0 + (ev.clientY - y0) / w * 100; limPan(p); });
+            aplicarPan(alvos); agendar();
+        };
+        const fim = () => {
+            box.removeEventListener('pointermove', mover);
+            box.removeEventListener('pointerup', fim);
+            box.removeEventListener('pointercancel', fim);
+        };
+        box.addEventListener('pointermove', mover);
+        box.addEventListener('pointerup', fim);
+        box.addEventListener('pointercancel', fim);
     });
 
     /* ---------- campos (inputs) ---------- */
@@ -772,7 +1093,7 @@
             else if (k === 'forma' && FORMAS.includes(v)) l.forEach(p => { p.forma = v; });
             else if (k === 'cor' && COR_OK.test(v)) l.forEach(p => { p.cor = v; });
             else if (k === 'tam' && v) { l.forEach(p => { p.tam = limitar(Math.round(num(v)) || 1, 1, 4); }); limitarPecas(); }
-            else if (k === 'zoom') l.filter(p => p.img).forEach(p => { p.iz = limitar(num(v) || 1, 1, 5); });
+            else if (k === 'zoom') { const c = l.filter(p => p.img); c.forEach(p => { p.iz = limitar(num(v) || 1, 1, 5); limPan(p); }); aplicarPan(c); }
             else return;
             renderPecas(); agendar();
             // forma e tamanho mudam o painel (valor "—" some); nome e cor não precisam reconstruir
@@ -783,6 +1104,7 @@
     el.page.addEventListener('change', aoMudar);
 
     el.nomeMesa.addEventListener('change', () => {
+        if (!DONO) { el.nomeMesa.value = CFG.nome; return; }
         const n = el.nomeMesa.value.trim().slice(0, 80);
         if (!n) { el.nomeMesa.value = CFG.nome; return; }
         CFG.nome = n; document.title = n + ' · Tabletop'; agendar();
@@ -797,4 +1119,8 @@
     renderSel();
     renderDesUI();
     setStatus('salvo');
+    if (SALA) {
+        loopSala();
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) ciclo(); });
+    }
 })();

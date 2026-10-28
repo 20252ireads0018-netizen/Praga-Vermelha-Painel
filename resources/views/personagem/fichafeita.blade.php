@@ -22,14 +22,59 @@
         'disfarce' => 'Disfarce', 'performance' => 'Performance', 'detectar_mentira' => 'Detectar mentira',
     ];
 
-    $habilidades = $personagem->habilidades ?? [];
-    $itens = $personagem->itens ?? [];
+    // Aceita array, Collection ou texto JSON (a ficha abre igual para o dono e para o mestre,
+    // mesmo quando o model não tem cast e o controller que a renderiza não decodifica).
+    $paraLista = function ($valor) {
+        if ($valor instanceof \Illuminate\Support\Collection) {
+            $valor = $valor->toArray();
+        }
+        if (is_string($valor)) {
+            $valor = json_decode($valor, true);
+        }
+        return is_array($valor) ? $valor : [];
+    };
+
+    $habilidades = $paraLista($personagem->habilidades ?? []);
+    $itens = $paraLista($personagem->itens ?? []);
 
     $atributos = [
         'forca' => 'Força', 'constituicao' => 'Constituição', 'destreza' => 'Destreza',
         'conhecimento' => 'Conhecimento', 'carisma' => 'Carisma', 'percepcao' => 'Percepção',
         'alma' => 'Alma',
     ];
+
+    // Atributos vitais: Vida, Sanidade e Aura (mesmas colunas usadas no CampanhaController)
+    // mais os personalizados, se a ficha tiver. Os personalizados são lidos de forma tolerante:
+    // aceita as colunas vitais_extras, vitais_personalizados ou atributos_vitais, com itens
+    // {nome, atual, max|maximo|total, cor}.
+    $vitais = [
+        ['nome' => 'Vida',     'atual' => $personagem->vida_atual ?? null,     'max' => $personagem->vida_maxima ?? null,     'cor' => '#b91c1c'],
+        ['nome' => 'Sanidade', 'atual' => $personagem->sanidade_atual ?? null, 'max' => $personagem->sanidade_maxima ?? null, 'cor' => '#22a05a'],
+        ['nome' => 'Aura',     'atual' => $personagem->aura_atual ?? null,     'max' => $personagem->aura_maxima ?? null,     'cor' => '#7c5cff'],
+    ];
+
+    $vitaisExtras = $paraLista(
+        $personagem->vitais_extras
+        ?? $personagem->vitais_personalizados
+        ?? $personagem->atributos_vitais
+        ?? []
+    );
+    foreach ($vitaisExtras as $extra) {
+        if (!is_array($extra) || empty($extra['nome'])) {
+            continue;
+        }
+        $cor = $extra['cor'] ?? '#888888';
+        // só aceita cores hexadecimais, para não injetar CSS arbitrário
+        if (!is_string($cor) || !preg_match('/^#[0-9a-fA-F]{3,8}$/', $cor)) {
+            $cor = '#888888';
+        }
+        $vitais[] = [
+            'nome'  => $extra['nome'],
+            'atual' => $extra['atual'] ?? null,
+            'max'   => $extra['max'] ?? $extra['maximo'] ?? $extra['total'] ?? null,
+            'cor'   => $cor,
+        ];
+    }
 
     // Maldições do personagem. O campo "maldicoes" guarda texto no formato:
     //   "Maldição do Justiceiro (Ameaça 2); Outra Maldição (Ameaça 0)"
@@ -56,12 +101,149 @@
         })
         ->values();
     $maldicoesComFicha = $maldicoesEscolhidas->filter(fn ($m) => $m['maldicao'] !== null)->values();
+
+    // Variáveis opcionais enviadas pela campanha (CampanhaController@verFicha):
+    //   $voltarUrl -> para onde o botão "Voltar" leva
+    //   $donoNome  -> preenchido quando o mestre está vendo a ficha de outro jogador (somente leitura)
+    $voltarUrl = $voltarUrl ?? route('personagens.index');
+    $donoNome  = $donoNome ?? null;
 @endphp
 
-<div class="container">
-    <div class="card ficha-card">
+<style>
+    /* Formatação da ficha de leitura (escopada em .ficha-leitura para não afetar outras telas) */
+    .ficha-leitura .ficha-header.colapsavel { margin: 1.25rem 0 .75rem; }
+    .ficha-leitura .ficha-header.colapsavel h1 { font-size: 1.9rem; margin: 0; }
 
-        <a href="{{ route('personagens.index') }}" class="botao-voltar">← Voltar</a>
+    /* Barra de ações (voltar / baixar) */
+    .ficha-leitura .ficha-acoes {
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .5rem;
+    }
+    .ficha-leitura .botao-baixar-ficha {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .45rem .9rem; font: inherit; font-size: .9rem; color: inherit;
+        text-decoration: none; cursor: pointer;
+        background: rgba(255, 255, 255, .04);
+        border: 1px solid rgba(189, 3, 3, .55); border-radius: 8px;
+    }
+    .ficha-leitura .botao-baixar-ficha:hover { background: rgba(189, 3, 3, .2); }
+
+    /* Informações técnicas */
+    .ficha-leitura .info-tecnica-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: .75rem;
+    }
+    .ficha-leitura .info-tecnica-card {
+        display: flex; flex-direction: column; gap: .35rem;
+        padding: .75rem .9rem;
+        background: rgba(255, 255, 255, .03);
+        border: 1px solid rgba(189, 3, 3, .35);
+        border-radius: 8px;
+    }
+    .ficha-leitura .info-tecnica-card .rotulo {
+        font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; opacity: .7;
+    }
+    .ficha-leitura .info-tecnica-card .valor { font-size: 1.1rem; }
+    .ficha-leitura .maldicao-links { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+    /* Atributos vitais */
+    .ficha-leitura .vitais-lista { display: flex; flex-direction: column; gap: 1rem; }
+    .ficha-leitura .vital-topo {
+        display: flex; justify-content: space-between; align-items: baseline;
+        font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: .3rem;
+    }
+    .ficha-leitura .vital-valor { font-weight: 700; letter-spacing: 0; }
+    .ficha-leitura .vital-trilho {
+        height: 12px; border-radius: 999px; overflow: hidden;
+        background: rgba(255, 255, 255, .08);
+    }
+    .ficha-leitura .vital-barra { height: 100%; border-radius: 999px; transition: width .3s; }
+    .ficha-leitura .vital-detalhe {
+        display: flex; justify-content: center; gap: 1.5rem; margin-top: .5rem; font-size: .9rem;
+    }
+    .ficha-leitura .vital-detalhe span { opacity: .7; }
+    .ficha-leitura .vital-detalhe strong {
+        display: inline-block; min-width: 3rem; text-align: center; margin-left: .35rem;
+        padding: .25rem .6rem; border-radius: 6px;
+        background: rgba(255, 255, 255, .04); border: 1px solid rgba(189, 3, 3, .35);
+    }
+
+    /* Atributos */
+    .ficha-leitura .atributos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: .75rem;
+    }
+    .ficha-leitura .atributo-card {
+        display: flex; flex-direction: column; align-items: center; gap: .2rem;
+        padding: .75rem .5rem;
+        background: rgba(255, 255, 255, .03);
+        border: 1px solid rgba(189, 3, 3, .35);
+        border-radius: 8px; text-align: center;
+    }
+    .ficha-leitura .atributo-nome { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; opacity: .8; }
+    .ficha-leitura .atributo-valor-display { font-size: 1.6rem; font-weight: 700; }
+    .ficha-leitura .atributo-mod-display { font-size: 1rem; }
+
+    /* Habilidades */
+    .ficha-leitura .habilidades-categoria-titulo { margin: 1rem 0 .5rem; font-size: 1.1rem; }
+    .ficha-leitura .habilidades-grid-leitura {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: .5rem;
+    }
+    .ficha-leitura .habilidade-linha {
+        display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: .6rem;
+        padding: .45rem .7rem;
+        background: rgba(255, 255, 255, .03);
+        border: 1px solid rgba(189, 3, 3, .25);
+        border-radius: 6px;
+    }
+    .ficha-leitura .habilidade-mod { opacity: .65; font-size: .85rem; }
+    .ficha-leitura .habilidade-valor { font-weight: 700; min-width: 1.5rem; text-align: right; }
+
+    /* Itens */
+    .ficha-leitura .lista-itens { display: flex; flex-direction: column; gap: .6rem; }
+    .ficha-leitura .item-mostrar-card {
+        padding: .75rem .9rem;
+        background: rgba(255, 255, 255, .03);
+        border: 1px solid rgba(189, 3, 3, .3);
+        border-radius: 8px;
+    }
+    .ficha-leitura .item-mostrar-topo { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+    .ficha-leitura .item-mostrar-nome { margin: 0; }
+    .ficha-leitura .item-mostrar-texto { margin: .4rem 0 0; }
+    .ficha-leitura .descricao-texto { white-space: pre-line; line-height: 1.55; }
+
+    /* Maldições */
+    .ficha-leitura .maldicao-escolhidas { display: flex; flex-direction: column; gap: .75rem; }
+    .ficha-leitura .maldicao-bloco {
+        border: 1px solid rgba(189, 3, 3, .35); border-radius: 8px; padding: .6rem .9rem;
+        background: rgba(255, 255, 255, .03);
+    }
+    .ficha-leitura .maldicao-bloco-titulo {
+        cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+    }
+    .ficha-leitura .maldicao-bloco-corpo { margin-top: .75rem; display: flex; flex-direction: column; gap: .6rem; }
+</style>
+
+<div class="container">
+    <div class="card ficha-card ficha-leitura">
+
+        <div class="ficha-acoes">
+            <a href="{{ $voltarUrl }}" class="botao-voltar">← Voltar</a>
+
+            {{-- Só o dono baixa a ficha (o mestre vê em somente leitura) --}}
+            @unless($donoNome)
+                <a href="{{ route('personagens.exportar', $personagem->id) }}" class="botao-baixar-ficha" title="Baixar esta ficha como arquivo">⬇ Baixar ficha</a>
+            @endunless
+        </div>
+
+        @if($donoNome)
+            <p class="ficha-subinfo" style="text-align:center; margin: .5rem 0 0;">
+                Ficha de <strong>{{ $donoNome }}</strong> &middot; somente leitura
+            </p>
+        @endif
 
         <div class="ficha-header">
             <span class="selo">△</span>
@@ -113,6 +295,36 @@
                     </div>
                 @endif
             </div>
+        </div>
+
+        <hr style="width:100%">
+
+        <div class="ficha-header colapsavel">
+            <h1>Atributos Vitais</h1>
+        </div>
+        <div class="vitais-lista">
+            @foreach($vitais as $v)
+                @php
+                    $atual = $v['atual'] !== null ? (int) $v['atual'] : null;
+                    $max   = $v['max'] !== null ? (int) $v['max'] : null;
+                    $pct   = ($atual !== null && $max !== null && $max > 0)
+                        ? max(0, min(100, round($atual / $max * 100)))
+                        : 0;
+                @endphp
+                <div class="vital">
+                    <div class="vital-topo">
+                        <span>{{ $v['nome'] }}</span>
+                        <span class="vital-valor">{{ $atual ?? '—' }} / {{ $max ?? '—' }}</span>
+                    </div>
+                    <div class="vital-trilho">
+                        <div class="vital-barra" style="width: {{ $pct }}%; background: {{ $v['cor'] }};"></div>
+                    </div>
+                    <div class="vital-detalhe">
+                        <span>Atual <strong>{{ $atual ?? '—' }}</strong></span>
+                        <span>Máx <strong>{{ $max ?? '—' }}</strong></span>
+                    </div>
+                </div>
+            @endforeach
         </div>
 
         @if($maldicoesComFicha->isNotEmpty())
