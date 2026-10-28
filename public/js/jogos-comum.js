@@ -13,7 +13,11 @@ window.JG = (function () {
         const fd = new FormData();
         fd.append('_token', csrf);
         if (metodo) fd.append('_method', metodo);
-        Object.keys(dados || {}).forEach(k => { if (dados[k] != null) fd.append(k, dados[k]); });
+        Object.keys(dados || {}).forEach(k => {
+            const v = dados[k];
+            if (Array.isArray(v)) v.forEach(x => fd.append(k + '[]', x)); // listas vão como campo[]
+            else if (v != null) fd.append(k, v);
+        });
         const r = await fetch(url, { method: 'POST', body: fd, headers: { Accept: 'application/json' }, credentials: 'same-origin' });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.ok === false) {
@@ -47,6 +51,8 @@ window.JG = (function () {
     // gládio de ponta para cima: lâmina larga (o número fica nela), guarda, empunhadura e pomo
     const ESPADA = SVG('<path d="M16 .8C20 4.5 25 8 25 12.5L23.5 25h-15L7 12.5C7 8 12 4.5 16 .8z' +
         'M2.5 25Q16 28.2 29.5 25v3.6Q16 31.8 2.5 28.6zM13.6 30.4h4.8V35h-4.8zM16 34.2a2.9 2.9 0 1 0 .001 0z"/>', '0 0 32 40');
+    const PALAVRA = { sobrepujar: 'Sobrepujar', impeto: 'Ímpeto' };
+    const palavras = c => (Array.isArray(c.palavras) ? c.palavras : String(c.palavras || '').split(',')).map(s => s.trim()).filter(Boolean);
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
     // descrições longas usam letra menor para caber acima dos atributos
@@ -64,6 +70,8 @@ window.JG = (function () {
         const vida = o.vida != null ? o.vida : c.vida;
         const ferida = o.max != null && vida < o.max ? ' jg-ferida' : '';
         const texto = lenda ? (c.descricao || '') : textoEfeito(c);
+        // palavras-chave: da carta ou, na mesa, as que a Lenda tem agora (o.pal)
+        const pal = (o.pal || palavras(c)).filter(p => PALAVRA[p]);
         const arte = c.imagem
             ? `<img src="${esc(c.imagem)}" alt="" draggable="false">`
             : `<span class="jg-carta-emblema">${EMBLEMA[lenda ? 'lenda' : 'feitico']}</span>`;
@@ -72,6 +80,7 @@ window.JG = (function () {
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
+            (pal.length ? `<div class="jg-carta-palavras">${pal.map(p => esc(PALAVRA[p] || p)).join(' · ')}</div>` : '') +
             `<div class="jg-carta-texto${tamTexto(texto)}">${esc(texto)}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
                 `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
@@ -110,5 +119,5 @@ window.JG = (function () {
         return h + '</div>';
     }
 
-    return { esc, post, carta, textoEfeito, diagrama };
+    return { esc, post, carta, textoEfeito, diagrama, PALAVRA };
 })();

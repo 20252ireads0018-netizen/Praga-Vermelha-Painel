@@ -124,6 +124,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/jogos/cartas', [CampanhaJogoController::class, 'salvarCarta'])
             ->middleware('throttle:60,1')->name('jogos.cartas.salvar');
         Route::delete('/{campanha}/jogos/cartas/{carta}', [CampanhaJogoController::class, 'excluirCarta'])->name('jogos.cartas.excluir');
+        Route::post('/{campanha}/jogos/decks', [CampanhaJogoController::class, 'salvarDeck'])
+            ->middleware('throttle:60,1')->name('jogos.decks.salvar');
+        Route::delete('/{campanha}/jogos/decks/{deck}', [CampanhaJogoController::class, 'excluirDeck'])->name('jogos.decks.excluir');
         Route::post('/{campanha}/jogos/imagens', [CampanhaJogoController::class, 'enviarImagens'])
             ->middleware('throttle:30,1')->name('jogos.imagens.enviar'); // galeria das cartas
         Route::get('/{campanha}/jogos/imagens/{imagem}', [CampanhaJogoController::class, 'verImagem'])->name('jogos.imagens.ver');

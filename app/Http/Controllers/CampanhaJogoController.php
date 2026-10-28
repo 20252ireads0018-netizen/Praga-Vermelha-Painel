@@ -6,6 +6,7 @@ use App\Jogos\Gladio;
 use App\Jogos\PelaDama;
 use App\Models\Campanha;
 use App\Models\GladioCarta;
+use App\Models\GladioDeck;
 use App\Models\GladioImagem;
 use App\Models\JogoCarteira;
 use App\Models\JogoPartida;
@@ -44,6 +45,7 @@ class CampanhaJogoController extends Controller
             'cartas'    => GladioCarta::where('campanha_id', $campanha->id)->orderBy('tipo')->orderBy('custo')->orderBy('nome')->get(),
             'pecas'     => PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get(),
             'imagens'   => $this->listaImagens($campanha),
+            'decks'     => $this->listaDecks($campanha, $uid),
             'lobby'     => $this->dadosLobby($campanha),
         ]);
     }
@@ -112,6 +114,8 @@ class CampanhaJogoController extends Controller
             'descricao' => ['nullable', 'string', 'max:500'],
             'imagem'    => ['nullable', 'string', 'max:400000'],
             'sem_imagem'=> ['nullable', 'boolean'],
+            'palavras'  => ['nullable', 'array'],
+            'palavras.*'=> [Rule::in(Gladio::PALAVRAS)],
         ]);
         if ($d['tipo'] === 'lenda' && (int) ($d['vida'] ?? 0) < 1) {
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
@@ -135,6 +139,9 @@ class CampanhaJogoController extends Controller
             'valor'     => $lenda ? 0 : (int) ($d['valor'] ?? 0),
             'descricao' => trim((string) ($d['descricao'] ?? '')) ?: null,
         ]);
+        if (Schema::hasColumn('gladio_cartas', 'palavras')) {
+            $carta->palavras = $lenda ? (implode(',', array_unique($d['palavras'] ?? [])) ?: null) : null;
+        }
         if (!empty($d['imagem'])) {
             if (!preg_match('#^data:image/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$#', $d['imagem'])) {
                 return response()->json(['ok' => false, 'erro' => 'Imagem inválida.'], 422);
@@ -183,6 +190,50 @@ class CampanhaJogoController extends Controller
         $peca->fill(['nome' => trim($d['nome']), 'simbolo' => $simbolo, 'regras' => $regras])->save();
 
         return response()->json(['ok' => true, 'peca' => $this->pecaJson($peca)]);
+    }
+
+    /* ---------- Decks de Gladio (cada membro monta os seus com as cartas da campanha) ---------- */
+
+    public function salvarDeck(Request $request, Campanha $campanha): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        if (!Schema::hasTable('gladio_decks')) {
+            return $this->erro('Os decks ainda não existem no banco: rode o SQL da migração 2026_10_28_000013.');
+        }
+        $uid = (int) auth()->id();
+        $d = $request->validate([
+            'id'     => ['nullable', 'integer'],
+            'nome'   => ['required', 'string', 'max:60'],
+            'cartas' => ['required', 'string', 'max:5000'], // JSON { id da carta: quantidade }
+        ]);
+        $catalogo = $this->catalogo($campanha);
+        $cartas = [];
+        foreach ((array) json_decode($d['cartas'], true) as $id => $qtd) {
+            $qtd = (int) $qtd;
+            if ($qtd > 0 && isset($catalogo[(string) $id])) {
+                $cartas[(string) $id] = min($qtd, GladioDeck::COPIAS);
+            }
+        }
+        $total = array_sum($cartas);
+        if ($total < GladioDeck::MIN || $total > GladioDeck::MAX) {
+            return $this->erro('O deck precisa ter de ' . GladioDeck::MIN . ' a ' . GladioDeck::MAX . " cartas (tem $total).");
+        }
+
+        $deck = !empty($d['id'])
+            ? GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->findOrFail((int) $d['id'])
+            : new GladioDeck(['campanha_id' => $campanha->id, 'user_id' => $uid]);
+        $deck->fill(['nome' => trim($d['nome']), 'cartas' => $cartas])->save();
+
+        return response()->json(['ok' => true, 'deck' => $deck->paraLista()]);
+    }
+
+    public function excluirDeck(Campanha $campanha, GladioDeck $deck): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        abort_unless((int) $deck->campanha_id === (int) $campanha->id && (int) $deck->user_id === (int) auth()->id(), 404);
+        $deck->delete(); // partidas já começadas guardam a própria lista de cartas
+
+        return response()->json(['ok' => true]);
     }
 
     /* ---------- Galeria de imagens das cartas (o mestre envia; todos os membros veem) ---------- */
@@ -268,6 +319,7 @@ class CampanhaJogoController extends Controller
             'aposta'       => ['nullable', 'integer', 'min:0', 'max:1000000000'],
             'convidado_id' => ['nullable', 'integer'],
             'exercito'     => ['nullable', 'string', 'max:2000'],
+            'deck_id'      => ['nullable', 'integer'],
         ]);
         $convidado = !empty($d['convidado_id']) ? (int) $d['convidado_id'] : null;
         if ($convidado !== null && ($convidado === $uid || !$campanha->temMembro($convidado))) {
@@ -283,6 +335,11 @@ class CampanhaJogoController extends Controller
             $aposta = (int) ($d['aposta'] ?? 0);
             if ($aposta > $this->saldo($campanha, $uid)) {
                 return $this->erro('Você não tem Dinheiro suficiente para essa aposta.');
+            }
+            try {
+                $config = ['deck' => $this->deckDe($campanha, $uid, $d['deck_id'] ?? null, $this->catalogo($campanha))];
+            } catch (\InvalidArgumentException $e) {
+                return $this->erro($e->getMessage());
             }
         } else {
             $ex = json_decode((string) ($d['exercito'] ?? ''), true) ?: PelaDama::exercitoPadrao();
@@ -306,7 +363,7 @@ class CampanhaJogoController extends Controller
         $this->exigirMembro($campanha);
         $this->daCampanha($campanha, $partida);
         $uid = (int) auth()->id();
-        $request->validate(['exercito' => ['nullable', 'string', 'max:2000']]);
+        $request->validate(['exercito' => ['nullable', 'string', 'max:2000'], 'deck_id' => ['nullable', 'integer']]);
 
         try {
             DB::transaction(function () use ($request, $campanha, $partida, $uid) {
@@ -322,8 +379,8 @@ class CampanhaJogoController extends Controller
                 }
 
                 if ($p->jogo === 'gladio') {
-                    $cartas = GladioCarta::where('campanha_id', $campanha->id)->get()
-                        ->mapWithKeys(fn ($c) => [(string) $c->id => $c->paraJogo()])->all();
+                    $cartas = $this->catalogo($campanha);
+                    $deck2 = $this->deckDe($campanha, $uid, $request->input('deck_id'), $cartas);
                     if ($p->aposta > 0) {
                         foreach ([(int) $p->jogador1_id, $uid] as $quem) {
                             $c = $this->carteira($campanha, $quem, true);
@@ -336,7 +393,9 @@ class CampanhaJogoController extends Controller
                             $c->save();
                         }
                     }
-                    $estado = Gladio::iniciar($cartas, (int) $p->aposta);
+                    // cartas do deck de quem desafiou que o mestre apagou nesse meio-tempo ficam de fora
+                    $deck1 = array_values(array_filter((array) ($p->config['deck'] ?? []), fn ($id) => isset($cartas[(string) $id])));
+                    $estado = Gladio::iniciar($cartas, (int) $p->aposta, ['a' => $deck1 ?: null, 'b' => $deck2]);
                 } else {
                     $ex2 = json_decode((string) $request->input('exercito', ''), true) ?: PelaDama::exercitoPadrao();
                     $tipos = $this->tiposDe($campanha, (int) $p->jogador1_id) + $this->tiposDe($campanha, $uid);
@@ -427,6 +486,13 @@ class CampanhaJogoController extends Controller
             'acao' => ['required', 'string', 'max:20'],
             'inst' => ['nullable', 'integer'],
             'alvo' => ['nullable', 'string', 'max:20'],
+            'insts' => ['nullable', 'array', 'max:20'], 'insts.*' => ['integer'],
+            'ordem' => ['nullable', 'array', 'max:200'], 'ordem.*' => ['integer'],
+            'outro' => ['nullable', 'integer'],             // atacante bloqueado / Lenda modelo da cópia
+            'nome' => ['nullable', 'string', 'max:40'],
+            'atk' => ['nullable', 'integer', 'min:-99', 'max:9999'],
+            'vida' => ['nullable', 'integer', 'min:-99', 'max:9999'],
+            'gratis' => ['nullable', 'boolean'],
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
             'tx' => ['nullable', 'integer'], 'ty' => ['nullable', 'integer'],
         ]);
@@ -445,14 +511,26 @@ class CampanhaJogoController extends Controller
                 $acao = $request->input('acao');
 
                 if ($p->jogo === 'gladio') {
+                    $e = Gladio::completar($e);
                     $inst = (int) $request->input('inst', 0);
-                    $alvo = $request->input('alvo');
+                    $outro = $request->filled('outro') ? (int) $request->input('outro') : null;
                     $e = match ($acao) {
-                        'jogar'    => Gladio::jogar($e, $lado, $inst, $alvo),
-                        'atacar'   => Gladio::atacar($e, $lado, $inst, $alvo),
-                        'passar'   => Gladio::passar($e, $lado),
-                        'desistir' => Gladio::desistir($e, $lado),
-                        default    => throw new \InvalidArgumentException('Ação desconhecida.'),
+                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), $request->boolean('gratis')),
+                        'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', [])),
+                        'bloquear'   => Gladio::bloquear($e, $lado, $inst, $outro),
+                        'defender'   => Gladio::defender($e, $lado),
+                        'passar'     => Gladio::passar($e, $lado),
+                        'desistir'   => Gladio::desistir($e, $lado),
+                        'comprar'    => Gladio::comprar($e, $lado),
+                        'embaralhar' => Gladio::embaralhar($e, $lado),
+                        'reordenar'  => Gladio::reordenar($e, $lado, (array) $request->input('ordem', [])),
+                        'descartar'  => Gladio::descartar($e, $lado, $inst),
+                        'recuperar'  => Gladio::recuperar($e, $lado, $inst),
+                        'ficha'      => Gladio::ficha($e, $lado, (string) $request->input('nome', ''), (int) $request->input('atk', 1), (int) $request->input('vida', 1)),
+                        'ajustar'    => Gladio::ajustar($e, $lado, $inst, (int) $request->input('atk', 0), (int) $request->input('vida', 0)),
+                        'copiar'     => Gladio::copiar($e, $lado, $inst, (int) $outro),
+                        'sacrificar' => Gladio::sacrificar($e, $lado, $inst),
+                        default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;
                 } else {
@@ -560,6 +638,44 @@ class CampanhaJogoController extends Controller
         return $tipos;
     }
 
+    /** Cartas de Gladio da campanha no formato do motor: [id => carta]. */
+    private function catalogo(Campanha $campanha): array
+    {
+        return GladioCarta::where('campanha_id', $campanha->id)->get()
+            ->mapWithKeys(fn ($c) => [(string) $c->id => $c->paraJogo()])->all();
+    }
+
+    /**
+     * Lista de cartas do deck escolhido (uma entrada por cópia) ou null para jogar com 20 cartas sorteadas.
+     * Cartas que o mestre apagou ficam de fora; se o deck ficar pequeno demais, a partida não começa.
+     */
+    private function deckDe(Campanha $campanha, int $uid, mixed $deckId, array $catalogo): ?array
+    {
+        if (!$deckId || !Schema::hasTable('gladio_decks')) {
+            return null;
+        }
+        $deck = GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->find((int) $deckId);
+        if (!$deck) {
+            throw new \InvalidArgumentException('Esse deck não existe mais. Escolha outro.');
+        }
+        $lista = $deck->lista($catalogo);
+        if (count($lista) < GladioDeck::MIN) {
+            throw new \InvalidArgumentException("O deck \"{$deck->nome}\" ficou com menos de " . GladioDeck::MIN . ' cartas (o mestre apagou algumas). Ajuste o deck.');
+        }
+
+        return $lista;
+    }
+
+    private function listaDecks(Campanha $campanha, int $uid): array
+    {
+        if (!Schema::hasTable('gladio_decks')) {
+            return [];
+        }
+
+        return GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get()
+            ->map(fn (GladioDeck $d) => $d->paraLista())->all();
+    }
+
     /** Galeria da campanha (vazia enquanto a tabela não existir no banco). */
     private function listaImagens(Campanha $campanha): array
     {
@@ -621,7 +737,7 @@ class CampanhaJogoController extends Controller
         $lado = $p->ladoDe($uid);
         $e = $p->estado;
         if ($e && $p->jogo === 'gladio') {
-            $e = Gladio::visao($e, $lado);
+            $e = Gladio::visao(Gladio::completar($e), $lado);
         } elseif ($e && $p->jogo === 'pela_dama') {
             $e['legais'] = $lado && $p->status === 'andamento' && ($e['vez'] ?? null) === $lado ? PelaDama::mapaLegais($e) : (object) [];
         }

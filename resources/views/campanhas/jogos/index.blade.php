@@ -33,6 +33,9 @@
                         <label>Aposta (Dinheiro)
                             <input type="number" name="aposta" min="0" value="0">
                         </label>
+                        <label>Seu deck (também ao aceitar)
+                            <select name="deck_id" id="jg-deck-escolhido"></select>
+                        </label>
                         <button class="camp-btn camp-btn-primario">Lançar desafio</button>
                     </form>
                     <p class="camp-dica">Seu Dinheiro: <strong id="jg-meu-dinheiro">0</strong></p>
@@ -41,6 +44,28 @@
                 <section class="camp-card">
                     <div class="camp-card-cab"><h2>Partidas de Gladio</h2></div>
                     <div class="jg-partidas" data-lista="gladio"></div>
+                </section>
+
+                <section class="camp-card">
+                    <div class="camp-card-cab">
+                        <h2>Meus decks</h2>
+                        <span class="camp-contagem" id="jg-cont-decks">0</span>
+                    </div>
+                    <p class="camp-dica">Monte decks com as cartas da campanha: de {{ \App\Models\GladioDeck::MIN }} a {{ \App\Models\GladioDeck::MAX }} cartas, até {{ \App\Models\GladioDeck::COPIAS }} cópias de cada. Sem deck, você joga com 20 cartas sorteadas.</p>
+                    <button type="button" class="camp-btn camp-btn-primario" id="jg-novo-deck">+ Novo deck</button>
+                    <form class="jg-criador jg-criador-deck" id="jg-criador-deck" hidden>
+                        <input type="hidden" name="registro">
+                        <div class="jg-deck-topo">
+                            <label>Nome do deck<input type="text" name="nome" maxlength="60" required placeholder="Ex.: Fúria dos Kuros"></label>
+                            <span class="jg-deck-total" id="jg-deck-total">0 cartas</span>
+                        </div>
+                        <div class="jg-deck-lista" id="jg-deck-lista"></div>
+                        <div class="jg-botoes">
+                            <button class="camp-btn camp-btn-primario">Salvar deck</button>
+                            <button type="button" class="camp-btn" data-acao="cancelar">Cancelar</button>
+                        </div>
+                    </form>
+                    <div class="jg-decks" id="jg-decks"></div>
                 </section>
 
                 <section class="camp-card">
@@ -72,6 +97,11 @@
                                 <label>Custo (energia)<input type="number" name="custo" min="0" max="10" value="1"></label>
                                 <label class="jg-so-lenda">Ataque<input type="number" name="ataque" min="0" max="9999" value="1"></label>
                                 <label class="jg-so-lenda">Vida<input type="number" name="vida" min="1" max="9999" value="1"></label>
+                                <div class="jg-so-lenda jg-larga jg-palavras">
+                                    <span>Palavras-chave</span>
+                                    <label title="O dano que passar da vida de quem bloquear vai para o jogador"><input type="checkbox" name="palavras" value="sobrepujar"> Sobrepujar</label>
+                                    <label title="Pode atacar no mesmo turno em que entra na mesa"><input type="checkbox" name="palavras" value="impeto"> Ímpeto</label>
+                                </div>
                                 <label class="jg-so-feitico">Efeito
                                     <select name="efeito">
                                         <option value="dano">Dano (Lenda inimiga ou adversário)</option>
@@ -208,6 +238,8 @@
     'cartas'    => $cartas->map(fn ($c) => ['id' => $c->id] + $c->paraJogo() + ['imagem' => $c->imagem])->values(),
     'pecas'     => $pecas->map(fn ($p) => ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: []])->values(),
     'imagens'   => $imagens,
+    'decks'     => $decks,
+    'deckRegra' => ['min' => \App\Models\GladioDeck::MIN, 'max' => \App\Models\GladioDeck::MAX, 'copias' => \App\Models\GladioDeck::COPIAS],
     'padrao'    => \App\Jogos\PelaDama::tiposPadrao(),
     'exercito'  => \App\Jogos\PelaDama::exercitoPadrao(),
     'lobby'     => $lobby,
@@ -217,6 +249,7 @@
         'cartas'   => route('campanhas.jogos.cartas.salvar', $campanha),
         'pecas'    => route('campanhas.jogos.pecas.salvar', $campanha),
         'imagens'  => route('campanhas.jogos.imagens.enviar', $campanha),
+        'decks'    => route('campanhas.jogos.decks.salvar', $campanha),
         'partidas' => route('campanhas.jogos.partidas.criar', $campanha),
         'base'     => url('/campanhas/' . $campanha->id . '/jogos'),
     ],

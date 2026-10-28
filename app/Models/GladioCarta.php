@@ -9,7 +9,7 @@ class GladioCarta extends Model
 {
     protected $table = 'gladio_cartas';
 
-    protected $fillable = ['campanha_id', 'nome', 'tipo', 'custo', 'ataque', 'vida', 'efeito', 'valor', 'descricao', 'imagem'];
+    protected $fillable = ['campanha_id', 'nome', 'tipo', 'custo', 'ataque', 'vida', 'efeito', 'valor', 'palavras', 'descricao', 'imagem'];
 
     protected $casts = ['custo' => 'integer', 'ataque' => 'integer', 'vida' => 'integer', 'valor' => 'integer'];
 
@@ -19,6 +19,7 @@ class GladioCarta extends Model
         return [
             'nome' => $this->nome, 'tipo' => $this->tipo, 'custo' => $this->custo, 'ataque' => $this->ataque,
             'vida' => $this->vida, 'efeito' => $this->efeito, 'valor' => $this->valor, 'descricao' => (string) $this->descricao,
+            'palavras' => (string) ($this->palavras ?? ''), // Sobrepujar, Ímpeto (separadas por vírgula)
         ];
     }
 }

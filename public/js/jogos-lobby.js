@@ -102,7 +102,7 @@
         try {
             if (b.dataset.aceitar) {
                 b.disabled = true;
-                const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : {};
+                const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : { deck_id: deckEscolhido() };
                 const r = await post(urlPartida(b.dataset.aceitar, 'aceitar'), dados, D.csrf);
                 location.href = r.url;
             } else if (b.dataset.cancelar) {
@@ -124,7 +124,7 @@
     $$('.jg-desafio').forEach(f => f.addEventListener('submit', async e => {
         e.preventDefault();
         const dados = { jogo: f.dataset.jogo, convidado_id: f.convidado_id.value || null };
-        if (f.dataset.jogo === 'gladio') dados.aposta = f.aposta.value || 0;
+        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); }
         else {
             const ex = exercito();
             if (ex.filter(t => t === 'rei').length !== 1) return msg('Seu exército precisa de exatamente um Rei.', true);
@@ -136,6 +136,100 @@
             msg('Desafio lançado! A partida começa quando alguém aceitar.');
         } catch (err) { falhou(err); }
     }));
+
+    /* ---------- decks (Gladio): cada membro monta os seus ---------- */
+    let decks = D.decks || [];
+    const R = D.deckRegra;
+    const chaveDeck = 'jg-deck-' + D.campanha;
+    const totalDeck = c => Object.values(c || {}).reduce((s, n) => s + (+n || 0), 0);
+    function deckEscolhido() { const v = $('#jg-deck-escolhido').value; return v ? +v : null; }
+    function renderSeletorDeck() {
+        const sel = $('#jg-deck-escolhido');
+        const atual = sel.options.length ? sel.value : (ls.get(chaveDeck) || '');
+        sel.innerHTML = '<option value="">Sorteado (20 cartas do mestre)</option>' +
+            decks.map(d => `<option value="${d.id}">${esc(d.nome)} (${totalDeck(d.cartas)})</option>`).join('');
+        sel.value = decks.some(d => String(d.id) === atual) ? atual : '';
+    }
+    $('#jg-deck-escolhido').addEventListener('change', e => ls.set(chaveDeck, e.target.value));
+    function renderDecks() {
+        $('#jg-cont-decks').textContent = decks.length;
+        $('#jg-decks').innerHTML = decks.length ? decks.map(d => {
+            const n = totalDeck(d.cartas);
+            const nomes = Object.keys(d.cartas).map(id => {
+                const c = cartas.find(x => String(x.id) === id);
+                return c ? `${d.cartas[id]}× ${esc(c.nome)}` : null;
+            }).filter(Boolean).join(', ');
+            return `<div class="jg-deck-item"><div class="jg-partida-info"><strong>${esc(d.nome)}</strong>` +
+                `<span class="camp-dica">${n} cartas · ${nomes || 'cartas apagadas pelo mestre'}</span></div>` +
+                `<div class="jg-partida-botoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-deck="${d.id}">Editar</button>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-deck="${d.id}">Excluir</button></div></div>`;
+        }).join('') : '<p class="camp-vazio">Nenhum deck ainda.</p>';
+        renderSeletorDeck();
+    }
+
+    const formDeck = $('#jg-criador-deck');
+    let montando = {}; // { id da carta: quantidade }
+    function renderMontagem() {
+        const n = totalDeck(montando);
+        const ok = n >= R.min && n <= R.max;
+        $('#jg-deck-total').textContent = `${n} carta${n === 1 ? '' : 's'} (${R.min} a ${R.max})`;
+        $('#jg-deck-total').classList.toggle('jg-deck-total--ok', ok);
+        $('#jg-deck-lista').innerHTML = cartas.length ? cartas.map(c => {
+            const q = montando[c.id] || 0;
+            return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}">` +
+                `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
+                `<span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : 'Feitiço'}</small></span>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
+                `<b class="jg-deck-qtd">${q}</b>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= R.copias ? ' disabled' : ''}>+</button>` +
+                `</div>`;
+        }).join('') : '<p class="camp-vazio">O mestre ainda não criou cartas.</p>';
+    }
+    function abrirDeck(d) {
+        formDeck.reset();
+        formDeck.registro.value = d ? d.id : '';
+        formDeck.nome.value = d ? d.nome : '';
+        montando = {};
+        if (d) Object.keys(d.cartas).forEach(id => { if (cartas.some(c => String(c.id) === id)) montando[id] = +d.cartas[id]; });
+        formDeck.hidden = false;
+        renderMontagem();
+        formDeck.nome.focus();
+    }
+    $('#jg-novo-deck').addEventListener('click', () => abrirDeck(null));
+    formDeck.addEventListener('click', e => {
+        const b = e.target.closest('[data-qtd]');
+        if (b) {
+            const id = b.dataset.qtd;
+            montando[id] = Math.max(0, Math.min(R.copias, (montando[id] || 0) + +b.dataset.d));
+            if (!montando[id]) delete montando[id];
+            renderMontagem();
+            return;
+        }
+        if (e.target.closest('[data-acao="cancelar"]')) formDeck.hidden = true;
+    });
+    formDeck.addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+            const r = await post(D.url.decks, { id: formDeck.registro.value || null, nome: formDeck.nome.value.trim(), cartas: JSON.stringify(montando) }, D.csrf);
+            const i = decks.findIndex(x => x.id === r.deck.id);
+            if (i >= 0) decks[i] = r.deck; else decks.push(r.deck);
+            formDeck.hidden = true;
+            renderDecks();
+            $('#jg-deck-escolhido').value = r.deck.id;
+            ls.set(chaveDeck, String(r.deck.id));
+            msg('Deck salvo e escolhido para os próximos desafios.');
+        } catch (err) { falhou(err); }
+    });
+    $('#jg-decks').addEventListener('click', async e => {
+        const ed = e.target.closest('[data-editar-deck]');
+        const ex = e.target.closest('[data-excluir-deck]');
+        if (ed) { abrirDeck(decks.find(d => d.id === +ed.dataset.editarDeck)); formDeck.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        if (ex) {
+            const d = decks.find(x => x.id === +ex.dataset.excluirDeck);
+            if (!d || !confirm(`Excluir o deck "${d.nome}"? Partidas já começadas não mudam.`)) return;
+            try { await post(`${D.url.decks}/${d.id}`, {}, D.csrf, 'DELETE'); decks = decks.filter(x => x !== d); renderDecks(); } catch (err) { falhou(err); }
+        }
+    });
 
     /* ---------- cartas (Gladio) ---------- */
     function renderCartas() {
@@ -156,6 +250,7 @@
             nome: fc.nome.value.trim() || 'Nova carta', tipo: fc.tipo.value, custo: +fc.custo.value || 0,
             ataque: +fc.ataque.value || 0, vida: +fc.vida.value || 0, efeito: fc.efeito.value, valor: +fc.valor.value || 0,
             descricao: fc.descricao.value, imagem: semImagem ? null : (imagem || imagemAtual),
+            palavras: $$('input[name=palavras]:checked', fc).map(x => x.value),
         });
         const previa = () => {
             const lenda = fc.tipo.value === 'lenda';
@@ -264,6 +359,8 @@
             fc.registro.value = c ? c.id : '';
             if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'valor', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
             if (c && c.efeito) fc.efeito.value = c.efeito;
+            const pal = c ? String(c.palavras || '').split(',') : [];
+            $$('input[name=palavras]', fc).forEach(x => { x.checked = pal.includes(x.value); });
             fc.hidden = false;
             previa();
             mostrarAjuste();
@@ -315,7 +412,8 @@
             e.preventDefault();
             const c = lerCarta();
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
-                            efeito: c.tipo === 'feitico' ? c.efeito : null, valor: c.valor, descricao: c.descricao };
+                            efeito: c.tipo === 'feitico' ? c.efeito : null, valor: c.valor, descricao: c.descricao,
+                            palavras: c.tipo === 'lenda' ? c.palavras : [] };
             if (imagem) dados.imagem = imagem;
             if (semImagem) dados.sem_imagem = 1;
             try {
@@ -632,5 +730,6 @@
 
     renderPartidas();
     renderCartas();
+    renderDecks();
     renderPecas();
 })();

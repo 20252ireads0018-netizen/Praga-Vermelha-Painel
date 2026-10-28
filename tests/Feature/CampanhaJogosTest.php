@@ -56,6 +56,7 @@ class CampanhaJogosTest extends TestCase
         });
         (require database_path('migrations/2026_10_28_000011_create_jogos_da_campanha.php'))->up();
         (require database_path('migrations/2026_10_28_000012_create_gladio_imagens.php'))->up();
+        (require database_path('migrations/2026_10_28_000013_gladio_decks_e_palavras.php'))->up();
 
         $u = fn ($n) => User::create(['name' => $n, 'email' => strtolower($n) . '@t.test', 'password' => 'x']);
         $this->mestre = $u('Mestre');
@@ -120,6 +121,55 @@ class CampanhaJogosTest extends TestCase
             ->assertOk()->assertJsonPath('status', 'fim')->assertJsonPath('vencedor', 'j1');
         $this->assertSame([140, 60], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
         $this->assertSame($this->ana->id, (int) $p->fresh()->vencedor_id);
+    }
+
+    public function test_decks_palavras_e_combate_pelas_rotas(): void
+    {
+        $this->actingAs($this->mestre);
+        $lucas = $this->postJson($this->url('/cartas'), ['nome' => 'Lucas', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 4, 'vida' => 5, 'palavras' => ['sobrepujar']])
+            ->assertOk()->assertJsonPath('carta.palavras', 'sobrepujar')->json('carta.id');
+        $isaque = $this->postJson($this->url('/cartas'), ['nome' => 'Isaque', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 2, 'vida' => 1])->json('carta.id');
+
+        // deck: de 15 a 60 cartas, até 4 cópias (o excesso é cortado)
+        $this->actingAs($this->ana);
+        $this->postJson($this->url('/decks'), ['nome' => 'Pequeno', 'cartas' => json_encode([$lucas => 4])])->assertStatus(422);
+        $this->postJson($this->url('/decks'), ['nome' => 'Lixo', 'cartas' => json_encode([$lucas => 9, 999 => 4])])->assertStatus(422);
+        $deckAna = $this->postJson($this->url('/decks'), ['nome' => 'Fúria', 'cartas' => json_encode([$lucas => 4, $isaque => 4])])->assertStatus(422);
+        // só 8 cartas: precisa de mais uma carta no catálogo
+        $this->actingAs($this->mestre);
+        $extras = [];
+        foreach (['A', 'B'] as $n) {
+            $extras[] = $this->postJson($this->url('/cartas'), ['nome' => $n, 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1])->json('carta.id');
+        }
+        $this->actingAs($this->ana);
+        $deckAna = $this->postJson($this->url('/decks'), ['nome' => 'Fúria', 'cartas' => json_encode([$lucas => 4, $isaque => 4, $extras[0] => 4, $extras[1] => 4])])
+            ->assertOk()->json('deck.id');
+        // ninguém usa o deck dos outros
+        $this->actingAs($this->bia)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'deck_id' => $deckAna])->assertStatus(422);
+
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'deck_id' => $deckAna])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk(); // Bia: 20 sorteadas
+        $e = $p->fresh()->estado;
+        $this->assertSame(11, count($e['lados']['a']['baralho']), 'deck de 16 menos 5 na mão');
+        $this->assertSame(15, count($e['lados']['b']['baralho']));
+
+        // Ana arruma o baralho, compra e coloca uma Lenda; vê o próprio baralho, não o da Bia
+        $this->actingAs($this->ana);
+        $v = $this->getJson($this->url("/partidas/{$p->id}/estado"))->json('estado');
+        $this->assertIsArray($v['lados']['a']['baralho']);
+        $this->assertIsInt($v['lados']['b']['baralho']);
+        $ordem = array_reverse(array_column($v['lados']['a']['baralho'], 'i'));
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'reordenar', 'ordem' => $ordem])->assertOk();
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();
+        $mao = $p->fresh()->estado['lados']['a']['mao'];
+        $this->assertSame($ordem[0], end($mao)['i'], 'comprou o novo topo');
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'ficha', 'nome' => 'Olhinho', 'atk' => 1, 'vida' => 1])->assertOk();
+        $ficha = $p->fresh()->estado['lados']['a']['mesa'][0]['i'];
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'atacar', 'insts' => [$ficha]])->assertStatus(422); // acabou de entrar
+
+        // a Bia não mexe no turno da Ana
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertStatus(422);
     }
 
     public function test_mestre_cancela_partida_em_andamento_e_devolve_apostas(): void

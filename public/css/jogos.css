@@ -176,6 +176,16 @@
     color: #b62525;
 }
 .jg-carta--feitico .jg-carta-tipo { color: #c9a45c; }
+/* palavras-chave (Sobrepujar, Ímpeto) logo abaixo do tipo */
+.jg-carta-palavras {
+    margin-top: calc(var(--cw) * -.02);
+    font-family: var(--fonte-titulo, 'Cinzel', Georgia, serif);
+    font-size: calc(var(--cw) * .052);
+    font-weight: 700;
+    text-align: center;
+    color: #d8b26a;
+    letter-spacing: .04em;
+}
 .jg-carta-texto {
     flex: 1 1 auto;
     min-height: 0;
@@ -242,6 +252,28 @@
 .jg-carta-vida b { margin-top: calc(var(--cw) * .045); }
 .jg-carta-vida.jg-ferida b { color: #ffb4a6; }
 
+/* ---------- palavras-chave no criador de cartas ---------- */
+.jg-palavras { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; font-size: .85rem; }
+.jg-palavras[hidden] { display: none; }
+.jg-palavras > span { opacity: .8; }
+.jg-palavras label { display: inline-flex; flex-direction: row; align-items: center; gap: .3rem; }
+
+/* ---------- decks de Gladio ---------- */
+.jg-decks { display: flex; flex-direction: column; gap: .5rem; margin-top: .7rem; }
+.jg-deck-item { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; padding: .55rem .75rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: rgba(255, 255, 255, .03); }
+.jg-criador-deck { flex-direction: column; gap: .6rem; }
+.jg-deck-topo { display: flex; align-items: flex-end; gap: .8rem; flex-wrap: wrap; }
+.jg-deck-topo label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; flex: 1 1 200px; }
+.jg-deck-total { font-weight: 700; color: #f87171; }
+.jg-deck-total--ok { color: var(--camp-ok); }
+.jg-deck-lista { display: flex; flex-direction: column; gap: .25rem; max-height: 360px; overflow-y: auto; }
+.jg-deck-linha { display: flex; align-items: center; gap: .5rem; padding: .25rem .4rem; border-radius: 6px; }
+.jg-deck-linha--tem { background: rgba(182, 37, 37, .14); }
+.jg-deck-custo { width: 1.6rem; height: 1.6rem; flex: 0 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; background: radial-gradient(circle at 36% 30%, #cf4a42, #5a0d0d); }
+.jg-deck-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jg-deck-nome small { opacity: .6; }
+.jg-deck-qtd { width: 1.4rem; text-align: center; }
+
 /* ---------- criador de peça (Pela Dama) ---------- */
 .jg-grade-mov { display: grid; grid-template-columns: repeat(15, 1fr); width: min(100%, 390px); aspect-ratio: 1; border: 1px solid var(--camp-borda-forte); }
 .jg-grade-mov > * { border: 0; padding: 0; margin: 0; min-width: 0; font: inherit; color: inherit; cursor: pointer; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .08); }
@@ -281,38 +313,82 @@
 /* ==========================================================
    Partida de Gladio
    ========================================================== */
-.gl { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 1rem; align-items: start; }
-.gl-tabuleiro { display: flex; flex-direction: column; gap: .7rem; min-width: 0; padding: .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: radial-gradient(ellipse at center, rgba(120, 60, 30, .25), rgba(0, 0, 0, .35)); }
-.gl-lado { display: flex; flex-direction: column; gap: .6rem; }
-.gl-heroi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: .7rem; align-items: center; padding: .5rem .8rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .35); }
+/* tamanho das cartas acompanha a altura da tela: o tabuleiro inteiro cabe sem rolar */
+.gl { --cw-campo: clamp(64px, 11.5vh, 122px); --cw-mao: clamp(70px, 12.5vh, 130px);
+      display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: .8rem; align-items: start; }
+.jg-partida-pagina .jg-topo--partida { margin-bottom: .5rem; }
+.jg-partida-pagina .jg-topo--partida h1 { font-size: 1.4rem; }
+.gl-tabuleiro { display: flex; flex-direction: column; gap: .45rem; min-width: 0; padding: .6rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio);
+                background: radial-gradient(ellipse at center, rgba(120, 40, 30, .22), rgba(0, 0, 0, .4)); }
+.gl-tabuleiro.gl-em-combate { border-color: rgba(220, 38, 38, .55); box-shadow: inset 0 0 40px rgba(127, 29, 29, .35); }
+.gl-lado { display: flex; flex-direction: column; gap: .4rem; }
+.gl-heroi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: .6rem; align-items: center; padding: .35rem .7rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .4); }
 .gl-heroi.gl-vez { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 0 1px var(--pv-gold, #c9a45c); }
 .gl-heroi-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gl-heroi-info { display: flex; gap: .7rem; font-size: .9rem; white-space: nowrap; }
-.gl-vida { position: relative; height: 1.4rem; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.gl-heroi-info { display: flex; gap: .5rem; align-items: center; font-size: .85rem; white-space: nowrap; flex-wrap: wrap; justify-content: flex-end; }
+.gl-energia { color: #fde68a; font-weight: 700; }
+.gl-zona { font: inherit; color: inherit; cursor: pointer; padding: .1rem .45rem; border: 1px solid var(--camp-borda-forte); border-radius: 6px; background: rgba(255, 255, 255, .05); }
+.gl-zona:hover { border-color: var(--pv-gold, #c9a45c); }
+.gl-vida { position: relative; height: 1.3rem; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
 .gl-vida span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7f1d1d, #dc2626); transition: width .3s; }
-.gl-vida b { position: relative; display: block; text-align: center; font-size: .82rem; line-height: 1.4rem; }
+.gl-vida b { position: relative; display: block; text-align: center; font-size: .8rem; line-height: 1.3rem; }
 
-.gl-campo { display: flex; gap: .5rem; min-height: calc(110px * 1.42); align-items: center; justify-content: center; flex-wrap: wrap; padding: .4rem; border-radius: var(--camp-raio); background: rgba(0, 0, 0, .18); }
-.gl-campo .jg-carta { --cw: 110px; }
-.gl-vazio { opacity: .5; font-size: .85rem; margin: 0; }
-.gl-mao { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
-.gl-mao .jg-carta { --cw: 118px; }
-.gl-mao-op { display: flex; gap: .25rem; justify-content: center; min-height: 2.2rem; flex-wrap: wrap; }
-.gl-verso { width: 1.6rem; height: 2.2rem; border-radius: 4px; border: 1px solid #8a6a32; background: repeating-linear-gradient(45deg, #3a1d1d 0 4px, #24110f 4px 8px); }
+.gl-campo { display: flex; gap: .45rem; min-height: calc(var(--cw-campo) * 1.42 + .8rem); align-items: center; justify-content: center; flex-wrap: wrap; padding: .4rem; border-radius: var(--camp-raio); background: rgba(0, 0, 0, .2); }
+.gl-campo .jg-carta { --cw: var(--cw-campo); }
+.gl-vazio { opacity: .45; font-size: .85rem; margin: 0; }
+.gl-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+.gl-mais { position: absolute; top: -6px; right: -6px; z-index: 3; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--pv-gold, #c9a45c); background: #1a0f0f; color: #f3e9d6; font: inherit; line-height: 1; cursor: pointer; }
+.gl-mais:hover { background: #3a1616; }
+.gl-etiqueta { position: absolute; bottom: -.55rem; left: 50%; transform: translateX(-50%); z-index: 2; font-size: .68rem; padding: .05rem .4rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .8); border-radius: 999px; background: #4a3a1c; color: #f3e2b8; white-space: nowrap; max-width: calc(var(--cw-campo) + 1rem); overflow: hidden; text-overflow: ellipsis; }
+.gl-etiqueta--ataque { background: #7f1d1d; color: #fecaca; }
+.gl-etiqueta--cansada { background: #2a2020; color: #a89494; }
 
-.gl-jogavel { cursor: pointer; border-color: #4ade80; box-shadow: 0 0 0 1px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); transition: transform .12s; }
-.gl-jogavel:hover { transform: translateY(-6px); }
+.gl-mao { display: flex; gap: .4rem; justify-content: center; padding-top: .3rem; }
+.gl-mao .jg-carta { --cw: var(--cw-mao); }
+.gl-mao--cheia .gl-slot + .gl-slot { margin-left: calc(var(--cw-mao) * -.32); } /* mão cheia: as cartas se sobrepõem */
+.gl-mao--cheia .gl-slot:hover { z-index: 4; }
+.gl-mao-op { display: flex; gap: .2rem; justify-content: center; min-height: 1.6rem; flex-wrap: wrap; }
+.gl-verso { width: 1.2rem; height: 1.6rem; border-radius: 3px; border: 1px solid #8a6a32; background: repeating-linear-gradient(45deg, #3a1d1d 0 4px, #24110f 4px 8px); }
+
+.gl-jogavel { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); transition: transform .12s; }
+.gl-jogavel:hover { transform: translateY(-8px); }
 .gl-cara { filter: saturate(.55) brightness(.8); }
 .gl-pode { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); }
-.gl-mirando { box-shadow: 0 0 0 3px var(--pv-gold, #c9a45c), 0 4px 12px rgba(0, 0, 0, .5); transform: translateY(-4px); }
+.gl-escolhido { box-shadow: 0 0 0 3px #f59e0b, 0 0 16px rgba(245, 158, 11, .55) !important; transform: translateY(-6px); }
+.gl-atacando { box-shadow: 0 0 0 3px #dc2626, 0 0 18px rgba(220, 38, 38, .6); }
+.gl-bloqueando { box-shadow: 0 0 0 3px #60a5fa, 0 0 14px rgba(96, 165, 250, .5); }
+.gl-defensor { cursor: pointer; }
+.gl-mirando { box-shadow: 0 0 0 3px var(--pv-gold, #c9a45c), 0 4px 12px rgba(0, 0, 0, .5) !important; transform: translateY(-4px); }
 .gl-alvo { cursor: crosshair; box-shadow: 0 0 0 3px #f87171, 0 0 16px rgba(248, 113, 113, .6) !important; }
 
-.gl-meio { display: flex; align-items: center; justify-content: center; gap: .6rem; flex-wrap: wrap; padding: .3rem 0; border-top: 1px dashed var(--camp-borda); border-bottom: 1px dashed var(--camp-borda); }
-.gl-turno { font-size: .85rem; opacity: .75; }
-.gl-dica { color: #fca5a5; font-weight: 600; }
-.gl-log { padding: .7rem .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: var(--camp-fundo-card); max-height: 70vh; overflow: auto; }
+.gl-meio { display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap; padding: .35rem 0; border-top: 1px dashed var(--camp-borda); border-bottom: 1px dashed var(--camp-borda); }
+.gl-turno { font-size: .8rem; opacity: .7; }
+.gl-dica { color: #fca5a5; font-weight: 600; font-size: .9rem; }
+.gl-dica--suave { color: var(--camp-texto-suave); font-weight: 400; }
+.gl-desistir { margin-left: auto; opacity: .75; }
+.gl-log { padding: .7rem .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: var(--camp-fundo-card); max-height: calc(100vh - 180px); overflow: auto; position: sticky; top: 80px; }
 .gl-log h3 { margin: 0 0 .4rem; font-size: .95rem; }
-.gl-log ol { margin: 0; padding-left: 1.1rem; font-size: .82rem; display: flex; flex-direction: column; gap: .2rem; }
+.gl-log ol { margin: 0; padding-left: 1.1rem; font-size: .8rem; display: flex; flex-direction: column; gap: .2rem; }
+
+/* janelas (baralho, cemitério, ficha, ações de uma carta) */
+.gl-modal { position: fixed; inset: 0; z-index: 1300; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .65); }
+.gl-modal-caixa { width: min(640px, 100%); max-height: calc(100vh - 2rem); display: flex; flex-direction: column; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: var(--pv-bg-alt, #130d0d); box-shadow: 0 18px 40px rgba(0, 0, 0, .7); }
+.gl-modal-cab { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .7rem .9rem; border-bottom: 1px solid var(--camp-borda); }
+.gl-modal-cab h3 { margin: 0; font-size: 1.05rem; }
+.gl-modal-corpo { padding: .8rem .9rem; overflow: auto; }
+.gl-modal-rodape { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; padding: .7rem .9rem; border-top: 1px solid var(--camp-borda); }
+.gl-lista-baralho { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
+.gl-lista-baralho .jg-deck-linha { background: rgba(255, 255, 255, .03); }
+.gl-pos { width: 2.4rem; flex: 0 0 auto; font-size: .75rem; opacity: .7; }
+.gl-grade-cartas { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .6rem; }
+.gl-grade-cartas .jg-carta { --cw: 104px; }
+.gl-modal-carta { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+.gl-modal-carta > .jg-carta { --cw: 150px; }
+.gl-modal-acoes { flex: 1 1 220px; display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }
+.gl-ajustes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.gl-form-ficha { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .6rem; align-items: end; }
+.gl-form-ficha label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
+.gl-form-ficha button { grid-column: 1 / -1; }
 
 /* ==========================================================
    Partida de Pela Dama
@@ -351,14 +427,15 @@
 
 @media (max-width: 900px) {
     .jg-colunas, .gl { grid-template-columns: minmax(0, 1fr); }
-    .gl-log { max-height: 220px; }
+    .gl-log { max-height: 220px; position: static; }
 }
 @media (max-width: 600px) {
     .jg-criador-campos { grid-template-columns: minmax(0, 1fr); }
     .gl-heroi { grid-template-columns: minmax(0, 1fr); }
-    .gl-campo .jg-carta { --cw: 84px; }
-    .gl-campo { min-height: calc(84px * 1.42); }
-    .gl-mao .jg-carta { --cw: 92px; }
+    .gl-heroi-info { justify-content: flex-start; }
+    .gl { --cw-campo: 70px; --cw-mao: 76px; }
+    .gl-form-ficha { grid-template-columns: 1fr 1fr; }
+    .gl-form-ficha label:first-child { grid-column: 1 / -1; }
     .jg-cartas { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     .jg-cartas .jg-carta { --cw: 120px; }
 }

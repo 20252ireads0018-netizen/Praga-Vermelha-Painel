@@ -56,9 +56,16 @@
 
     /* ================================================================== */
     /*  Gladio                                                             */
+    /*  Regras no servidor (App\Jogos\Gladio). Aqui: escolher jogadas,     */
+    /*  atacar/bloquear e as janelas de baralho, cemitério e ferramentas.  */
     /* ================================================================== */
-    let alvo = null; // { tipo: 'feitico' | 'ataque', inst, precisa: 'inimigo' | 'aliado' | 'lenda' }
+    let alvo = null;        // mirando: { tipo: 'feitico', inst, precisa } | { tipo: 'copiar', inst }
+    let atacantes = [];     // Lendas escolhidas para o ataque
+    let bloqueador = null;  // na defesa: Lenda minha escolhida, esperando o clique no atacante
+    let modal = null;       // { tipo: 'baralho' | 'cemiterio' | 'ficha' | 'mao' | 'mesa', inst?, lado? }
+    let ordemDeck = null;   // ordem do baralho sendo arrumada (ids, do topo para o fundo)
     const PRECISA = { dano: 'inimigo', cura: 'aliado', fortalecer: 'lenda' };
+    const qtd = v => (Array.isArray(v) ? v.length : (v || 0));
 
     function cartaDef(id) {
         const c = Object.assign({}, D.estado.cartas[id] || { nome: '?', tipo: 'feitico', custo: 0 });
@@ -66,105 +73,323 @@
         if (extra) { c.imagem = extra.imagem; c.descricao = c.descricao || extra.descricao; }
         return c;
     }
+    // ficha: Lenda sem carta
+    const defLenda = x => (x.c != null ? cartaDef(x.c)
+        : { nome: x.nome || 'Ficha', tipo: 'lenda', custo: 0, ataque: x.atk, vida: x.max, descricao: 'Ficha', palavras: '' });
+    const nomeLenda = x => defLenda(x).nome;
 
     function renderGladio() {
         const e = D.estado;
         const eu = D.lado || 'a';
         const op = eu === 'a' ? 'b' : 'a';
-        const nomeLado = l => (l === 'a' ? nomeJ('j1') : nomeJ('j2'));
-        const minhaVez = D.status === 'andamento' && D.lado && e.vez === D.lado;
         const L = e.lados;
+        const nomeLado = l => (l === 'a' ? nomeJ('j1') : nomeJ('j2'));
+        const ativo = D.status === 'andamento' && !e.fim;
+        const minhaVez = !!(ativo && D.lado && e.vez === D.lado && e.fase === 'principal');
+        const defendo = !!(ativo && D.lado && e.fase === 'defesa' && e.vez !== D.lado);
+        const esperoDefesa = !!(ativo && D.lado && e.fase === 'defesa' && e.vez === D.lado);
+        const ataque = e.ataque || { atacantes: [], bloqueios: {} };
+        const bloqueios = ataque.bloqueios || {};
+        const atacando = ataque.atacantes || [];
 
-        // alvos válidos no modo de mirar
-        const alvoOk = (lado, tipo) => {
+        // seleções que deixaram de valer
+        if (!minhaVez) { atacantes = []; if (alvo) alvo = null; }
+        atacantes = atacantes.filter(i => L[eu].mesa.some(m => m.i === i && m.pode));
+        if (!defendo) bloqueador = null;
+
+        const alvoOk = (lado, tipo, x) => {
+            if (defendo && bloqueador != null) return tipo === 'lenda' && lado === op && atacando.includes(x.i);
             if (!alvo) return false;
-            const pIni = alvo.tipo === 'ataque' || alvo.precisa === 'inimigo';
-            if (tipo === 'heroi') return pIni ? lado === op : (alvo.precisa === 'aliado' && lado === eu);
-            return pIni ? lado === op : lado === eu;
+            if (alvo.tipo === 'copiar') return tipo === 'lenda' && lado === eu && x.i !== alvo.inst;
+            if (alvo.precisa === 'inimigo') return lado === op;
+            if (alvo.precisa === 'aliado') return lado === eu;
+            return tipo === 'lenda' && lado === eu; // fortalecer
         };
 
-        const heroi = (lado) => {
+        const heroi = lado => {
             const l = L[lado];
             const pct = Math.max(0, Math.min(100, (l.vida / (l.max || 1)) * 100));
-            const mao = Array.isArray(l.mao) ? l.mao.length : l.mao;
-            return `<div class="gl-heroi${e.vez === lado && !e.fim ? ' gl-vez' : ''}${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
-                `<div class="gl-heroi-nome">${nomeLado(lado)}${lado === D.lado ? ' <small>(você)</small>' : ''}</div>` +
+            const meu = lado === D.lado;
+            return `<div class="gl-heroi${e.vez === lado && ativo ? ' gl-vez' : ''}${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
+                `<div class="gl-heroi-nome">${nomeLado(lado)}${meu ? ' <small>(você)</small>' : ''}</div>` +
                 `<div class="gl-vida" title="Vida${D.aposta ? ' (Dinheiro apostado)' : ''}"><span style="width:${pct}%"></span><b>${D.aposta ? '💰 ' : '❤ '}${l.vida} / ${l.max}</b></div>` +
-                `<div class="gl-heroi-info"><span title="Energia">⚡ ${l.energia} / ${l.energiaMax}</span><span title="Cartas na mão">🂠 ${mao}</span><span title="Cartas no baralho">📚 ${l.baralho}</span></div>` +
-                `</div>`;
+                `<div class="gl-heroi-info">` +
+                    `<span class="gl-energia" title="Energia: sobe 1 por rodada">⚡ ${l.energia}/${l.energiaMax}</span>` +
+                    `<span title="Cartas na mão">✋ ${qtd(l.mao)}</span>` +
+                    (meu ? `<button type="button" class="gl-zona" data-gl="baralho" title="Consultar o seu baralho">📚 ${qtd(l.baralho)}</button>`
+                         : `<span title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>`) +
+                    `<button type="button" class="gl-zona" data-gl="cemiterio" data-lado="${lado}" title="Cemitério">✝ ${l.cemiterio.length}</button>` +
+                `</div></div>`;
         };
-        const campo = (lado) => {
+
+        const campo = lado => {
             const m = L[lado].mesa;
-            return `<div class="gl-campo" data-campo="${lado}">` + (m.length ? m.map(x =>
-                window.JG.carta(cartaDef(x.c), {
-                    atk: x.atk, vida: x.vida, max: x.max,
-                    classe: (lado === D.lado && minhaVez && x.pode && x.atk > 0 ? 'gl-pode' : '') +
-                        (alvo && alvo.inst === x.i && alvo.tipo === 'ataque' ? ' gl-mirando' : '') +
-                        (alvoOk(lado, 'lenda') ? ' gl-alvo' : ''),
-                    attrs: `data-lenda="${x.i}" data-dono="${lado}"`,
-                })).join('') : '<p class="gl-vazio">Sem Lendas na mesa</p>') + '</div>';
+            return `<div class="gl-campo" data-campo="${lado}">` + (m.length ? m.map(x => {
+                const meu = lado === D.lado;
+                const bloqueia = bloqueios[x.i] != null ? L[op === lado ? eu : op].mesa.find(a => a.i === +bloqueios[x.i]) : null;
+                const cls = [];
+                if (meu && minhaVez && x.pode && x.atk > 0) cls.push('gl-pode');
+                if (atacantes.includes(x.i)) cls.push('gl-escolhido');
+                if (atacando.includes(x.i)) cls.push('gl-atacando');
+                if (bloqueios[x.i] != null) cls.push('gl-bloqueando');
+                if (bloqueador === x.i || (alvo && alvo.inst === x.i)) cls.push('gl-mirando');
+                if (alvoOk(lado, 'lenda', x)) cls.push('gl-alvo');
+                if (meu && defendo) cls.push('gl-defensor');
+                const etiqueta = atacando.includes(x.i) ? '<span class="gl-etiqueta gl-etiqueta--ataque">atacando</span>'
+                    : (bloqueia ? `<span class="gl-etiqueta">bloqueia ${esc(nomeLenda(bloqueia))}</span>`
+                    : (!x.pode && meu && minhaVez ? '<span class="gl-etiqueta gl-etiqueta--cansada">cansada</span>' : ''));
+                return `<div class="gl-slot">` +
+                    window.JG.carta(defLenda(x), { atk: x.atk, vida: x.vida, max: x.max, pal: x.pal || [], classe: cls.join(' '),
+                        attrs: `data-lenda="${x.i}" data-dono="${lado}"` }) +
+                    etiqueta +
+                    (meu && minhaVez ? `<button type="button" class="gl-mais" data-mais-mesa="${x.i}" title="Mais ações" aria-label="Mais ações de ${esc(nomeLenda(x))}">⋯</button>` : '') +
+                    `</div>`;
+            }).join('') : '<p class="gl-vazio">Sem Lendas na mesa</p>') + '</div>';
         };
-        const maoOp = Array.isArray(L[op].mao) ? L[op].mao.length : L[op].mao;
+
         const minhaMao = Array.isArray(L[eu].mao) ? L[eu].mao : null;
+        const maoHtml = minhaMao
+            ? `<div class="gl-mao${minhaMao.length > 6 ? ' gl-mao--cheia' : ''}">${minhaMao.map(x => {
+                const c = cartaDef(x.c);
+                const pode = (minhaVez && c.custo <= L[eu].energia) || (defendo && c.tipo === 'lenda' && c.custo <= L[eu].energia);
+                return `<div class="gl-slot">` +
+                    window.JG.carta(c, { classe: (pode ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : ''), attrs: `data-mao="${x.i}"` }) +
+                    (minhaVez ? `<button type="button" class="gl-mais" data-mais-mao="${x.i}" title="Mais ações" aria-label="Mais ações de ${esc(c.nome)}">⋯</button>` : '') +
+                    `</div>`;
+            }).join('')}</div>`
+            : `<div class="gl-mao-op">${'<span class="gl-verso"></span>'.repeat(qtd(L[eu].mao))}</div>`;
+
+        // barra do meio: o que dá para fazer agora
+        let meio = `<span class="gl-turno">Turno ${e.turno}</span>`;
+        if (alvo) {
+            meio += `<span class="gl-dica">${alvo.tipo === 'copiar' ? 'Escolha a Lenda sua que vai servir de modelo' : 'Escolha o alvo do feitiço'}</span>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="cancelar-alvo">Cancelar</button>`;
+        } else if (defendo) {
+            meio += `<span class="gl-dica">${bloqueador != null ? 'Agora clique no atacante que ela vai bloquear' : 'Jogue Lendas da mão e escolha bloqueadores: clique numa Lenda sua e depois no atacante'}</span>` +
+                `<button type="button" class="camp-btn camp-btn-primario" data-gl="defender">Confirmar defesa</button>`;
+        } else if (esperoDefesa) {
+            meio += `<span class="gl-dica">Aguardando a defesa de ${nomeLado(op)}…</span>`;
+        } else if (minhaVez) {
+            meio += (atacantes.length
+                    ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="atacar">⚔ Atacar com ${atacantes.length}</button>` +
+                      `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="limpar-ataque">Limpar</button>`
+                    : `<span class="gl-dica gl-dica--suave">Clique nas Lendas prontas para escolher quem ataca</span>`) +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="comprar" title="Comprar uma carta do topo do baralho">Comprar</button>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="ficha" title="Criar uma ficha (Lenda sem carta) na sua mesa">Criar ficha</button>` +
+                `<button type="button" class="camp-btn camp-btn-primario" data-gl="passar">Terminar turno</button>`;
+        }
+        if (ativo && D.lado) meio += `<button type="button" class="camp-btn camp-btn-pequeno gl-desistir" data-gl="desistir">Desistir</button>`;
 
         box.innerHTML =
-            `<div class="gl-tabuleiro">` +
-                `<div class="gl-lado gl-lado--op">${heroi(op)}<div class="gl-mao-op">${'<span class="gl-verso"></span>'.repeat(maoOp)}</div>${campo(op)}</div>` +
-                `<div class="gl-meio">` +
-                    `<span class="gl-turno">Turno ${e.turno}</span>` +
-                    (alvo ? `<span class="gl-dica">${alvo.tipo === 'ataque' ? 'Escolha quem atacar' : 'Escolha o alvo do feitiço'}</span><button type="button" class="camp-btn camp-btn-pequeno" data-gl="cancelar-alvo">Cancelar</button>` : '') +
-                    (minhaVez ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="passar">Terminar turno</button>` : '') +
-                    (D.lado && D.status === 'andamento' ? `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="desistir">Desistir</button>` : '') +
-                `</div>` +
-                `<div class="gl-lado gl-lado--eu">${campo(eu)}${heroi(eu)}` +
-                    (minhaMao ? `<div class="gl-mao">${minhaMao.map(x => {
-                        const c = cartaDef(x.c);
-                        const pode = minhaVez && c.custo <= L[eu].energia;
-                        return window.JG.carta(c, { classe: (pode ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : ''), attrs: `data-mao="${x.i}"` });
-                    }).join('')}</div>` : `<div class="gl-mao-op">${'<span class="gl-verso"></span>'.repeat(L[eu].mao)}</div>`) +
-                `</div>` +
+            `<div class="gl-tabuleiro${defendo || esperoDefesa ? ' gl-em-combate' : ''}">` +
+                `<div class="gl-lado gl-lado--op">${heroi(op)}${campo(op)}</div>` +
+                `<div class="gl-meio">${meio}</div>` +
+                `<div class="gl-lado gl-lado--eu">${campo(eu)}${heroi(eu)}${maoHtml}</div>` +
             `</div>` +
-            `<aside class="gl-log"><h3>Acontecimentos</h3><ol>${e.log.slice().reverse().map(t => `<li>${esc(t)}</li>`).join('')}</ol></aside>`;
+            `<aside class="gl-log"><h3>Acontecimentos</h3><ol>${e.log.slice().reverse().map(t => `<li>${esc(t)}</li>`).join('')}</ol></aside>` +
+            renderModal(e, eu, op, minhaVez);
 
-        // status
+        // status no topo
         if (D.status === 'cancelada') status('Partida cancelada pelo mestre. As apostas voltaram.');
         else if (e.fim) {
             const venc = e.fim.vencedor === 'a' ? nomeJ('j1') : nomeJ('j2');
             const ganhei = D.lado && e.fim.vencedor === D.lado;
             status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} Vencedor: <strong>${venc}</strong>` +
                 (D.aposta ? ` · leva ${(2 * D.aposta).toLocaleString('pt-BR')} de Dinheiro` : '') + (e.fim.motivo === 'desistencia' ? ' (desistência)' : ''));
-        } else status(minhaVez ? '<strong>Sua vez.</strong> Jogue cartas da mão ou ataque com suas Lendas.' : `Vez de <strong>${nomeLado(e.vez)}</strong>.${D.lado ? '' : ' Você está assistindo.'}`);
+        } else if (defendo) status(`<strong>Você está sendo atacado!</strong> ${atacando.length} Lenda(s) avançam. Bloqueie ou jogue Lendas para se defender.`);
+        else if (esperoDefesa) status(`Ataque declarado. <strong>${nomeLado(op)}</strong> está escolhendo a defesa.`);
+        else if (minhaVez) status('<strong>Sua vez.</strong> Jogue cartas, ataque com Lendas prontas ou use as ferramentas.');
+        else status(`Vez de <strong>${nomeLado(e.vez)}</strong>.${D.lado ? '' : ' Você está assistindo.'}`);
+    }
+
+    /* ---------- janelas: baralho, cemitério, ficha e ações de uma carta ---------- */
+    function renderModal(e, eu, op, minhaVez) {
+        if (!modal) return '';
+        const L = e.lados;
+        const fechar = '<button type="button" class="camp-btn camp-btn-pequeno" data-gl="fechar-modal">Fechar</button>';
+        const janela = (titulo, corpo, rodape) => `<div class="gl-modal" data-gl="fundo-modal"><div class="gl-modal-caixa" role="dialog" aria-label="${esc(titulo)}">` +
+            `<div class="gl-modal-cab"><h3>${esc(titulo)}</h3>${fechar}</div><div class="gl-modal-corpo">${corpo}</div>` +
+            (rodape ? `<div class="gl-modal-rodape">${rodape}</div>` : '') + `</div></div>`;
+        const linhaCarta = c => `<span class="jg-deck-custo">${esc(c.custo)}</span><span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : 'Feitiço'}</small></span>`;
+
+        if (modal.tipo === 'baralho') {
+            const baralho = Array.isArray(L[eu].baralho) ? L[eu].baralho : [];
+            const ids = baralho.map(c => c.i);
+            if (!ordemDeck || ordemDeck.length !== ids.length || ordemDeck.some(i => !ids.includes(i))) ordemDeck = ids.slice();
+            const porId = {};
+            baralho.forEach(c => { porId[c.i] = c; });
+            const mudou = ordemDeck.some((i, k) => i !== ids[k]);
+            const corpo = ordemDeck.length ? `<ol class="gl-lista-baralho">${ordemDeck.map((i, k) => `<li class="jg-deck-linha">` +
+                `<span class="gl-pos">${k === 0 ? 'Topo' : k + 1}</span>${linhaCarta(cartaDef(porId[i].c))}` +
+                (minhaVez ? `<button type="button" class="camp-btn camp-btn-pequeno" data-ord="${k}" data-para="topo" title="Para o topo"${k ? '' : ' disabled'}>⤒</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-ord="${k}" data-para="-1" title="Subir"${k ? '' : ' disabled'}>↑</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-ord="${k}" data-para="1" title="Descer"${k < ordemDeck.length - 1 ? '' : ' disabled'}>↓</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-ord="${k}" data-para="fundo" title="Para o fundo"${k < ordemDeck.length - 1 ? '' : ' disabled'}>⤓</button>` : '') +
+                `</li>`).join('')}</ol>` : '<p class="camp-vazio">Seu baralho acabou.</p>';
+            const rodape = minhaVez
+                ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="salvar-ordem"${mudou ? '' : ' disabled'}>Salvar nova ordem</button>` +
+                  `<button type="button" class="camp-btn" data-gl="embaralhar">Embaralhar</button>` +
+                  `<button type="button" class="camp-btn" data-gl="comprar">Comprar do topo</button>`
+                : '<span class="camp-dica">Arrumar, embaralhar e comprar só no seu turno.</span>';
+            return janela(`Seu baralho (${ordemDeck.length} cartas, do topo para o fundo)`, corpo, rodape);
+        }
+
+        if (modal.tipo === 'cemiterio') {
+            const lado = modal.lado || eu;
+            const abas = ['a', 'b'].map(l => `<button type="button" class="jg-aba${l === lado ? ' ativo' : ''}" data-gl="aba-cemiterio" data-lado="${l}">` +
+                `${l === D.lado ? 'Seu' : 'Do adversário'}${D.lado ? '' : (l === 'a' ? ` (${nomeJ('j1')})` : ` (${nomeJ('j2')})`)} · ${L[l].cemiterio.length}</button>`).join('');
+            const cartasCem = L[lado].cemiterio.slice().reverse();
+            const corpo = `<div class="jg-abas">${abas}</div>` + (cartasCem.length ? `<div class="gl-grade-cartas">${cartasCem.map(x =>
+                `<div class="gl-slot">${window.JG.carta(cartaDef(x.c))}` +
+                (lado === D.lado && minhaVez ? `<button type="button" class="camp-btn camp-btn-pequeno" data-recuperar="${x.i}">Para a mão</button>` : '') +
+                `</div>`).join('')}</div>` : '<p class="camp-vazio">Cemitério vazio.</p>');
+            return janela('Cemitério', corpo, '<span class="camp-dica">Lendas que caem, feitiços usados e cartas descartadas. O mais recente aparece primeiro.</span>');
+        }
+
+        if (modal.tipo === 'ficha') {
+            const corpo = `<form class="gl-form-ficha" data-gl-form="ficha">` +
+                `<label>Nome<input type="text" name="nome" maxlength="40" value="Olhinho" required></label>` +
+                `<label>Ataque<input type="number" name="atk" min="0" max="9999" value="1"></label>` +
+                `<label>Vida<input type="number" name="vida" min="1" max="9999" value="1"></label>` +
+                `<button class="camp-btn camp-btn-primario">Criar na minha mesa</button></form>`;
+            return janela('Criar ficha', corpo, '<span class="camp-dica">Para efeitos como "invoque uma ficha 1/1". Fichas não vão para o cemitério quando caem.</span>');
+        }
+
+        if (modal.tipo === 'mao') {
+            const x = (Array.isArray(L[eu].mao) ? L[eu].mao : []).find(c => c.i === modal.inst);
+            if (!x) { modal = null; return ''; }
+            const c = cartaDef(x.c);
+            const corpo = `<div class="gl-modal-carta">${window.JG.carta(c)}<div class="gl-modal-acoes">` +
+                `<button type="button" class="camp-btn" data-m="gratis">Jogar sem pagar energia</button>` +
+                `<button type="button" class="camp-btn" data-m="descartar">Descartar (vai ao cemitério)</button>` +
+                `<p class="camp-dica">Use quando o texto de uma carta mandar. Fica registrado nos acontecimentos.</p></div></div>`;
+            return janela(c.nome, corpo, '');
+        }
+
+        if (modal.tipo === 'mesa') {
+            const x = L[eu].mesa.find(m => m.i === modal.inst);
+            if (!x) { modal = null; return ''; }
+            const outras = L[eu].mesa.length > 1;
+            const corpo = `<div class="gl-modal-carta">${window.JG.carta(defLenda(x), { atk: x.atk, vida: x.vida, max: x.max, pal: x.pal || [] })}<div class="gl-modal-acoes">` +
+                `<div class="gl-ajustes">` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="1" data-v="1">+1/+1</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="-1" data-v="-1">−1/−1</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="1" data-v="0">+1 ataque</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="-1" data-v="0">−1 ataque</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="0" data-v="1">+1 vida</button>` +
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="0" data-v="-1">−1 vida</button>` +
+                `</div>` +
+                (outras ? `<button type="button" class="camp-btn" data-m="copiar">Virar cópia de outra Lenda sua</button>` : '') +
+                `<button type="button" class="camp-btn" data-m="sacrificar">Sacrificar (vai ao cemitério)</button>` +
+                `<p class="camp-dica">Para efeitos escritos nas cartas (+1/+1, cópias, sacrifícios). Tudo fica registrado nos acontecimentos.</p></div></div>`;
+            return janela(nomeLenda(x), corpo, '');
+        }
+        return '';
     }
 
     function cliqueGladio(ev) {
-        const b = ev.target.closest('[data-gl]');
-        if (b) {
-            if (b.dataset.gl === 'cancelar-alvo') { alvo = null; render(); }
-            if (b.dataset.gl === 'passar') { alvo = null; acao({ acao: 'passar' }); }
-            if (b.dataset.gl === 'desistir' && confirm('Desistir da partida?' + (D.aposta ? ' Você perde a aposta.' : ''))) acao({ acao: 'desistir' });
+        const e = D.estado;
+        const eu = D.lado;
+        const L = e.lados;
+
+        // ----- janelas -----
+        const fundo = ev.target.closest('[data-gl="fundo-modal"]');
+        if (fundo && ev.target === fundo) { modal = null; ordemDeck = null; render(); return; }
+        const ord = ev.target.closest('[data-ord]');
+        if (ord) {
+            const k = +ord.dataset.ord;
+            const [id] = ordemDeck.splice(k, 1);
+            const p = ord.dataset.para;
+            ordemDeck.splice(p === 'topo' ? 0 : p === 'fundo' ? ordemDeck.length : k + (+p), 0, id);
+            render();
             return;
         }
-        const e = D.estado;
-        if (D.status !== 'andamento' || !D.lado || e.vez !== D.lado) return;
-        const eu = D.lado;
+        const rec = ev.target.closest('[data-recuperar]');
+        if (rec) { acao({ acao: 'recuperar', inst: +rec.dataset.recuperar }); return; }
+        const m = ev.target.closest('[data-m]');
+        if (m && modal) {
+            const inst = modal.inst;
+            const tipo = m.dataset.m;
+            if (tipo === 'copiar') { modal = null; alvo = { tipo: 'copiar', inst }; render(); return; }
+            if (tipo === 'sacrificar' && !confirm('Sacrificar esta Lenda?')) return;
+            if (tipo === 'descartar' && !confirm('Descartar esta carta?')) return;
+            if (tipo !== 'ajustar') modal = null;
+            if (tipo === 'gratis') {
+                const x = L[eu].mao.find(c => c.i === inst);
+                const c = x && cartaDef(x.c);
+                const precisa = c && c.tipo === 'feitico' ? PRECISA[c.efeito] : null;
+                if (precisa) { alvo = { tipo: 'feitico', inst, precisa, gratis: true }; render(); return; }
+                acao({ acao: 'jogar', inst, gratis: 1 });
+            } else if (tipo === 'ajustar') acao({ acao: 'ajustar', inst, atk: +m.dataset.a, vida: +m.dataset.v });
+            else acao({ acao: tipo, inst });
+            return;
+        }
 
-        // com um alvo pendente: o clique escolhe o alvo
+        const b = ev.target.closest('[data-gl]');
+        if (b) {
+            const g = b.dataset.gl;
+            if (g === 'fechar-modal') { modal = null; ordemDeck = null; render(); }
+            else if (g === 'baralho') { modal = { tipo: 'baralho' }; ordemDeck = null; render(); }
+            else if (g === 'cemiterio' || g === 'aba-cemiterio') { modal = { tipo: 'cemiterio', lado: b.dataset.lado }; render(); }
+            else if (g === 'ficha') { modal = { tipo: 'ficha' }; render(); const n = box.querySelector('[data-gl-form] [name=nome]'); if (n) n.select(); }
+            else if (g === 'cancelar-alvo') { alvo = null; render(); }
+            else if (g === 'limpar-ataque') { atacantes = []; render(); }
+            else if (g === 'atacar') { const lista = atacantes.slice(); atacantes = []; acao({ acao: 'atacar', insts: lista }); }
+            else if (g === 'defender') { bloqueador = null; acao({ acao: 'defender' }); }
+            else if (g === 'passar') { alvo = null; atacantes = []; acao({ acao: 'passar' }); }
+            else if (g === 'comprar') acao({ acao: 'comprar' });
+            else if (g === 'embaralhar') { ordemDeck = null; acao({ acao: 'embaralhar' }); }
+            else if (g === 'salvar-ordem') acao({ acao: 'reordenar', ordem: ordemDeck.slice() });
+            else if (g === 'desistir' && confirm('Desistir da partida?' + (D.aposta ? ' Você perde a aposta.' : ''))) acao({ acao: 'desistir' });
+            return;
+        }
+        const maisMao = ev.target.closest('[data-mais-mao]');
+        if (maisMao) { modal = { tipo: 'mao', inst: +maisMao.dataset.maisMao }; render(); return; }
+        const maisMesa = ev.target.closest('[data-mais-mesa]');
+        if (maisMesa) { modal = { tipo: 'mesa', inst: +maisMesa.dataset.maisMesa }; render(); return; }
+
+        if (D.status !== 'andamento' || !eu || e.fim) return;
+        const h = ev.target.closest('[data-heroi]');
+        const l = ev.target.closest('[data-lenda]');
+        const cartaMao = ev.target.closest('[data-mao]');
+
+        // ----- defesa: jogar Lendas da mão e escolher bloqueadores -----
+        if (e.fase === 'defesa' && e.vez !== eu) {
+            if (cartaMao && cartaMao.classList.contains('gl-jogavel')) { acao({ acao: 'jogar', inst: +cartaMao.dataset.mao }); return; }
+            if (!l) return;
+            const inst = +l.dataset.lenda;
+            if (l.dataset.dono === eu) {
+                const bloq = e.ataque && e.ataque.bloqueios || {};
+                if (bloq[inst] != null) { bloqueador = null; acao({ acao: 'bloquear', inst }); return; } // tira o bloqueio
+                bloqueador = bloqueador === inst ? null : inst;
+                render();
+            } else if (bloqueador != null && l.classList.contains('gl-alvo')) {
+                const quem = bloqueador;
+                bloqueador = null;
+                acao({ acao: 'bloquear', inst: quem, outro: inst });
+            }
+            return;
+        }
+        if (e.vez !== eu || e.fase !== 'principal') return;
+
+        // ----- mirando: o clique escolhe o alvo -----
         if (alvo) {
-            const h = ev.target.closest('[data-heroi]');
-            const l = ev.target.closest('[data-lenda]');
+            if (alvo.tipo === 'copiar') {
+                if (l && l.classList.contains('gl-alvo')) { const a = alvo; alvo = null; acao({ acao: 'copiar', inst: a.inst, outro: +l.dataset.lenda }); }
+                return;
+            }
             let escolhido = null;
             if (h && h.classList.contains('gl-alvo')) escolhido = h.dataset.heroi === eu ? 'eu' : 'inimigo';
             if (l && l.classList.contains('gl-alvo')) escolhido = l.dataset.lenda;
             if (escolhido == null) return;
             const a = alvo;
             alvo = null;
-            acao({ acao: a.tipo === 'ataque' ? 'atacar' : 'jogar', inst: a.inst, alvo: escolhido });
+            acao({ acao: 'jogar', inst: a.inst, alvo: escolhido, gratis: a.gratis ? 1 : null });
             return;
         }
 
-        const m = ev.target.closest('[data-mao]');
-        if (m && m.classList.contains('gl-jogavel')) {
-            const x = e.lados[eu].mao.find(c => String(c.i) === m.dataset.mao);
+        if (cartaMao && cartaMao.classList.contains('gl-jogavel')) {
+            const x = L[eu].mao.find(c => String(c.i) === cartaMao.dataset.mao);
             const c = x && cartaDef(x.c);
             if (!c) return;
             const precisa = c.tipo === 'feitico' ? PRECISA[c.efeito] : null;
@@ -172,12 +397,22 @@
             else acao({ acao: 'jogar', inst: x.i });
             return;
         }
-        const l = ev.target.closest('[data-lenda]');
+        // escolher quem ataca
         if (l && l.dataset.dono === eu && l.classList.contains('gl-pode')) {
-            alvo = { tipo: 'ataque', inst: +l.dataset.lenda };
+            const inst = +l.dataset.lenda;
+            atacantes = atacantes.includes(inst) ? atacantes.filter(i => i !== inst) : atacantes.concat(inst);
             render();
         }
     }
+
+    // formulário da ficha
+    box.addEventListener('submit', ev => {
+        const f = ev.target.closest('[data-gl-form="ficha"]');
+        if (!f) return;
+        ev.preventDefault();
+        modal = null;
+        acao({ acao: 'ficha', nome: f.nome.value.trim(), atk: +f.atk.value || 0, vida: +f.vida.value || 1 });
+    });
 
     /* ================================================================== */
     /*  Pela Dama                                                          */
@@ -285,7 +520,12 @@
     }
     box.addEventListener('click', ev => (D.jogo === 'gladio' ? cliqueGladio(ev) : cliquePelaDama(ev)));
     document.addEventListener('keydown', ev => {
-        if (ev.key === 'Escape' && (alvo || sel)) { alvo = null; sel = null; render(); }
+        if (ev.key === 'Escape' && (alvo || sel || modal || bloqueador != null)) { alvo = null; sel = null; modal = null; ordemDeck = null; bloqueador = null; render(); }
     });
     render();
+    // Gladio: abre já com o tabuleiro inteiro à vista (o título da página fica acima, rolando para cima)
+    if (D.jogo === 'gladio' && D.estado) {
+        const t = $('#jg-status');
+        if (t) window.scrollTo({ top: Math.max(0, t.getBoundingClientRect().top + window.scrollY - 76) });
+    }
 })();
