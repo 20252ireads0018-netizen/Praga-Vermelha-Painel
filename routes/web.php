@@ -11,6 +11,7 @@ use App\Http\Controllers\TabletopController;
 use App\Http\Controllers\CampanhaController;
 use App\Http\Controllers\CampanhaCatalogoController;
 use App\Http\Controllers\CampanhaRolagemController;
+use App\Http\Controllers\CampanhaIniciativaController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -133,6 +134,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'index'])->name('catalogos.index');
         Route::post('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'store'])
             ->middleware('throttle:10,1')->name('catalogos.store');
+
+        // Rastreador de iniciativa
+        Route::get('/{campanha}/iniciativas', [CampanhaIniciativaController::class, 'index'])->name('iniciativas.index');
+        Route::post('/{campanha}/iniciativas', [CampanhaIniciativaController::class, 'store'])
+            ->middleware('throttle:20,1')->name('iniciativas.store');
+        Route::delete('/{campanha}/iniciativas', [CampanhaIniciativaController::class, 'limpar'])->name('iniciativas.limpar');
+        Route::delete('/{campanha}/iniciativas/{iniciativa}', [CampanhaIniciativaController::class, 'destroy'])
+            ->whereNumber('iniciativa')->name('iniciativas.destroy');
 
         // Efeitos sonoros
         Route::post('/{campanha}/sons', [CampanhaController::class, 'enviarSom'])->name('sons.enviar');

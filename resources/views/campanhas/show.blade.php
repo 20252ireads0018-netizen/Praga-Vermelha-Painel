@@ -238,6 +238,14 @@
                     <span class="camp-dica js-pote-rotulo">rolagens públicas</span>
                 </div>
 
+                @php $temIniciativa = Route::has('campanhas.iniciativas.index'); @endphp
+                @if ($temIniciativa)
+                <div class="camp-dados-abas" role="tablist">
+                    <button type="button" class="camp-btn camp-btn-pequeno ativo" role="tab" data-aba-dados="dados">🎲 Dados</button>
+                    <button type="button" class="camp-btn camp-btn-pequeno" role="tab" data-aba-dados="iniciativa">⚔️ Iniciativa</button>
+                </div>
+                @endif
+                <div class="js-aba-dados-painel" data-painel="dados">
                 @php
                     // Potes secretos que a pessoa pode ver (o mestre vê todos); vazio até a migration rodar
                     $potesSecretos = \App\Http\Controllers\CampanhaRolagemController::potesVisiveis($campanha, $uid);
@@ -334,6 +342,29 @@
 
                 <div class="camp-dados-lista js-dados-lista" aria-live="polite"></div>
                 <p class="camp-vazio js-dados-vazio">Nenhuma rolagem ainda.</p>
+                </div>
+
+                @if ($temIniciativa)
+                <div class="js-aba-dados-painel camp-ini" data-painel="iniciativa" hidden
+                     data-url-ini="{{ route('campanhas.iniciativas.index', $campanha) }}">
+                    <p class="camp-dica">Quem tirar menos começa.</p>
+                    <form class="camp-ini-form js-ini-form" autocomplete="off">
+                        <label>Personagem
+                            <select class="js-ini-ficha"></select>
+                        </label>
+                        <button type="submit" class="camp-btn camp-btn-primario js-ini-rolar">Rolar iniciativa</button>
+                    </form>
+                    <p class="camp-dados-erro js-ini-erro" hidden></p>
+                    <div class="camp-ini-topo">
+                        <span class="camp-dica js-ini-contagem"></span>
+                        @if ($souMestre)
+                            <button type="button" class="camp-btn camp-btn-pequeno camp-btn-perigo js-ini-nova">Nova rodada</button>
+                        @endif
+                    </div>
+                    <ol class="camp-ini-lista js-ini-lista"></ol>
+                    <p class="camp-vazio js-ini-vazio">Ninguém rolou iniciativa ainda.</p>
+                </div>
+                @endif
             </section>
             @endif
 
@@ -637,6 +668,7 @@
 <script src="{{ asset('js/campanha-sync.js') }}?v={{ @filemtime(public_path('js/campanha-sync.js')) }}"></script>
 @if (Route::has('campanhas.rolagens.index'))
 <script src="{{ asset('js/campanha-dados.js') }}?v={{ @filemtime(public_path('js/campanha-dados.js')) }}"></script>
+<script src="{{ asset('js/campanha-iniciativa.js') }}?v={{ @filemtime(public_path('js/campanha-iniciativa.js')) }}"></script>
 <script src="{{ asset('js/campanha-catalogo.js') }}?v={{ @filemtime(public_path('js/campanha-catalogo.js')) }}"></script>
 @endif
 @endsection

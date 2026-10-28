@@ -86,16 +86,7 @@ class CampanhaController extends Controller
             : collect();
 
         // Fichas rolláveis (mestre: todas da campanha; jogador: as próprias) com habilidades já calculadas.
-        $fichasRolagem = $vinculos
-            ->filter(fn ($v) => $v->ficha !== null)
-            ->map(fn ($v) => [
-                'id'          => $v->ficha->id,
-                'nome'        => trim((string) $v->ficha->nome) !== '' ? $v->ficha->nome : 'Ficha #' . $v->ficha->id,
-                'habilidades' => $v->ficha->habilidadesParaRolagem(),
-            ])
-            ->unique('id')
-            ->values()
-            ->all();
+        $fichasRolagem = self::mapearFichasRolagem($vinculos);
 
         return view('campanhas.show', [
             'fichasRolagem' => $fichasRolagem,
@@ -683,6 +674,31 @@ class CampanhaController extends Controller
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    /** Fichas que o usuário pode rolar na campanha (mestre: todas; jogador: as próprias), com habilidades calculadas. */
+    public static function fichasRolaveis(Campanha $campanha, int $userId, bool $souMestre): array
+    {
+        $self     = new self();
+        $vinculos = $self->vinculosVisiveis($campanha, $userId, $souMestre)->get();
+        $self->carregarFichas($vinculos);
+
+        return self::mapearFichasRolagem($vinculos);
+    }
+
+    /** @return array<int, array{id:int, nome:string, habilidades:array}> */
+    private static function mapearFichasRolagem($vinculos): array
+    {
+        return $vinculos
+            ->filter(fn ($v) => $v->ficha !== null)
+            ->map(fn ($v) => [
+                'id'          => $v->ficha->id,
+                'nome'        => trim((string) $v->ficha->nome) !== '' ? $v->ficha->nome : 'Ficha #' . $v->ficha->id,
+                'habilidades' => $v->ficha->habilidadesParaRolagem(),
+            ])
+            ->unique('id')
+            ->values()
+            ->all();
+    }
 
     private function exigirMestre(Campanha $campanha): void
     {
