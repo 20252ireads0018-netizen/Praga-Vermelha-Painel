@@ -323,7 +323,7 @@
                     if (x.d.item) mostrarResultado(x.d.item);
                     txt.value = '';
                     contar();
-                    iniciarEspera(x.d.espera != null ? x.d.espera : 120);
+                    iniciarEspera(x.d.espera != null ? x.d.espera : 30);
                     assinatura = '';
                     buscar();
                     return;

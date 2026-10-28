@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 /** Disputa de catálogo: o jogador descreve uma maldição restrita da qual só conhece o título. */
 class CampanhaCatalogoController extends Controller
 {
-    public const ESPERA = 120; // segundos entre catálogos do mesmo jogador
+    public const ESPERA = 30; // segundos entre catálogos do mesmo jogador
 
     private function autorizar(Campanha $campanha): void
     {
