@@ -928,3 +928,54 @@
 .camp-ini-x:hover { opacity: 1; }
 .camp-ini-x { background: transparent; border: 1px solid rgba(255, 255, 255, .14); border-radius: 6px; color: inherit; width: 1.9rem; height: 1.9rem; cursor: pointer; }
 .camp-ini-x:hover { background: rgba(220, 70, 70, .25); }
+
+/* ---------- Painel rápido do tabletop (sobe pela direita; só mover peças) ---------- */
+.camp-tt {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    width: min(620px, 100vw);
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    padding: .9rem 1rem;
+    box-sizing: border-box;
+    background: var(--pv-bg-alt, #130d0d);
+    border-left: 1px solid var(--camp-borda-forte);
+    box-shadow: -14px 0 32px rgba(0, 0, 0, .6);
+    transform: translateX(100%);
+    transition: transform .25s ease;
+}
+.camp-tt[hidden] { display: none; }
+.camp-tt.aberta { transform: none; }
+.camp-tt-cab { display: flex; flex-direction: row; align-items: center; gap: .6rem; text-align: left; }
+.camp-tt-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .1rem; }
+.camp-tt-info h2 { margin: 0; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camp-tt-status { font-size: .8rem; color: var(--camp-texto-suave); }
+.camp-tt-cab .camp-btn { flex: 0 0 auto; white-space: nowrap; }
+.camp-tt-aviso {
+    margin: 0;
+    padding: .55rem .75rem;
+    font-size: .85rem;
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+    background: var(--camp-fundo-card);
+}
+.camp-tt-cena {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 14px;
+    background: var(--pv-bg, #0d0a0a);
+    border: 1px solid var(--camp-borda);
+    border-radius: var(--camp-raio);
+}
+.camp-tt-dica { margin: 0; font-size: .78rem; color: var(--camp-texto-suave); }
+
+@media (max-width: 600px) {
+    .camp-tt { padding: .7rem .6rem; }
+    .camp-tt-cab { flex-wrap: wrap; }
+    .camp-tt-info { flex-basis: calc(100% - 3rem); }
+}

@@ -113,6 +113,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/mesas', [CampanhaController::class, 'vincularMesa'])->name('mesas.vincular');
         Route::post('/{campanha}/mesas/nova', [CampanhaController::class, 'criarMesa'])->name('mesas.criar');
         Route::delete('/{campanha}/mesas/{mesa}', [CampanhaController::class, 'desvincularMesa'])->name('mesas.desvincular');
+        Route::post('/{campanha}/mesas/{mesa}/sala', [TabletopController::class, 'salaCampanha'])
+            ->middleware('throttle:60,1')->name('mesas.sala'); // painel rápido: sala ao vivo da mesa (o mestre abre na hora)
 
         // Sessão
         Route::post('/{campanha}/sessao/iniciar', [CampanhaController::class, 'iniciarSessao'])->name('sessao.iniciar');

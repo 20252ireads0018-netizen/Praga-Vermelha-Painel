@@ -185,15 +185,14 @@
                 <div class="camp-mesas-grade">
                     @forelse ($mesas as $m)
                         <div class="camp-linha camp-linha-clicavel camp-mesa-item">
-                            @if ($souMestre)
-                                <a href="{{ route('tabletop.show', $m) }}" class="camp-clicavel">
-                                    <span class="camp-clicavel-info"><strong>{{ $m->nome }}</strong></span>
-                                    <span class="camp-dica">Abrir</span>
-                                    <span class="camp-seta" aria-hidden="true">›</span>
-                                </a>
-                            @else
-                                <div class="camp-mesa-nome"><strong>{{ $m->nome }}</strong></div>
-                            @endif
+                            {{-- Abre o painel rápido pela direita (só mover peças, ao vivo); de lá dá para abrir o tabletop inteiro --}}
+                            <button type="button" class="camp-clicavel js-tt-rapido"
+                                    data-sala-url="{{ route('campanhas.mesas.sala', [$campanha, $m]) }}"
+                                    data-nome="{{ $m->nome }}">
+                                <span class="camp-clicavel-info"><strong>{{ $m->nome }}</strong></span>
+                                <span class="camp-dica">{{ $m->codigo ? 'ao vivo' : 'Mover peças' }}</span>
+                                <span class="camp-seta" aria-hidden="true">›</span>
+                            </button>
                             @if ($souMestre)
                                 <form method="POST" action="{{ route('campanhas.mesas.desvincular', [$campanha, $m]) }}">
                                     @csrf @method('DELETE')
@@ -661,7 +660,29 @@
             </div>
         </dialog>
     </template>
+    {{-- ===== Painel rápido do tabletop: sobe pela direita, só move as peças (sala ao vivo) ===== --}}
+    <aside class="camp-tt" id="camp-tt" hidden aria-labelledby="camp-tt-titulo" data-csrf="{{ csrf_token() }}">
+        <div class="camp-tt-cab">
+            <div class="camp-tt-info">
+                <h2 id="camp-tt-titulo">Tabletop</h2>
+                <span class="camp-tt-status" id="camp-tt-status">Conectando…</span>
+            </div>
+            <a href="#" class="camp-btn camp-btn-primario camp-btn-pequeno" id="camp-tt-abrir" hidden>Abrir tabletop completo</a>
+            <button type="button" class="camp-btn camp-btn-pequeno" id="camp-tt-fechar" aria-label="Fechar painel do tabletop">✕</button>
+        </div>
+        <p class="camp-tt-aviso" id="camp-tt-aviso" hidden></p>
+        <div class="camp-tt-cena" id="camp-tt-cena">
+            <div class="tt-grade" id="camp-tt-grade" aria-label="Mapa do tabletop">
+                <img class="tt-mapa" id="camp-tt-mapa" alt="" hidden draggable="false">
+                <div class="tt-linhas"></div>
+                <svg class="tt-des" id="camp-tt-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+                <div class="tt-pecas" id="camp-tt-pecas"></div>
+            </div>
+        </div>
+        <p class="camp-tt-dica">Arraste as peças para movê-las. Todos na mesa veem a mudança em cerca de 1 segundo. Para desenhar, criar peças ou mudar o mapa, abra o tabletop completo.</p>
+    </aside>
 </div>
+
 
 {{-- Carregados aqui mesmo, para não depender de o layout ter @yield('script') --}}
 <script src="{{ asset('js/campanha.js') }}?v={{ @filemtime(public_path('js/campanha.js')) }}"></script>
@@ -671,4 +692,5 @@
 <script src="{{ asset('js/campanha-iniciativa.js') }}?v={{ @filemtime(public_path('js/campanha-iniciativa.js')) }}"></script>
 <script src="{{ asset('js/campanha-catalogo.js') }}?v={{ @filemtime(public_path('js/campanha-catalogo.js')) }}"></script>
 @endif
+<script src="{{ asset('js/campanha-tabletop.js') }}?v={{ @filemtime(public_path('js/campanha-tabletop.js')) }}"></script>
 @endsection

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Campanha;
 use App\Models\Mesa;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -244,8 +245,43 @@ class TabletopController extends Controller
         return $this->json($this->resposta($mesa, $estado, $on));
     }
 
+    /**
+     * Painel rápido da campanha (só mover peças): devolve a sala ao vivo da mesa vinculada.
+     * Se ainda não há sala, o mestre da campanha abre uma na hora; o jogador espera o mestre.
+     */
+    public function salaCampanha(Campanha $campanha, Mesa $mesa): JsonResponse
+    {
+        $uid = Auth::id();
+        abort_unless($campanha->temMembro($uid), 403, 'Você não participa desta campanha.');
+        abort_unless((int) $mesa->campanha_id === (int) $campanha->id, 404);
+
+        if (!$mesa->codigo && $campanha->ehMestre($uid)) {
+            $mesa->codigo    = $this->codigoNovo();
+            $mesa->sala_dono = $uid;
+            $mesa->versao    = 1;
+            $mesa->save();
+        }
+
+        if (!$mesa->codigo) {
+            return $this->json(['ok' => true, 'codigo' => null]);
+        }
+
+        $cod = $mesa->codigo;
+
+        return $this->json([
+            'ok'     => true,
+            'codigo' => $cod,
+            'url'    => [
+                'estado'  => route('tabletop.sala.estado', $cod),
+                'alterar' => route('tabletop.sala.alterar', $cod),
+                'pesado'  => route('tabletop.sala.pesado', $cod),
+                'abrir'   => $this->ehDono($mesa) ? route('tabletop.show', $mesa) : route('tabletop.sala', $cod),
+            ],
+        ]);
+    }
+
     /* ------------------------------------------------------------------ */
-    /*  Sala: auxiliares                                                   */
+    /*  Sala: auxiliares                                                  */
     /* ------------------------------------------------------------------ */
 
     private function ehDono(Mesa $mesa): bool
