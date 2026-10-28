@@ -62,7 +62,8 @@ class CampanhaCatalogoController extends Controller
             'jogador'    => $c->user->name ?? '—',
             'maldicao'   => $nomes[$c->maldicao_slug] ?? $c->maldicao_slug,
             'pontuacao'  => (int) $c->pontuacao,
-            'detalhes'   => $c->detalhes ?: null,
+            // o detalhamento da nota (critérios e penalidades) é só do mestre; jogadores veem apenas a porcentagem
+            'detalhes'   => $souMestre ? ($c->detalhes ?: null) : null,
             'criado_em'  => optional($c->created_at)->toIso8601String(),
             'meu'        => $meu,
             'texto'      => ($meu || $souMestre) ? $c->texto : null,

@@ -139,7 +139,7 @@
         info.appendChild(el('span', 'camp-dica', 'Pontuação final do envio'));
         topo.appendChild(info);
         resultado.appendChild(topo);
-        resultado.appendChild(detalhes(item.detalhes));
+        if (item.detalhes) resultado.appendChild(detalhes(item.detalhes)); // só o mestre recebe o detalhamento
     }
 
     /* ---------- Placar ---------- */
@@ -208,7 +208,7 @@
 
             if (aberto) {
                 const corpo = el('div', 'cat-item-corpo');
-                corpo.appendChild(detalhes(it.detalhes));
+                if (it.detalhes) corpo.appendChild(detalhes(it.detalhes)); // só o mestre recebe o detalhamento
                 if (it.texto) {
                     corpo.appendChild(el('div', 'cat-texto', it.texto));
                 }
