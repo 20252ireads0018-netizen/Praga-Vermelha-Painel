@@ -915,6 +915,30 @@
     #form-ficha .card-rolagem.redimensionavel { max-height: calc(100vh - 86px) !important; }
 }
 
+/* ===== Pilha dos painéis da esquerda: abertos ficam um embaixo do outro, na ordem em que foram abertos ===== */
+/* a coluna não captura cliques no espaço vazio; só os painéis abertos recebem o mouse */
+#paineis-pilha {
+    position: fixed; left: 40px; top: 100px; bottom: 16px; z-index: 900;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+    width: max-content; max-width: calc(100vw - 80px);
+    overflow-y: auto; overscroll-behavior: contain;
+    pointer-events: none;
+}
+#paineis-pilha:not(:has(> .card-rolagem.ativo)) { display: none; }
+#paineis-pilha > .card-rolagem {
+    position: relative; left: auto; right: auto; top: auto; z-index: auto;
+    flex-shrink: 0; margin: 0;
+    max-width: calc(100vw - 80px);
+    pointer-events: auto;
+}
+#paineis-pilha > .card-rolagem:not(.ativo) { display: none; }
+#paineis-pilha > .card-rolagem.ativo { animation: painel-entrar .2s ease; }
+@keyframes painel-entrar { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@media (max-width: 700px) {
+    #paineis-pilha { left: 12px; top: 70px; max-width: calc(100vw - 24px); }
+    #paineis-pilha > .card-rolagem { max-width: calc(100vw - 24px); }
+}
+
 /* ===== Somente leitura (mestre vendo a ficha de um jogador) ===== */
 .ficha-somente-leitura {
     display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px;
@@ -2355,7 +2379,9 @@ window.PastasFicha = (function(){
 (function(){
     document.addEventListener("keydown", function(e){
         if(e.key !== "Escape") return;
-        const abertos = document.querySelectorAll("#form-ficha .card-rolagem.ativo");
+        // fecha o aberto mais recentemente (na pilha da esquerda a ordem fica em style.order)
+        const abertos = [...document.querySelectorAll("#form-ficha .card-rolagem.ativo")];
+        abertos.sort((a, b) => (Number(a.style.order) || 0) - (Number(b.style.order) || 0));
         if(abertos.length) abertos[abertos.length - 1].classList.remove("ativo");
     });
 
@@ -2414,6 +2440,35 @@ window.PastasFicha = (function(){
             if(antes === "" || antes === w + "x" + h) return; // não foi um redimensionamento
             try { localStorage.setItem(chave, JSON.stringify({ w: w, h: h })); } catch(e) {}
         });
+    });
+})();
+
+// Pilha dos painéis da esquerda: em vez de abrirem todos no mesmo ponto (um cobrindo o outro),
+// os abertos ficam numa coluna, o mais recente embaixo. Os painéis continuam dentro do #form-ficha (os campos são enviados).
+(function(){
+    const form = document.getElementById("form-ficha");
+    if(!form) return;
+    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card"];
+    const cards = ids.map(id => document.getElementById(id)).filter(Boolean);
+    if(!cards.length) return;
+
+    const pilha = document.createElement("div");
+    pilha.id = "paineis-pilha";
+    form.appendChild(pilha);
+
+    let ordem = 0;
+    cards.forEach(function(card){
+        pilha.appendChild(card);
+        let estava = card.classList.contains("ativo");
+        if(estava) card.style.order = ++ordem;
+        new MutationObserver(function(){
+            const agora = card.classList.contains("ativo");
+            if(agora && !estava){
+                card.style.order = ++ordem;
+                requestAnimationFrame(() => card.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+            }
+            estava = agora;
+        }).observe(card, { attributes: true, attributeFilter: ["class"] });
     });
 })();
 </script>
