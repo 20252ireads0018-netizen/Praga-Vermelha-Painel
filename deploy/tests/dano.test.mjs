@@ -19,8 +19,20 @@ const calc = (o) => Dano.calcular(Object.assign({}, base, o));
 let ok = 0;
 function t(nome, fn){ fn(); ok++; console.log("ok - " + nome); }
 
-t("braceiras + natural 10, 30 cortante = 2", () => {
-    assert.strictEqual(calc({ valor: 30, tipo: "cortante", peca: braceiras }).final, 2);
+t("exemplo do usuário: 20 impacto + 20 tóxico, natural 5, peça defesa 5, resistência a tóxico = 10 + 10", () => {
+    const peca = { nome: "Peitoral", alcance_min: 1, alcance_max: 100, defesa: 5, contra_corte_impacto: 0, equipada: true };
+    const r = Dano.calcularAtaque(Object.assign({}, base, { natural: 5, peca, resistencias: ["tóxico"],
+        linhas: [{ tipo: "impacto", valor: 20 }, { tipo: "tóxico", valor: 20 }] }));
+    assert.deepStrictEqual(r.linhas.map(l => [l.natural, l.defesa, l.final]), [[5, 5, 10], [0, 0, 10]]);
+    assert.strictEqual(r.total, 20);
+});
+t("impacto/cortante com contra corte/impacto usa só ele: braceiras (def 4, contra 14) + natural 10, 30 cortante = 6", () => {
+    const l = calc({ valor: 30, tipo: "cortante", peca: braceiras });
+    assert.deepStrictEqual([l.natural, l.contra, l.defesa, l.final], [10, 14, 0, 6]);
+});
+t("impacto/cortante sem contra corte/impacto usa a defesa", () => {
+    const peca = Object.assign({}, braceiras, { contra_corte_impacto: 0 });
+    assert.strictEqual(calc({ valor: 30, tipo: "impacto", peca }).final, 16); // 30 − 10 − 4
 });
 t("30 flamejante ignora armadura = 30", () => {
     assert.strictEqual(calc({ valor: 30, tipo: "flamejante", peca: braceiras }).final, 30);
@@ -80,11 +92,12 @@ t("reserva da defesa compartilhada: peça def 10, cortante 6 + impacto 20 → 0 
     assert.strictEqual(r.linhas[1].defesa, 4);
     assert.strictEqual(r.total, 16);
 });
-t("contra corte/impacto vem antes da defesa: def 10, contra 5, cortante 6 + impacto 20 → 0 e 11", () => {
+t("com contra corte/impacto, a defesa não soma em impacto/cortante: def 10, contra 5, cortante 6 + impacto 20 → 1 e 20", () => {
     const peca = { nome: "Peitoral", alcance_min: 1, alcance_max: 100, defesa: 10, contra_corte_impacto: 5, equipada: true };
     const r = atk([["cortante", 6], ["impacto", 20]], { peca, natural: 0 });
-    assert.deepStrictEqual(finais(r), [0, 11]); // cortante: 5 (contra) + 1 (defesa); impacto: contra 0, defesa 9
-    assert.deepStrictEqual(r.linhas.map(l => [l.contra, l.defesa]), [[5, 1], [0, 9]]);
+    assert.deepStrictEqual(finais(r), [1, 20]); // a reserva de 5 do contra é gasta no cortante; o impacto não recorre à defesa
+    assert.deepStrictEqual(r.linhas.map(l => [l.contra, l.defesa]), [[5, 0], [0, 0]]);
+    assert.deepStrictEqual(finais(atk([["perfurante", 20]], { peca, natural: 0 })), [10]); // perfurante continua usando a defesa
 });
 t("contra corte/impacto não é gasto por perfurante nem por tipos que ignoram", () => {
     const peca = { nome: "X", alcance_min: 1, alcance_max: 100, defesa: 0, contra_corte_impacto: 5, equipada: true };
@@ -131,9 +144,9 @@ t("texto do log por linha (exemplo do usuário)", () => {
     const rolsA = Dano.rolar("2d6+90", seq(0.6, 0.4)); // 4 e 3 → 97
     const rolsB = Dano.rolar("100");
     const r = atk([["impacto", rolsA.total], ["amaldiçoado", rolsB.total]], { peca, resistencias: ["impacto"] });
-    assert.strictEqual(Dano.textoLinha(r.linhas[0], rolsA), "impacto 2d6+90 (4,3)=97 − 14 (corte/impacto) − 4 (defesa) − 10 (natural) = 69 → resistência 34");
+    assert.strictEqual(Dano.textoLinha(r.linhas[0], rolsA), "impacto 2d6+90 (4,3)=97 − 10 (natural) − 14 (corte/impacto) = 73 → resistência 36");
     assert.strictEqual(Dano.textoLinha(r.linhas[1], rolsB), "amaldiçoado 100 = 100");
-    assert.strictEqual(r.total, 134);
+    assert.strictEqual(r.total, 136);
 });
 
 console.log(ok + " testes passaram");

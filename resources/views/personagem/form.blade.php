@@ -6266,13 +6266,16 @@ const Dano = {
         return { ok: true, total: Math.max(0, total), dados: dados, expr: expr };
     },
     // Um ataque inteiro. entrada: { linhas:[{tipo, valor}], peca|null, natural, usarRes, resistencias[], imunidades[] }
-    // As reduções são "reservas" gastas uma vez por ataque, na ordem das linhas:
-    // contra corte/impacto (só cortante/impacto), defesa da peça atingida e armadura natural (ambas só impacto/cortante/perfurante).
+    // Só impacto, cortante e perfurante são reduzidos; as reduções são "reservas" gastas uma vez por ataque, na ordem das linhas.
+    // Ordem em cada linha: 1) armadura natural; 2) peça atingida no d100. Contra impacto/cortante, se a peça tiver
+    // "contra corte/impacto" > 0, vale SÓ esse valor (a defesa comum não soma); senão, vale a defesa. Perfurante usa a defesa.
     // Depois: imunidade → 0; resistência → metade (arredondada para baixo), só na linha do tipo.
+    // Ex.: 20 impacto + 20 tóxico, natural 5, peça defesa 5, resistência a tóxico → 20−5−5 = 10 e 20/2 = 10.
     calcularAtaque: function(e){
         const peca = e.peca || null;
         let resDefesa = peca ? Math.max(0, Dano.inteiro(peca.defesa)) : 0;
         let resContra = peca ? Math.max(0, Dano.inteiro(peca.contra_corte_impacto)) : 0;
+        const temContra = resContra > 0;
         let resNatural = Math.max(0, Dano.inteiro(e.natural));
         let total = 0;
         const linhas = (e.linhas || []).map(function(l){
@@ -6282,9 +6285,12 @@ const Dano = {
             let contra = 0, defesa = 0, natural = 0;
             let resto = valor;
             if(!ignora){
-                if(tipo === "cortante" || tipo === "impacto"){ contra = Math.min(resto, resContra); resContra -= contra; resto -= contra; }
-                defesa = Math.min(resto, resDefesa); resDefesa -= defesa; resto -= defesa;
-                if(Dano.NATURAL_TIPOS.indexOf(tipo) >= 0){ natural = Math.min(resto, resNatural); resNatural -= natural; resto -= natural; }
+                natural = Math.min(resto, resNatural); resNatural -= natural; resto -= natural;
+                if((tipo === "cortante" || tipo === "impacto") && temContra){
+                    contra = Math.min(resto, resContra); resContra -= contra; resto -= contra;
+                } else {
+                    defesa = Math.min(resto, resDefesa); resDefesa -= defesa; resto -= defesa;
+                }
             }
             const reduzido = resto;
             let final = reduzido, efeito = "";
@@ -6302,14 +6308,14 @@ const Dano = {
         const r = Dano.calcularAtaque({ linhas: [{ tipo: e.tipo, valor: e.valor }], peca: e.peca, natural: e.natural, usarRes: e.usarRes, resistencias: e.resistencias, imunidades: e.imunidades });
         return r.linhas[0];
     },
-    // Texto de uma linha do log: "impacto 2d6+90 (4,3)=97 − 14 (corte/impacto) − 4 (defesa) − 10 (natural) = 69 → resistência 34"
+    // Texto de uma linha do log: "impacto 2d6+90 (4,3)=97 − 10 (natural) − 14 (corte/impacto) = 73 → resistência 36"
     textoLinha: function(l, rolagem){
         let s = l.tipo + " " + rolagem.expr;
         if(rolagem.dados.length) s += " (" + rolagem.dados.join(",") + ")=" + l.valor;
         let red = false;
+        if(l.natural){ s += " − " + l.natural + " (natural)"; red = true; }
         if(l.contra){ s += " − " + l.contra + " (corte/impacto)"; red = true; }
         if(l.defesa){ s += " − " + l.defesa + " (defesa)"; red = true; }
-        if(l.natural){ s += " − " + l.natural + " (natural)"; red = true; }
         if(red) s += " = " + l.reduzido;
         if(l.efeito) s += " → " + l.efeito + " " + l.final;
         else if(!red && !rolagem.dados.length) s += " = " + l.final;
