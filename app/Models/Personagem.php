@@ -19,6 +19,17 @@ class Personagem extends Model
 
     public const PORTES = ['Comum', 'Magro', 'Musculoso', 'Gordo', 'Infantil', 'Idoso'];
 
+    /** Artes marciais da ficha (chave => nome). A barra de experiência é calculada na tela (form.blade.php, ArtesMarciais). */
+    public const ARTES_MARCIAIS = [
+        'esgrima'      => 'Esgrima',
+        'hexomancia'   => 'Hexomancia',
+        'fisiomancia'  => 'Fisiomancia',
+        'boxing'       => 'Boxing',
+        'wrestling'    => 'Wrestling',
+        'tiro_tatico'  => 'Tiro tático',
+        'kuro_stomper' => 'Kuro Stomper',
+    ];
+
     /**
      * Chaves das habilidades exatamente como o formulário envia (atributo "name" dos inputs)
      * e como a view lê em $personagem->habilidades['chave'].
@@ -63,7 +74,7 @@ class Personagem extends Model
 
         // atributos vitais
         'vida_atual', 'vida_maxima', 'sanidade_atual', 'sanidade_maxima', 'aura_atual', 'aura_maxima',
-        'vitais_extras', 'armaduras',
+        'vitais_extras', 'armaduras', 'artes_marciais',
 
         'anotacoes',
 
@@ -80,6 +91,7 @@ class Personagem extends Model
         'niveis_profissao' => 'array',
         'vitais_extras'    => 'array',
         'armaduras'        => 'array',
+        'artes_marciais'   => 'array',
         'anotacoes'        => 'array',
         'pastas'           => 'array',
         'mods_atributos'   => 'array',

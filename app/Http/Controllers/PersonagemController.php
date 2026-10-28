@@ -89,6 +89,11 @@ class PersonagemController extends Controller
             'armaduras' => $request->has('armaduras') ? (json_decode($request->input('armaduras') ?: 'null', true) ?: null) : null,
         ]);
 
+        // Artes marciais (nível, experiência e talentos de cada arte). Mesmo cuidado das armaduras: só decodifica se veio no formulário.
+        $request->merge([
+            'artes_marciais' => $request->has('artes_marciais') ? (json_decode($request->input('artes_marciais') ?: 'null', true) ?: null) : null,
+        ]);
+
         $dados = $request->validate([
             'nome' => 'required|string|max:255',
             'raca' => 'required|string',
@@ -234,6 +239,15 @@ class PersonagemController extends Controller
             'armaduras.pecas.*.penalidade_destreza' => 'nullable|integer|min:-999|max:999',
             'armaduras.pecas.*.peso' => 'nullable|numeric|min:0|max:9999',
             'armaduras.pecas.*.equipada' => 'nullable|boolean',
+            'artes_marciais' => 'nullable|array',
+            'artes_marciais.*' => 'array',
+            'artes_marciais.*.nivel' => 'nullable|integer|min:0|max:999',
+            'artes_marciais.*.xp' => 'nullable|integer|min:0|max:9999999',
+            'artes_marciais.*.talentos' => 'nullable|array|max:60',
+            'artes_marciais.*.talentos.*.nome' => 'required|string|max:120',
+            'artes_marciais.*.talentos.*.custo' => 'nullable|integer|min:0|max:99999',
+            'artes_marciais.*.talentos.*.descricao' => 'nullable|string|max:3000',
+            'artes_marciais.*.talentos.*.ativo' => 'nullable|boolean',
             'propriedades_fisiomantes.*.nome' => 'required|string|max:120',
             'propriedades_fisiomantes.*.fonte' => 'nullable|string|max:120',
             'propriedades_fisiomantes.*.ameaca' => 'nullable|integer|min:-999|max:9999',
@@ -276,6 +290,27 @@ class PersonagemController extends Controller
         // Armaduras: só grava se a coluna existir e se o formulário enviou o campo
         if (!Schema::hasColumn('fichas', 'armaduras') || !$request->has('armaduras')) {
             unset($dados['armaduras']);
+        }
+
+        // Artes marciais: só as artes conhecidas e só se a coluna existir e o formulário enviou o campo
+        if (!Schema::hasColumn('fichas', 'artes_marciais') || !$request->has('artes_marciais')) {
+            unset($dados['artes_marciais']);
+        } else {
+            $artes = [];
+            foreach (array_keys(Personagem::ARTES_MARCIAIS) as $chave) {
+                $a = $dados['artes_marciais'][$chave] ?? [];
+                $artes[$chave] = [
+                    'nivel' => (int) ($a['nivel'] ?? 0),
+                    'xp' => (int) ($a['xp'] ?? 0),
+                    'talentos' => array_values(array_map(fn ($t) => [
+                        'nome' => trim((string) $t['nome']),
+                        'custo' => (int) ($t['custo'] ?? 0),
+                        'descricao' => (string) ($t['descricao'] ?? ''),
+                        'ativo' => !empty($t['ativo']),
+                    ], $a['talentos'] ?? [])),
+                ];
+            }
+            $dados['artes_marciais'] = $artes;
         }
 
         if (!Schema::hasColumn('fichas', 'propriedades_fisiomantes')) {

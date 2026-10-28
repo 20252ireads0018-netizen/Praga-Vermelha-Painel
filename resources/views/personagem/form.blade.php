@@ -94,6 +94,15 @@
         $armaduraSalva = $armaduraPadrao;
     }
 
+    // Artes marciais (coluna artes_marciais; pode ainda não existir): { chave: { nivel, xp, talentos[] } }
+    $artesSalvas = $personagem->artes_marciais ?? [];
+    if (is_string($artesSalvas)) {
+        $artesSalvas = json_decode($artesSalvas, true);
+    }
+    if (!is_array($artesSalvas)) {
+        $artesSalvas = [];
+    }
+
     // Propriedades fisiomantes salvas na ficha (coluna propriedades_fisiomantes) e catálogo completo (resources/data)
     $propriedadesSalvas = $personagem->propriedades_fisiomantes ?? [];
     if (is_string($propriedadesSalvas)) {
@@ -915,6 +924,31 @@
     #form-ficha .card-rolagem.redimensionavel { max-height: calc(100vh - 86px) !important; }
 }
 
+/* ===== Artes marciais ===== */
+.am-abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.am-aba { min-height: 34px; padding: 0 10px; font-size: .82rem; white-space: nowrap; }
+.am-aba .am-aba-nivel { opacity: .75; font-size: .75rem; margin-left: 4px; }
+.am-corpo { display: flex; flex-direction: column; gap: 12px; }
+.am-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.am-linha label { font-size: .85rem; }
+.am-linha input[type=number] { width: 90px; }
+.am-xp { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.am-barra { position: relative; height: 18px; border-radius: 999px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .12); overflow: hidden; }
+.am-barra-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, #6e1414, #b62525); transition: width .2s; }
+.am-barra-texto { position: relative; display: block; text-align: center; font-size: .78rem; line-height: 16px; }
+.am-xp-regra { font-size: .75rem; opacity: .7; margin: 0; overflow-wrap: anywhere; }
+.am-subir[disabled] { opacity: .4; cursor: default; }
+.am-talentos { display: flex; flex-direction: column; gap: 8px; }
+.am-talentos-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.am-talentos-topo h4 { margin: 0; font-size: .95rem; }
+.am-talentos-resumo { font-size: .8rem; opacity: .75; }
+.am-talento { background: #1c1010; border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 8px 10px; display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 6px 8px; }
+.am-talento.ativo { border-color: rgba(220, 70, 70, .75); }
+.am-talento label { display: flex; flex-direction: column; gap: 2px; font-size: .75rem; opacity: .9; min-width: 0; }
+.am-talento label.larga { grid-column: 1 / -1; }
+.am-talento input, .am-talento textarea { width: 100%; box-sizing: border-box; min-width: 0; }
+.am-talento-acoes { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+
 /* ===== Pilha dos painéis da esquerda: abertos ficam um embaixo do outro, na ordem em que foram abertos ===== */
 /* a coluna não captura cliques no espaço vazio; só os painéis abertos recebem o mouse */
 #paineis-pilha {
@@ -1313,6 +1347,9 @@
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="talentos-arte-abrir" title="Técnicas de Hexomancia e de Fisiomancia">
                     Técnicas de arte <span class="contador-painel" id="cont-talentos-arte"></span>
+                </button>
+                <button type="button" class="button" style="margin-top:8px;" id="artes-marciais-abrir" title="Níveis, experiência e talentos de cada arte marcial">
+                    Artes Marciais <span class="contador-painel" id="cont-artes-marciais"></span>
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="anotacoes-abrir">
                     Anotações
@@ -1897,6 +1934,19 @@
             </div>
         </div>
 
+        {{-- Artes marciais: nível, barra de experiência de arte e talentos customizados de cada arte (JSON "artes_marciais") --}}
+        <div class="card card-rolagem card-talentos" id="artes-marciais-card">
+            <button type="button" class="botao-fechar" id="fechar-artes-marciais" title="Fechar (Esc)" aria-label="Fechar">✕</button>
+
+            <div class="botoes-grid" style="text-align:center">
+                <h1>Artes Marciais</h1>
+            </div>
+
+            <input type="hidden" id="artes_marciais" name="artes_marciais" value="">
+            <div class="am-abas" id="am-abas" role="tablist"></div>
+            <div class="am-corpo" id="am-corpo"></div>
+        </div>
+
         <div class="card card-rolagem" id="card-rolagem">
             <button class="botao-fechar" id="x" title="Fechar (Esc)" aria-label="Fechar">✕</button>
             <div class="titulo-rolagem">
@@ -2424,7 +2474,7 @@ window.PastasFicha = (function(){
 
 // Painéis flutuantes redimensionáveis: arraste o canto inferior direito; o tamanho fica lembrado no navegador
 (function(){
-    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card"].forEach(function(id){
+    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card", "artes-marciais-card"].forEach(function(id){
         const card = document.getElementById(id);
         if(!card) return;
         card.classList.add("redimensionavel");
@@ -2448,7 +2498,7 @@ window.PastasFicha = (function(){
 (function(){
     const form = document.getElementById("form-ficha");
     if(!form) return;
-    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card"];
+    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card", "artes-marciais-card"];
     const cards = ids.map(id => document.getElementById(id)).filter(Boolean);
     if(!cards.length) return;
 
@@ -6616,6 +6666,205 @@ const Dano = {
 
     renderizarLista();
     renderizarChips();
+    sincronizar(true);
+})();
+
+// ==================== Artes marciais ====================
+// Cálculo puro (sem DOM) entre os marcadores; carregado por deploy/tests/artes-marciais.test.mjs.
+// A lista de artes deve bater com Personagem::ARTES_MARCIAIS.
+/*ARTES-INICIO*/
+const ArtesMarciais = {
+    ARTES: [["esgrima", "Esgrima"], ["hexomancia", "Hexomancia"], ["fisiomancia", "Fisiomancia"], ["boxing", "Boxing"],
+            ["wrestling", "Wrestling"], ["tiro_tatico", "Tiro tático"], ["kuro_stomper", "Kuro Stomper"]],
+    BASE: 20,      // barra de experiência no nível 0: 0/20
+    POR_NIVEL: 80, // +80 no máximo da barra por nível de arte
+    CRUZADO: 15,   // cada nível em Fisiomancia soma +15 na barra de Hexomancia, e vice-versa
+    PARES: { hexomancia: "fisiomancia", fisiomancia: "hexomancia" },
+    nat: function(v){ const n = parseInt(v, 10); return isNaN(n) || n < 0 ? 0 : n; },
+    // Garante todas as artes com { nivel, xp, talentos[] }
+    normalizar: function(dados){
+        dados = dados && typeof dados === "object" ? dados : {};
+        const out = {};
+        ArtesMarciais.ARTES.forEach(function(par){
+            const a = dados[par[0]] && typeof dados[par[0]] === "object" ? dados[par[0]] : {};
+            out[par[0]] = {
+                nivel: ArtesMarciais.nat(a.nivel),
+                xp: ArtesMarciais.nat(a.xp),
+                talentos: (Array.isArray(a.talentos) ? a.talentos : []).map(function(t){
+                    t = t || {};
+                    return { nome: String(t.nome || ""), custo: ArtesMarciais.nat(t.custo), descricao: String(t.descricao || ""), ativo: !!t.ativo };
+                })
+            };
+        });
+        return out;
+    },
+    // Máximo da barra: 20 + 80 × nível da arte (+ 15 × nível da arte "par", para Hexomancia/Fisiomancia)
+    xpMaximo: function(artes, chave){
+        const a = artes[chave] || {};
+        let m = ArtesMarciais.BASE + ArtesMarciais.POR_NIVEL * ArtesMarciais.nat(a.nivel);
+        const par = ArtesMarciais.PARES[chave];
+        if(par && artes[par]) m += ArtesMarciais.CRUZADO * ArtesMarciais.nat(artes[par].nivel);
+        return m;
+    },
+    // Sobe um nível se a barra estiver cheia: gasta o máximo atual e soma 1 ao nível. Devolve true se subiu.
+    subirNivel: function(artes, chave){
+        const a = artes[chave];
+        const max = ArtesMarciais.xpMaximo(artes, chave);
+        if(!a || a.xp < max) return false;
+        a.xp -= max;
+        a.nivel += 1;
+        return true;
+    }
+};
+/*ARTES-FIM*/
+
+(function(){
+    const hidden = document.getElementById("artes_marciais");
+    if(!hidden) return;
+    const somenteLeitura = {{ $somenteLeitura ? 'true' : 'false' }};
+    const AM = ArtesMarciais;
+    const artes = AM.normalizar(@json($artesSalvas));
+    const abas = document.getElementById("am-abas");
+    const corpo = document.getElementById("am-corpo");
+    const card = document.getElementById("artes-marciais-card");
+    let atual = AM.ARTES[0][0];
+    try { const s = localStorage.getItem("ficha-arte-marcial"); if(s && artes[s]) atual = s; } catch(e) {}
+
+    function esc(s){ return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function nomeDe(chave){ const p = AM.ARTES.find(x => x[0] === chave); return p ? p[1] : chave; }
+
+    function sincronizar(silencioso){
+        hidden.value = JSON.stringify(artes);
+        const total = AM.ARTES.reduce((s, p) => s + artes[p[0]].talentos.length, 0);
+        document.getElementById("cont-artes-marciais").textContent = total ? "(" + total + ")" : "";
+        if(!silencioso) hidden.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function renderAbas(){
+        abas.innerHTML = AM.ARTES.map(function(p){
+            const n = artes[p[0]].nivel;
+            return '<button type="button" class="aba-painel am-aba' + (p[0] === atual ? " ativo" : "") + '" role="tab" data-arte="' + p[0] + '">' +
+                esc(p[1]) + '<span class="am-aba-nivel">' + (n ? "nv " + n : "") + '</span></button>';
+        }).join("");
+    }
+
+    function atualizarBarra(){
+        const a = artes[atual];
+        const max = AM.xpMaximo(artes, atual);
+        const fill = corpo.querySelector(".am-barra-fill");
+        if(!fill) return;
+        fill.style.width = Math.min(100, max > 0 ? (a.xp / max) * 100 : 0) + "%";
+        corpo.querySelector(".am-barra-texto").textContent = a.xp + " / " + max;
+        let regra = "Máximo = 20 + 80 × nível de arte (" + a.nivel + ")";
+        const par = AM.PARES[atual];
+        if(par) regra += " + 15 × nível em " + nomeDe(par) + " (" + artes[par].nivel + ")";
+        corpo.querySelector(".am-xp-regra").textContent = regra + " = " + max;
+        const subir = corpo.querySelector(".am-subir");
+        subir.disabled = somenteLeitura || a.xp < max;
+        subir.title = a.xp < max ? "Faltam " + (max - a.xp) + " de experiência" : "Gasta " + max + " de experiência e sobe 1 nível";
+    }
+
+    function resumoTalentos(){
+        const ts = artes[atual].talentos;
+        const ativos = ts.filter(t => t.ativo);
+        const el = corpo.querySelector(".am-talentos-resumo");
+        if(el) el.textContent = ts.length ? ts.length + " talento(s) · ativos custam " + ativos.reduce((s, t) => s + t.custo, 0) + " Aura" : "";
+    }
+
+    function htmlTalento(t, i){
+        return '<div class="am-talento' + (t.ativo ? " ativo" : "") + '" data-i="' + i + '">' +
+            '<label>Nome<input type="text" data-campo="nome" maxlength="120" value="' + esc(t.nome) + '" placeholder="Nome do talento"></label>' +
+            '<label>Custo (Aura)<input type="number" min="0" data-campo="custo" value="' + t.custo + '"></label>' +
+            '<label class="larga">Descrição<textarea rows="2" data-campo="descricao" maxlength="3000" placeholder="O que o talento faz">' + esc(t.descricao) + '</textarea></label>' +
+            '<div class="am-talento-acoes">' +
+                '<button type="button" class="arm-mini" data-acao="ativar">' + (t.ativo ? "Desativar" : "Ativar") + '</button>' +
+                '<button type="button" class="arm-mini" data-acao="remover">Remover</button>' +
+            '</div></div>';
+    }
+
+    function render(){
+        renderAbas();
+        const a = artes[atual];
+        corpo.innerHTML =
+            '<div class="am-linha"><label for="am-nivel">Nível de arte em ' + esc(nomeDe(atual)) + '</label>' +
+                '<input type="number" id="am-nivel" min="0" max="999" value="' + a.nivel + '"></div>' +
+            '<div class="am-xp">' +
+                '<div class="am-linha"><label for="am-xp">Experiência de arte</label>' +
+                    '<input type="number" id="am-xp" min="0" value="' + a.xp + '">' +
+                    '<button type="button" class="arm-mini am-subir">Subir de nível</button></div>' +
+                '<div class="am-barra"><div class="am-barra-fill"></div><span class="am-barra-texto"></span></div>' +
+                '<p class="am-xp-regra"></p>' +
+            '</div>' +
+            '<div class="am-talentos-topo"><h4>Talentos de ' + esc(nomeDe(atual)) + '</h4><span class="am-talentos-resumo"></span></div>' +
+            '<div class="am-talentos">' + (a.talentos.length ? a.talentos.map(htmlTalento).join("") : '<p class="vazio-lista">Nenhum talento nesta arte.</p>') + '</div>' +
+            '<button type="button" class="botao-adicionar-talento am-adicionar">+ Adicionar talento</button>';
+        if(somenteLeitura){
+            corpo.querySelectorAll("input, textarea").forEach(el => { el.readOnly = true; });
+            corpo.querySelectorAll("button").forEach(b => { b.disabled = true; });
+        }
+        atualizarBarra();
+        resumoTalentos();
+    }
+
+    abas.addEventListener("click", function(e){
+        const b = e.target.closest(".am-aba");
+        if(!b) return;
+        atual = b.dataset.arte;
+        try { localStorage.setItem("ficha-arte-marcial", atual); } catch(err) {}
+        render();
+    });
+
+    corpo.addEventListener("input", function(e){
+        if(somenteLeitura) return;
+        const a = artes[atual];
+        const t = e.target;
+        if(t.id === "am-nivel"){ a.nivel = Math.min(999, AM.nat(t.value)); renderAbas(); atualizarBarra(); }
+        else if(t.id === "am-xp"){ a.xp = AM.nat(t.value); atualizarBarra(); }
+        else if(t.dataset.campo){
+            const c = t.closest(".am-talento");
+            const tal = c ? a.talentos[Number(c.dataset.i)] : null;
+            if(!tal) return;
+            if(t.dataset.campo === "custo"){ tal.custo = AM.nat(t.value); resumoTalentos(); }
+            else tal[t.dataset.campo] = t.value;
+        } else return;
+        sincronizar();
+    });
+
+    corpo.addEventListener("click", function(e){
+        if(somenteLeitura) return;
+        const b = e.target.closest("button");
+        if(!b) return;
+        const a = artes[atual];
+        if(b.classList.contains("am-subir")){
+            if(AM.subirNivel(artes, atual)){ render(); sincronizar(); }
+        } else if(b.classList.contains("am-adicionar")){
+            a.talentos.push({ nome: "", custo: 0, descricao: "", ativo: false });
+            render(); sincronizar();
+            const ult = corpo.querySelector(".am-talento:last-child input[data-campo=nome]");
+            if(ult) ult.focus();
+        } else if(b.dataset.acao){
+            const c = b.closest(".am-talento");
+            const i = c ? Number(c.dataset.i) : -1;
+            const tal = a.talentos[i];
+            if(!tal) return;
+            if(b.dataset.acao === "ativar"){
+                tal.ativo = !tal.ativo;
+                c.classList.toggle("ativo", tal.ativo);
+                b.textContent = tal.ativo ? "Desativar" : "Ativar";
+                resumoTalentos();
+            } else if(b.dataset.acao === "remover"){
+                if(!confirm("Remover o talento \"" + (tal.nome || "sem nome") + "\"?")) return;
+                a.talentos.splice(i, 1);
+                render();
+            }
+            sincronizar();
+        }
+    });
+
+    document.getElementById("artes-marciais-abrir").addEventListener("click", () => card.classList.add("ativo"));
+    document.getElementById("fechar-artes-marciais").addEventListener("click", () => card.classList.remove("ativo"));
+
+    render();
     sincronizar(true);
 })();
 
