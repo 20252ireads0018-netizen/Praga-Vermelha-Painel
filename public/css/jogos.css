@@ -1,0 +1,226 @@
+/* ==========================================================
+   Jogos da campanha: Gladio (cartas) e Pela Dama (xadrez)
+   Usa as variáveis --camp-* de campanha.css e --pv-* do site.
+   ========================================================== */
+
+.jg-topo { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; margin-bottom: 1rem; text-align: left; }
+.jg-topo h1 { margin: 0; }
+.jg-status { margin: 0; font-size: 1rem; }
+.jg-msg { margin: 0 0 1rem; padding: .6rem .85rem; border: 1px solid var(--camp-ok); border-radius: var(--camp-raio); background: rgba(95, 167, 119, .12); }
+.jg-msg--erro { border-color: var(--camp-acento-hover); background: rgba(178, 42, 47, .18); }
+
+.jg-abas { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.jg-aba { font: inherit; color: inherit; cursor: pointer; padding: .55rem 1.1rem; border: 1px solid var(--camp-borda-forte); border-radius: 999px; background: rgba(255, 255, 255, .03); }
+.jg-aba:hover { background: var(--camp-fundo-hover); }
+.jg-aba.ativo { background: var(--camp-acento); border-color: var(--camp-acento); }
+
+.jg-colunas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 1rem; align-items: start; }
+.jg-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.jg .camp-card { margin: 0; }
+.jg-botoes { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+.jg .jg-desafio { flex-direction: row; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.jg .jg-desafio label { flex: 1 1 160px; min-width: 0; }
+.jg .jg-desafio select, .jg .jg-desafio input { width: 100%; box-sizing: border-box; }
+
+/* partidas */
+.jg-partidas { display: flex; flex-direction: column; gap: .5rem; }
+.jg-partida { display: flex; align-items: center; gap: .6rem; justify-content: space-between; flex-wrap: wrap; padding: .55rem .75rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: rgba(255, 255, 255, .03); }
+.jg-partida.jg-st-andamento { border-color: rgba(95, 167, 119, .55); }
+.jg-partida.jg-st-aberta { border-style: dashed; }
+.jg-partida.jg-st-fim, .jg-partida.jg-st-cancelada { opacity: .7; }
+.jg-partida-info { display: flex; flex-direction: column; min-width: 0; }
+.jg-partida-botoes { display: flex; gap: .4rem; flex-wrap: wrap; }
+.jg-partida-botoes a { text-decoration: none; }
+
+/* dinheiro */
+.jg-carteiras { display: flex; flex-direction: column; gap: .4rem; }
+.jg-carteira { display: flex; align-items: center; gap: .5rem; }
+.jg-carteira > span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jg-carteira input { width: 8rem; }
+
+/* criadores */
+.jg-criador { margin: .8rem 0; padding: .8rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: var(--camp-fundo-card); display: flex; gap: 1rem; flex-wrap: wrap; }
+.jg-criador[hidden] { display: none; }
+.jg-criador-peca { flex-direction: column; }
+.jg-criador-peca .jg-criador-campos { flex: 0 0 auto; }
+.jg-criador-campos { flex: 1 1 260px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .7rem; align-content: start; }
+.jg-criador-campos label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; min-width: 0; }
+.jg-criador-campos label[hidden] { display: none; }
+.jg-criador-campos input, .jg-criador-campos select, .jg-criador-campos textarea { width: 100%; box-sizing: border-box; }
+.jg-larga { grid-column: 1 / -1; }
+.jg-img-linha { display: flex; gap: .5rem; }
+.jg-criador-previa { flex: 0 0 auto; display: flex; justify-content: center; }
+
+/* ---------- carta de Gladio ---------- */
+.jg-cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; margin-top: .8rem; }
+.jg-carta-item { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+.jg-carta-acoes { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: center; }
+
+.jg-carta {
+    --cw: 150px;
+    position: relative;
+    width: var(--cw);
+    height: calc(var(--cw) * 1.42);
+    box-sizing: border-box;
+    padding: calc(var(--cw) * .05);
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--cw) * .025);
+    border-radius: calc(var(--cw) * .07);
+    background: linear-gradient(160deg, #3a1d1d, #170c0c);
+    border: 2px solid #8a6a32;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .5);
+    color: #f3e9d6;
+    font-size: calc(var(--cw) * .075);
+    line-height: 1.2;
+    user-select: none;
+    overflow: hidden;
+    flex: 0 0 auto;
+}
+.jg-carta--feitico { background: linear-gradient(160deg, #1d2440, #0c0f1c); border-color: #5c74b8; }
+.jg-carta-arte { flex: 0 0 auto; height: 42%; border-radius: calc(var(--cw) * .04); overflow: hidden; background: rgba(0, 0, 0, .35); display: flex; align-items: center; justify-content: center; }
+.jg-carta-arte img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.jg-carta-icone { font-size: calc(var(--cw) * .25); opacity: .6; }
+.jg-carta-nome { font-weight: 700; font-size: calc(var(--cw) * .085); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jg-carta-tipo { font-size: calc(var(--cw) * .06); text-align: center; text-transform: uppercase; letter-spacing: .08em; opacity: .7; }
+.jg-carta-texto { flex: 1 1 auto; font-size: calc(var(--cw) * .068); text-align: center; overflow: hidden; opacity: .92; }
+.jg-carta-custo, .jg-carta-atk, .jg-carta-vida {
+    position: absolute;
+    width: calc(var(--cw) * .2);
+    height: calc(var(--cw) * .2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: calc(var(--cw) * .095);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .8);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+}
+.jg-carta-custo { top: calc(var(--cw) * .025); left: calc(var(--cw) * .025); background: #2563eb; }
+.jg-carta-atk { bottom: calc(var(--cw) * .025); left: calc(var(--cw) * .025); background: #b45309; }
+.jg-carta-vida { bottom: calc(var(--cw) * .025); right: calc(var(--cw) * .025); background: #b91c1c; }
+.jg-carta-vida.jg-ferida { color: #fecaca; }
+
+/* ---------- criador de peça (Pela Dama) ---------- */
+.jg-grade-mov { display: grid; grid-template-columns: repeat(15, 1fr); width: min(100%, 390px); aspect-ratio: 1; border: 1px solid var(--camp-borda-forte); }
+.jg-grade-mov > * { border: 0; padding: 0; margin: 0; min-width: 0; font: inherit; color: inherit; cursor: pointer; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .08); }
+.jg-grade-mov > *:nth-child(even) { background: rgba(255, 255, 255, .07); }
+.jg-grade-mov > button:hover { outline: 1px solid var(--camp-acento-hover); outline-offset: -1px; }
+.jg-grade-mov .jg-centro { display: flex; align-items: center; justify-content: center; background: var(--pv-gold, #c9a45c) !important; color: #1a1010; font-weight: 800; cursor: default; }
+.jg-m-ambos { background: #16a34a !important; }
+.jg-m-mover { background: #2563eb !important; }
+.jg-m-capturar { background: #dc2626 !important; }
+.jg-raio { opacity: .5; }
+.jg-leg { display: inline-block; padding: 0 .35rem; border-radius: 4px; color: #fff; font-size: .8rem; }
+
+.jg-raios { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .35rem .8rem; }
+.jg-raio-linha { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
+.jg-seta { width: 1.4rem; text-align: center; font-size: 1.1rem; }
+.jg-raio-linha input { width: 3.2rem; }
+.jg-raio-linha select { flex: 1 1 auto; min-width: 0; }
+
+.jg-pecas { display: flex; flex-direction: column; gap: .5rem; margin-top: .8rem; }
+.jg-peca-item { display: flex; align-items: center; gap: .8rem; padding: .5rem .7rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); flex-wrap: wrap; }
+.jg-peca-simb { font-size: 2rem; width: 2.6rem; text-align: center; }
+.jg-peca-info { flex: 1 1 auto; display: flex; flex-direction: column; gap: .3rem; }
+
+/* diagrama de movimento (lista de peças e legenda da partida) */
+.jg-diagrama { --t: 9px; display: grid; grid-template-columns: repeat(var(--n), var(--t)); grid-auto-rows: var(--t); gap: 1px; width: max-content; background: rgba(255, 255, 255, .06); padding: 1px; }
+.jg-diagrama i { background: rgba(255, 255, 255, .05); }
+.jg-diagrama i.jg-centro { background: var(--pv-gold, #c9a45c); }
+
+/* exército */
+.jg-exercito { display: flex; flex-direction: column; gap: .4rem; overflow-x: auto; padding-bottom: .3rem; }
+.jg-ex-linha { display: flex; gap: .3rem; align-items: stretch; }
+.jg-ex-rot { writing-mode: vertical-rl; transform: rotate(180deg); font-size: .7rem; opacity: .6; text-align: center; }
+.jg-ex-casa { display: flex; flex-direction: column; align-items: center; gap: .1rem; min-width: 4.4rem; flex: 1 1 0; padding: .3rem .2rem; border: 1px solid var(--camp-borda); border-radius: 6px; font-size: .7rem; }
+.jg-ex-simb { font-size: 1.5rem; line-height: 1.1; }
+.jg-ex-casa select { width: 100%; font-size: .72rem; padding: .15rem; }
+
+/* ==========================================================
+   Partida de Gladio
+   ========================================================== */
+.gl { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 1rem; align-items: start; }
+.gl-tabuleiro { display: flex; flex-direction: column; gap: .7rem; min-width: 0; padding: .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: radial-gradient(ellipse at center, rgba(120, 60, 30, .25), rgba(0, 0, 0, .35)); }
+.gl-lado { display: flex; flex-direction: column; gap: .6rem; }
+.gl-heroi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: .7rem; align-items: center; padding: .5rem .8rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .35); }
+.gl-heroi.gl-vez { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 0 1px var(--pv-gold, #c9a45c); }
+.gl-heroi-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-heroi-info { display: flex; gap: .7rem; font-size: .9rem; white-space: nowrap; }
+.gl-vida { position: relative; height: 1.4rem; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.gl-vida span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7f1d1d, #dc2626); transition: width .3s; }
+.gl-vida b { position: relative; display: block; text-align: center; font-size: .82rem; line-height: 1.4rem; }
+
+.gl-campo { display: flex; gap: .5rem; min-height: calc(110px * 1.42); align-items: center; justify-content: center; flex-wrap: wrap; padding: .4rem; border-radius: var(--camp-raio); background: rgba(0, 0, 0, .18); }
+.gl-campo .jg-carta { --cw: 110px; }
+.gl-vazio { opacity: .5; font-size: .85rem; margin: 0; }
+.gl-mao { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; }
+.gl-mao .jg-carta { --cw: 118px; }
+.gl-mao-op { display: flex; gap: .25rem; justify-content: center; min-height: 2.2rem; flex-wrap: wrap; }
+.gl-verso { width: 1.6rem; height: 2.2rem; border-radius: 4px; border: 1px solid #8a6a32; background: repeating-linear-gradient(45deg, #3a1d1d 0 4px, #24110f 4px 8px); }
+
+.gl-jogavel { cursor: pointer; border-color: #4ade80; box-shadow: 0 0 0 1px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); transition: transform .12s; }
+.gl-jogavel:hover { transform: translateY(-6px); }
+.gl-cara { filter: saturate(.55) brightness(.8); }
+.gl-pode { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); }
+.gl-mirando { box-shadow: 0 0 0 3px var(--pv-gold, #c9a45c), 0 4px 12px rgba(0, 0, 0, .5); transform: translateY(-4px); }
+.gl-alvo { cursor: crosshair; box-shadow: 0 0 0 3px #f87171, 0 0 16px rgba(248, 113, 113, .6) !important; }
+
+.gl-meio { display: flex; align-items: center; justify-content: center; gap: .6rem; flex-wrap: wrap; padding: .3rem 0; border-top: 1px dashed var(--camp-borda); border-bottom: 1px dashed var(--camp-borda); }
+.gl-turno { font-size: .85rem; opacity: .75; }
+.gl-dica { color: #fca5a5; font-weight: 600; }
+.gl-log { padding: .7rem .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: var(--camp-fundo-card); max-height: 70vh; overflow: auto; }
+.gl-log h3 { margin: 0 0 .4rem; font-size: .95rem; }
+.gl-log ol { margin: 0; padding-left: 1.1rem; font-size: .82rem; display: flex; flex-direction: column; gap: .2rem; }
+
+/* ==========================================================
+   Partida de Pela Dama
+   ========================================================== */
+.pd-area { display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap; }
+.pd-tabuleiro { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: min(100%, 560px); aspect-ratio: 1; border: 3px solid #5b3a1e; border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, .55); }
+.pd-casa { position: relative; border: 0; padding: 0; margin: 0; font: inherit; cursor: default; display: flex; align-items: center; justify-content: center; min-width: 0; }
+.pd-clara { background: #e9d5b0; }
+.pd-escura { background: #9a6b43; }
+.pd-movivel { cursor: pointer; }
+.pd-ultimo { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, .3); }
+.pd-sel { box-shadow: inset 0 0 0 999px rgba(34, 197, 94, .45); }
+.pd-xeque { box-shadow: inset 0 0 0 999px rgba(220, 38, 38, .55); }
+.pd-destino { cursor: pointer; }
+.pd-destino::after { content: ''; width: 28%; height: 28%; border-radius: 50%; background: rgba(20, 83, 45, .55); }
+.pd-captura { cursor: pointer; box-shadow: inset 0 0 0 4px rgba(220, 38, 38, .75); }
+.pd-peca { font-size: clamp(1.4rem, 6.5vw, 3rem); line-height: 1; pointer-events: none; font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; }
+.pd-b { color: #fafafa; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 2px 3px rgba(0, 0, 0, .7); }
+.pd-p { color: #141414; text-shadow: 0 0 2px rgba(255, 255, 255, .55), 0 2px 3px rgba(0, 0, 0, .5); }
+.pd-custom { font-weight: 800; font-family: var(--fonte-titulo, serif); }
+.pd-casa .pd-custom { font-size: clamp(1.1rem, 5vw, 2.3rem); }
+.pd-rot { position: absolute; font-size: .62rem; font-weight: 700; color: rgba(0, 0, 0, .55); pointer-events: none; }
+.pd-rot-y { top: 2px; left: 3px; }
+.pd-rot-x { bottom: 1px; right: 3px; }
+
+.pd-lateral { flex: 1 1 220px; display: flex; flex-direction: column; gap: .6rem; }
+.pd-lateral h3 { margin: .4rem 0 0; font-size: .95rem; }
+.pd-jogadores { display: flex; flex-direction: column; gap: .4rem; }
+.pd-jog { display: flex; align-items: center; gap: .5rem; padding: .4rem .6rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .25); }
+.pd-jog .pd-peca { font-size: 1.5rem; }
+.pd-jog.pd-vez { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 0 1px var(--pv-gold, #c9a45c); }
+.pd-legenda { display: flex; gap: .6rem; align-items: center; }
+.pd-legenda .pd-peca { font-size: 1.6rem; width: 2rem; text-align: center; }
+.pd-legenda > div { display: flex; flex-direction: column; gap: .2rem; }
+.pd-aviso-xeque { color: #f87171; }
+
+@media (max-width: 900px) {
+    .jg-colunas, .gl { grid-template-columns: minmax(0, 1fr); }
+    .gl-log { max-height: 220px; }
+}
+@media (max-width: 600px) {
+    .jg-criador-campos { grid-template-columns: minmax(0, 1fr); }
+    .gl-heroi { grid-template-columns: minmax(0, 1fr); }
+    .gl-campo .jg-carta { --cw: 84px; }
+    .gl-campo { min-height: calc(84px * 1.42); }
+    .gl-mao .jg-carta { --cw: 92px; }
+    .jg-cartas { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .jg-cartas .jg-carta { --cw: 120px; }
+}

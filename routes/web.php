@@ -12,6 +12,7 @@ use App\Http\Controllers\CampanhaController;
 use App\Http\Controllers\CampanhaCatalogoController;
 use App\Http\Controllers\CampanhaRolagemController;
 use App\Http\Controllers\CampanhaIniciativaController;
+use App\Http\Controllers\CampanhaJogoController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -115,6 +116,25 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{campanha}/mesas/{mesa}', [CampanhaController::class, 'desvincularMesa'])->name('mesas.desvincular');
         Route::post('/{campanha}/mesas/{mesa}/sala', [TabletopController::class, 'salaCampanha'])
             ->middleware('throttle:60,1')->name('mesas.sala'); // painel rápido: sala ao vivo da mesa (o mestre abre na hora)
+
+        // Jogos da campanha: Gladio (cartas e apostas) e Pela Dama (xadrez com peças customizadas)
+        Route::get('/{campanha}/jogos', [CampanhaJogoController::class, 'index'])->name('jogos.index');
+        Route::get('/{campanha}/jogos/lobby', [CampanhaJogoController::class, 'lobby'])->name('jogos.lobby'); // polling do lobby
+        Route::post('/{campanha}/jogos/dinheiro', [CampanhaJogoController::class, 'dinheiro'])->name('jogos.dinheiro');
+        Route::post('/{campanha}/jogos/cartas', [CampanhaJogoController::class, 'salvarCarta'])
+            ->middleware('throttle:60,1')->name('jogos.cartas.salvar');
+        Route::delete('/{campanha}/jogos/cartas/{carta}', [CampanhaJogoController::class, 'excluirCarta'])->name('jogos.cartas.excluir');
+        Route::post('/{campanha}/jogos/pecas', [CampanhaJogoController::class, 'salvarPeca'])
+            ->middleware('throttle:60,1')->name('jogos.pecas.salvar');
+        Route::delete('/{campanha}/jogos/pecas/{peca}', [CampanhaJogoController::class, 'excluirPeca'])->name('jogos.pecas.excluir');
+        Route::post('/{campanha}/jogos/partidas', [CampanhaJogoController::class, 'criarPartida'])
+            ->middleware('throttle:30,1')->name('jogos.partidas.criar');
+        Route::get('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'partida'])->name('jogos.partida');
+        Route::get('/{campanha}/jogos/partidas/{partida}/estado', [CampanhaJogoController::class, 'estado'])->name('jogos.estado'); // polling
+        Route::post('/{campanha}/jogos/partidas/{partida}/aceitar', [CampanhaJogoController::class, 'aceitar'])->name('jogos.aceitar');
+        Route::post('/{campanha}/jogos/partidas/{partida}/cancelar', [CampanhaJogoController::class, 'cancelar'])->name('jogos.cancelar');
+        Route::post('/{campanha}/jogos/partidas/{partida}/acao', [CampanhaJogoController::class, 'acao'])
+            ->middleware('throttle:120,1')->name('jogos.acao');
 
         // Sessão
         Route::post('/{campanha}/sessao/iniciar', [CampanhaController::class, 'iniciarSessao'])->name('sessao.iniciar');
