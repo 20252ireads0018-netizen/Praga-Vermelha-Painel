@@ -185,7 +185,7 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
 }
 
-/* atributos: escudo (ataque) e gota de sangue (vida) */
+/* atributos: gládio (ataque) e gota de sangue (vida), no mesmo vermelho */
 .jg-carta-atributos {
     position: absolute;
     z-index: 2;
@@ -199,8 +199,9 @@
 .jg-carta-atk, .jg-carta-vida { position: relative; width: calc(var(--cw) * .2); height: calc(var(--cw) * .2); display: flex; align-items: center; justify-content: center; }
 .jg-carta-atributos svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .jg-carta-atributos b { position: relative; }
-.jg-carta-atk svg path { fill: #231a17; stroke: rgba(201, 164, 92, .8); stroke-width: 1.2; }
-.jg-carta-atk b { margin-top: calc(var(--cw) * -.01); }
+.jg-carta-atk svg path { fill: #8a1a1a; stroke: #c23b33; stroke-width: 1; stroke-linejoin: round; }
+.jg-carta-atk { height: calc(var(--cw) * .25); margin-bottom: calc(var(--cw) * -.025); }
+.jg-carta-atk b { margin-top: calc(var(--cw) * -.065); } /* sobe para o meio da lâmina */
 .jg-carta-vida svg path { fill: #8a1a1a; stroke: #c23b33; stroke-width: 1; }
 .jg-carta-vida b { margin-top: calc(var(--cw) * .045); }
 .jg-carta-vida.jg-ferida b { color: #ffb4a6; }

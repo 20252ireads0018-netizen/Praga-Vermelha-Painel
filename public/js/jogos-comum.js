@@ -44,7 +44,9 @@ window.JG = (function () {
             '<circle cx="32" cy="32" r="23"/><circle cx="32" cy="32" r="18" stroke-dasharray="1.5 3"/>' +
             '<path d="M32 13l16.5 28.5h-33z"/><path d="M32 51l-16.5-28.5h33z" opacity=".55"/><circle cx="32" cy="32" r="3.5"/></g>'),
     };
-    const ESCUDO = SVG('<path d="M16 3l11 4v9c0 7-5 11.5-11 13.5C10 27.5 5 23 5 16V7z"/>', '0 0 32 32');
+    // gládio de ponta para cima: lâmina larga (o número fica nela), guarda, empunhadura e pomo
+    const ESPADA = SVG('<path d="M16 .8C20 4.5 25 8 25 12.5L23.5 25h-15L7 12.5C7 8 12 4.5 16 .8z' +
+        'M2.5 25Q16 28.2 29.5 25v3.6Q16 31.8 2.5 28.6zM13.6 30.4h4.8V35h-4.8zM16 34.2a2.9 2.9 0 1 0 .001 0z"/>', '0 0 32 40');
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
     const GOTA = SVG('<path d="M16 2c5 8 11 13.5 11 19.5A11 11 0 0 1 5 21.5C5 15.5 11 10 16 2z"/>', '0 0 32 32');
@@ -69,7 +71,7 @@ window.JG = (function () {
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
             `<div class="jg-carta-texto">${esc(lenda ? (c.descricao || '') : textoEfeito(c))}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
-                `<span class="jg-carta-atk" title="Ataque">${ESCUDO}<b>${esc(atk)}</b></span>` +
+                `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
                 `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>` : '') +
             `</div>`;
     }
