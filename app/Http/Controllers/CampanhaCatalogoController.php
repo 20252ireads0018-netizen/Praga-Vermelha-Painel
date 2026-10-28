@@ -87,7 +87,7 @@ class CampanhaCatalogoController extends Controller
         $user = auth()->user();
 
         if (!Schema::hasTable('campanha_catalogos')) {
-            return response()->json(['itens' => [], 'espera' => 0, 'disponiveis' => self::disponiveis($user)]);
+            return response()->json(['itens' => [], 'espera' => 0, 'disponiveis' => self::disponiveis($user), 'mestre' => $campanha->ehMestre($user->id)]);
         }
 
         $souMestre = $campanha->ehMestre($user->id);
@@ -106,7 +106,33 @@ class CampanhaCatalogoController extends Controller
             'itens'       => $itens,
             'espera'      => $this->segundosRestantes($campanha, (int) $user->id),
             'disponiveis' => self::disponiveis($user),
+            'mestre'      => $souMestre,
         ]);
+    }
+
+    /** Mestre: recalcula pontuação e detalhes de todos os catálogos da campanha com o comparador atual. */
+    public function recalcular(Campanha $campanha): JsonResponse
+    {
+        $this->autorizar($campanha);
+        if (!$campanha->ehMestre(auth()->id())) {
+            return response()->json(['erro' => 'Só o mestre pode recalcular as notas.'], 403);
+        }
+        if (!Schema::hasTable('campanha_catalogos')) {
+            return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
+        }
+
+        $total = 0;
+        CampanhaCatalogo::where('campanha_id', $campanha->id)->orderBy('id')->chunkById(100, function ($lote) use (&$total) {
+            foreach ($lote as $c) {
+                $res = ComparadorCatalogo::comparar((string) $c->texto, (string) $c->maldicao_slug);
+                $c->pontuacao = $res['pontuacao'];
+                $c->detalhes  = $res['detalhes'] + ['penalidades' => $res['penalidades'] ?? []];
+                $c->save();
+                $total++;
+            }
+        });
+
+        return response()->json(['ok' => true, 'total' => $total]);
     }
 
     public function store(Request $request, Campanha $campanha): JsonResponse

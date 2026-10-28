@@ -132,6 +132,8 @@ Route::middleware('auth')->group(function () {
 
         // Disputa de catálogo (descrever maldições restritas)
         Route::get('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'index'])->name('catalogos.index');
+        Route::post('/{campanha}/catalogos/recalcular', [CampanhaCatalogoController::class, 'recalcular'])
+            ->middleware('throttle:6,1')->name('catalogos.recalcular');
         Route::post('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'store'])
             ->middleware('throttle:10,1')->name('catalogos.store');
 

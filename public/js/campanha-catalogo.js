@@ -9,6 +9,7 @@
 
     const urlIndex = raiz.dataset.urlIndex;
     const urlStore = raiz.dataset.urlStore;
+    const urlRecalcular = urlIndex.replace(/\/?$/, '/recalcular');
     const $ = (s) => raiz.querySelector(s);
 
     const form = $('.js-cat-form');
@@ -45,6 +46,7 @@
         prolixidade: 'texto longo demais',
         desvio: 'fuga do sentido original',
         lista_palavras: 'lista de palavras sem frases',
+        invencao: 'níveis ou números inventados',
     };
 
     let itens = [];
@@ -56,6 +58,7 @@
     let enviando = false;
     let timerPoll = null;
     let buscando = false;
+    let btnRecalcular = null;
 
     function el(tag, classe, texto) {
         const e = document.createElement(tag);
@@ -265,6 +268,48 @@
         if (!tempoEspera) tempoEspera = setInterval(atualizarBotao, 1000);
     }
 
+    /* ---------- Mestre: recalcular notas ---------- */
+
+    function garantirBotaoMestre(souMestre) {
+        if (!souMestre || btnRecalcular) return;
+        const cab = raiz.querySelector('.camp-card-cab');
+        if (!cab) return;
+        btnRecalcular = el('button', 'camp-btn camp-btn-pequeno', 'Recalcular notas');
+        btnRecalcular.type = 'button';
+        btnRecalcular.title = 'Recalcula as notas de todos os envios com os critérios atuais';
+        btnRecalcular.style.cssText = 'font-size:.75rem;padding:.15rem .5rem;opacity:.75;margin-left:auto';
+        btnRecalcular.addEventListener('click', recalcular);
+        cab.appendChild(btnRecalcular);
+    }
+
+    function recalcular() {
+        if (!btnRecalcular || btnRecalcular.disabled) return;
+        if (!window.confirm('Recalcular a nota de todos os catálogos desta campanha com os critérios atuais? As notas antigas serão substituídas.')) return;
+        const rotulo = btnRecalcular.textContent;
+        btnRecalcular.disabled = true;
+        btnRecalcular.textContent = 'Recalculando…';
+        fetch(urlRecalcular, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+            })
+            .then(function (x) {
+                if (x.ok && x.d.ok) {
+                    assinatura = '';
+                    return buscar();
+                }
+                window.alert(x.d.erro || x.d.message || 'Não foi possível recalcular as notas.');
+            })
+            .catch(function () { window.alert('Falha de conexão ao recalcular as notas.'); })
+            .then(function () {
+                btnRecalcular.disabled = false;
+                btnRecalcular.textContent = rotulo;
+            });
+    }
+
     /* ---------- Rede ---------- */
 
     function buscar() {
@@ -282,6 +327,7 @@
                     desenhar();
                 }
                 atualizarDisponiveis(d.disponiveis);
+                garantirBotaoMestre(!!d.mestre);
                 if (Number(d.espera) > 0 && fimEspera - Date.now() < 1000) iniciarEspera(d.espera);
             })
             .catch(function () { /* tenta de novo no próximo ciclo */ })
