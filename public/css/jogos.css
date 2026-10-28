@@ -179,15 +179,23 @@
 .jg-carta-texto {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 0 calc(var(--cw) * .04);
-    font-style: italic;
-    font-size: calc(var(--cw) * .064);
-    line-height: 1.25;
+    padding: 0 calc(var(--cw) * .035);
+    font-size: calc(var(--cw) * .068);
+    line-height: 1.22;
     text-align: center;
-    color: #bcaa98;
+    color: #ece0ca;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, .85);
     overflow: hidden;
+    /* se o texto não couber, a última linha esmaece em vez de ser cortada (o texto inteiro fica no "title" da carta) */
+    -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent);
+    mask-image: linear-gradient(to bottom, #000 82%, transparent);
 }
-.jg-carta--lenda .jg-carta-texto { padding-bottom: calc(var(--cw) * .14); } /* espaço dos atributos */
+/* descrições longas diminuem a letra */
+.jg-carta-texto.jg-texto-longo { font-size: calc(var(--cw) * .058); }
+.jg-carta-texto.jg-texto-muito-longo { font-size: calc(var(--cw) * .052); }
+/* Lenda: a arte encolhe um pouco e o texto termina acima do gládio e da gota */
+.jg-carta--lenda .jg-carta-arte { height: 34%; }
+.jg-carta--lenda .jg-carta-texto { margin-bottom: calc(var(--cw) * .19); }
 
 /* custo: selo de cera, borda irregular */
 .jg-carta-custo {
@@ -219,7 +227,7 @@
     z-index: 2;
     left: calc(var(--cw) * .05);
     right: calc(var(--cw) * .05);
-    bottom: calc(var(--cw) * .045);
+    bottom: calc(var(--cw) * .032);
     display: flex;
     justify-content: space-between;
     pointer-events: none;

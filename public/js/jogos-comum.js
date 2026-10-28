@@ -49,6 +49,8 @@ window.JG = (function () {
         'M2.5 25Q16 28.2 29.5 25v3.6Q16 31.8 2.5 28.6zM13.6 30.4h4.8V35h-4.8zM16 34.2a2.9 2.9 0 1 0 .001 0z"/>', '0 0 32 40');
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
+    // descrições longas usam letra menor para caber acima dos atributos
+    const tamTexto = t => { const k = String(t || '').length; return k > 140 ? ' jg-texto-muito-longo' : (k > 80 ? ' jg-texto-longo' : ''); };
     const GOTA = SVG('<path d="M16 2c5 8 11 13.5 11 19.5A11 11 0 0 1 5 21.5C5 15.5 11 10 16 2z"/>', '0 0 32 32');
 
     /**
@@ -61,6 +63,7 @@ window.JG = (function () {
         const atk = o.atk != null ? o.atk : c.ataque;
         const vida = o.vida != null ? o.vida : c.vida;
         const ferida = o.max != null && vida < o.max ? ' jg-ferida' : '';
+        const texto = lenda ? (c.descricao || '') : textoEfeito(c);
         const arte = c.imagem
             ? `<img src="${esc(c.imagem)}" alt="" draggable="false">`
             : `<span class="jg-carta-emblema">${EMBLEMA[lenda ? 'lenda' : 'feitico']}</span>`;
@@ -69,7 +72,7 @@ window.JG = (function () {
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
-            `<div class="jg-carta-texto">${esc(lenda ? (c.descricao || '') : textoEfeito(c))}</div>` +
+            `<div class="jg-carta-texto${tamTexto(texto)}">${esc(texto)}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
                 `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
                 `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>` : '') +
