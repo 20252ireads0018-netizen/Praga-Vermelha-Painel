@@ -92,8 +92,14 @@ class CampanhaCatalogoController extends Controller
 
         $souMestre = $campanha->ehMestre($user->id);
         $nomes     = $this->nomes();
-        $itens     = CampanhaCatalogo::with('user')->where('campanha_id', $campanha->id)
-            ->orderByDesc('id')->limit(30)->get()
+        // Placar: só a melhor proposta de cada jogador em cada maldição (empate: a mais antiga, quem chegou primeiro)
+        $melhores = CampanhaCatalogo::where('campanha_id', $campanha->id)
+            ->orderByDesc('pontuacao')->orderBy('id')
+            ->get(['id', 'user_id', 'maldicao_slug'])
+            ->unique(fn ($c) => $c->user_id . '|' . $c->maldicao_slug)
+            ->pluck('id');
+        $itens = CampanhaCatalogo::with('user')->whereIn('id', $melhores)
+            ->orderByDesc('pontuacao')->orderBy('id')->limit(50)->get()
             ->map(fn ($c) => $this->formatar($c, $nomes, (int) $user->id, $souMestre))->values();
 
         return response()->json([
