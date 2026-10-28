@@ -213,22 +213,39 @@
         });
     }
 
-    /** Reduz a imagem para no máximo "max" px e devolve um data URL JPEG. */
-    function reduzir(arq, max) {
-        return new Promise((ok, erro) => {
-            if (!/^image\//.test(arq.type)) return erro(new Error('Escolha um arquivo de imagem.'));
-            const img = new Image();
-            img.onload = () => {
-                const k = Math.min(1, max / Math.max(img.width, img.height));
-                const cv = document.createElement('canvas');
-                cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
-                cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-                URL.revokeObjectURL(img.src);
-                ok(cv.toDataURL('image/jpeg', 0.82));
-            };
-            img.onerror = () => erro(new Error('Não deu para ler essa imagem.'));
-            img.src = URL.createObjectURL(arq);
-        });
+    /* Imagem da carta: aceita qualquer formato que o navegador abra (JPEG, PNG, GIF, WebP, AVIF, BMP, ICO, SVG…),
+       mesmo quando o arquivo chega sem tipo (vale a extensão). O resultado é sempre um JPEG de até "max" px. */
+    const EXT_IMG = /\.(jpe?g|jfif|pjpeg|pjp|png|apng|gif|webp|avif|bmp|dib|ico|cur|svg|heic|heif|tiff?)$/i;
+    const abrirImagem = src => new Promise((ok, erro) => { const img = new Image(); img.onload = () => ok(img); img.onerror = erro; img.src = src; });
+
+    async function reduzir(arq, max) {
+        const tipo = (arq.type || '').toLowerCase();
+        const nome = arq.name || '';
+        if (!/^image\//.test(tipo) && !EXT_IMG.test(nome)) throw new Error('Escolha um arquivo de imagem.');
+
+        let fonte;
+        const url = URL.createObjectURL(arq);
+        try {
+            fonte = await abrirImagem(url); // o Safari abre até HEIC; Chrome e Edge não abrem HEIC nem TIFF
+        } catch (_) {
+            throw new Error(/hei[cf]|tiff?/.test(tipo + nome.toLowerCase())
+                ? 'Este navegador não abre fotos HEIC nem TIFF. Salve a imagem como JPEG ou PNG (no iPhone, o envio pelo Safari já converte).'
+                : 'Este navegador não consegue abrir essa imagem. Tente JPEG, PNG ou WebP.');
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+
+        const w = fonte.naturalWidth || max; // SVG sem tamanho declarado
+        const h = fonte.naturalHeight || max;
+        const k = Math.min(1, max / Math.max(w, h));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(w * k));
+        cv.height = Math.max(1, Math.round(h * k));
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#140b0b'; // fundo da carta atrás de PNG/GIF/SVG transparentes (o JPEG não tem transparência)
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(fonte, 0, 0, cv.width, cv.height);
+        return cv.toDataURL('image/jpeg', 0.82);
     }
 
     /* ---------- exército (Pela Dama) ---------- */

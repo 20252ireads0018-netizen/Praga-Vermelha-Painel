@@ -85,7 +85,7 @@
                                 <label class="jg-so-feitico">Valor<input type="number" name="valor" min="0" max="9999" value="1"></label>
                                 <label class="jg-larga">Descrição<textarea name="descricao" rows="2" maxlength="500" placeholder="Texto de ambientação (opcional)"></textarea></label>
                                 <div class="jg-larga jg-img-linha">
-                                    <label class="camp-btn camp-btn-pequeno">Imagem<input type="file" accept="image/*" hidden name="arquivo"></label>
+                                    <label class="camp-btn camp-btn-pequeno">Imagem<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="tirar-img">Tirar imagem</button>
                                 </div>
                                 <div class="jg-larga jg-botoes">
