@@ -89,6 +89,11 @@
                                     <label class="camp-btn camp-btn-pequeno">Do computador<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="tirar-img">Tirar imagem</button>
                                 </div>
+                                <div class="jg-larga jg-ajuste" id="jg-ajuste" hidden>
+                                    <label>Zoom <input type="range" id="jg-zoom" min="1" max="4" step="0.05" value="1"></label>
+                                    <button type="button" class="camp-btn camp-btn-pequeno" data-acao="centralizar">Centralizar</button>
+                                    <span class="camp-dica">Arraste a imagem na prévia para escolher o enquadramento (a roda do mouse também dá zoom).</span>
+                                </div>
                                 <div class="jg-larga jg-escolher" id="jg-escolher" hidden>
                                     <div class="jg-galeria-barra">
                                         <select id="jg-escolher-pasta" aria-label="Pasta da galeria"></select>

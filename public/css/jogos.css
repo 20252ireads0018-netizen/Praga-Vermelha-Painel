@@ -67,6 +67,14 @@
 .jg-galeria-item:hover .jg-galeria-x, .jg-galeria-x:focus-visible { opacity: 1; }
 .jg-galeria-x:hover { background: #9b2226; }
 @media (hover: none) { .jg-galeria-x { opacity: 1; } }
+/* enquadramento da arte no criador: zoom e arrastar na prévia */
+.jg-ajuste { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.jg-ajuste[hidden] { display: none; }
+.jg-ajuste label { display: flex; flex-direction: row; align-items: center; gap: .5rem; flex: 1 1 180px; }
+.jg-ajuste input[type=range] { flex: 1 1 auto; accent-color: #b62525; }
+.jg-ajuste .camp-dica { flex: 1 1 100%; margin: 0; }
+.jg-criador-previa.jg-ajustavel .jg-carta-arte { cursor: grab; touch-action: none; }
+.jg-criador-previa.jg-arrastando .jg-carta-arte { cursor: grabbing; }
 .jg-escolher { padding: .5rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .25); }
 .jg-escolher[hidden] { display: none; }
 .jg-escolher .jg-galeria { max-height: 260px; }

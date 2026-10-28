@@ -163,21 +163,117 @@
             $$('.jg-so-feitico', fc).forEach(el => { el.hidden = lenda; });
             $('#jg-previa-carta').innerHTML = window.JG.carta(lerCarta());
         };
+        /* ---- enquadramento da arte: zoom e deslocamento ----
+           A imagem original fica em "fonte"; o recorte (na proporção da janela de arte da carta) vira o JPEG salvo.
+           aj.z = zoom (1 = a imagem cobre a janela inteira); aj.cx/aj.cy = centro do recorte, em pixels da original. */
+        const ARTE_W = 480, ARTE_H = 308;  // mesma proporção da janela de arte da carta
+        const ajuste = $('#jg-ajuste');
+        const zoom = $('#jg-zoom');
+        const caixaPrevia = $('#jg-previa-carta');
+        let fonte = null;
+        let aj = { z: 1, cx: 0, cy: 0 };
+        const temImagem = () => !semImagem && !!(imagem || imagemAtual);
+        const mostrarAjuste = () => {
+            ajuste.hidden = !temImagem();
+            caixaPrevia.classList.toggle('jg-ajustavel', temImagem());
+        };
+        // pixels da original que cabem na janela, já com o zoom
+        const janela = () => {
+            const iw = fonte.naturalWidth || fonte.width, ih = fonte.naturalHeight || fonte.height;
+            const s = Math.max(ARTE_W / iw, ARTE_H / ih) * aj.z;
+            return { iw, ih, vw: ARTE_W / s, vh: ARTE_H / s };
+        };
+        function recortar() {
+            const { iw, ih, vw, vh } = janela();
+            aj.cx = Math.min(Math.max(aj.cx, vw / 2), iw - vw / 2);
+            aj.cy = Math.min(Math.max(aj.cy, vh / 2), ih - vh / 2);
+            const cv = document.createElement('canvas');
+            cv.width = ARTE_W; cv.height = ARTE_H;
+            const ctx = cv.getContext('2d');
+            ctx.fillStyle = '#140b0b';
+            ctx.fillRect(0, 0, ARTE_W, ARTE_H);
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(fonte, aj.cx - vw / 2, aj.cy - vh / 2, vw, vh, 0, 0, ARTE_W, ARTE_H);
+            imagem = cv.toDataURL('image/jpeg', 0.86);
+            semImagem = false;
+            previa();
+        }
+        let quadro = 0; // junta vários movimentos num desenho por quadro
+        const agendarRecorte = () => { if (!quadro) quadro = requestAnimationFrame(() => { quadro = 0; recortar(); }); };
+        /** Nova imagem escolhida: começa centralizada e sem zoom. */
+        function usarFonte(img) {
+            fonte = img;
+            aj = { z: 1, cx: (img.naturalWidth || img.width) / 2, cy: (img.naturalHeight || img.height) / 2 };
+            zoom.value = 1;
+            recortar();
+            mostrarAjuste();
+        }
+        // carta já salva: a imagem dela vira a fonte só quando o mestre mexer no enquadramento
+        async function garantirFonte() {
+            if (fonte || !imagemAtual || imagem) return !!fonte;
+            const img = await abrirImagem(imagemAtual);
+            fonte = img;
+            aj = { z: 1, cx: img.naturalWidth / 2, cy: img.naturalHeight / 2 };
+            return true;
+        }
+
+        zoom.addEventListener('input', async () => {
+            if (!(await garantirFonte())) return;
+            aj.z = +zoom.value;
+            agendarRecorte();
+        });
+        caixaPrevia.addEventListener('wheel', async e => {
+            if (!temImagem() || !e.target.closest('.jg-carta-arte')) return;
+            e.preventDefault();
+            if (!(await garantirFonte())) return;
+            aj.z = Math.min(4, Math.max(1, aj.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+            zoom.value = aj.z;
+            agendarRecorte();
+        }, { passive: false });
+        caixaPrevia.addEventListener('pointerdown', async e => {
+            const arte = e.target.closest('.jg-carta-arte');
+            if (!arte || !temImagem() || e.button > 0) return;
+            e.preventDefault();
+            caixaPrevia.setPointerCapture(e.pointerId);
+            if (!(await garantirFonte())) return;
+            const larg = arte.getBoundingClientRect().width || 1;
+            const k = janela().vw / larg; // pixels da original por pixel de tela
+            let x0 = e.clientX, y0 = e.clientY;
+            caixaPrevia.classList.add('jg-arrastando');
+            const mover = ev => {
+                aj.cx -= (ev.clientX - x0) * k;
+                aj.cy -= (ev.clientY - y0) * k;
+                x0 = ev.clientX; y0 = ev.clientY;
+                agendarRecorte();
+            };
+            const fim = () => {
+                caixaPrevia.classList.remove('jg-arrastando');
+                caixaPrevia.removeEventListener('pointermove', mover);
+                caixaPrevia.removeEventListener('pointerup', fim);
+                caixaPrevia.removeEventListener('pointercancel', fim);
+            };
+            caixaPrevia.addEventListener('pointermove', mover);
+            caixaPrevia.addEventListener('pointerup', fim);
+            caixaPrevia.addEventListener('pointercancel', fim);
+        });
+
         const abrir = c => {
             fc.reset();
             imagem = null; semImagem = false; imagemAtual = c ? c.imagem : null;
+            fonte = null; zoom.value = 1;
             fc.registro.value = c ? c.id : '';
             if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'valor', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
             if (c && c.efeito) fc.efeito.value = c.efeito;
             fc.hidden = false;
             previa();
+            mostrarAjuste();
             fc.nome.focus();
         };
         $('#jg-nova-carta').addEventListener('click', () => abrir(null));
-        fc.addEventListener('input', previa);
+        fc.addEventListener('input', e => { if (e.target !== zoom) previa(); });
         fc.addEventListener('change', async e => {
             if (e.target.name !== 'arquivo' || !e.target.files[0]) return;
-            try { imagem = await reduzir(e.target.files[0], 360); semImagem = false; previa(); } catch (err) { falhou(err); }
+            try { usarFonte(await abrirArquivo(e.target.files[0])); } catch (err) { falhou(err); }
             e.target.value = '';
         });
         // escolher a arte na galeria da campanha
@@ -193,17 +289,20 @@
                 item.classList.add('jg-carregando');
                 try {
                     const blob = await (await fetch(g.url, { credentials: 'same-origin' })).blob();
-                    imagem = await reduzir(new File([blob], g.nome + '.jpg', { type: blob.type || 'image/jpeg' }), 360);
-                    semImagem = false;
+                    usarFonte(await abrirArquivo(new File([blob], g.nome + '.jpg', { type: blob.type || 'image/jpeg' })));
                     escolher.hidden = true;
-                    previa();
                 } catch (err) { falhou(err); } finally { item.classList.remove('jg-carregando'); }
                 return;
             }
             const a = e.target.closest('[data-acao]');
             if (!a) return;
             if (a.dataset.acao === 'cancelar') { fc.hidden = true; escolher.hidden = true; }
-            if (a.dataset.acao === 'tirar-img') { imagem = null; semImagem = true; previa(); }
+            if (a.dataset.acao === 'tirar-img') { imagem = null; semImagem = true; fonte = null; previa(); mostrarAjuste(); }
+            if (a.dataset.acao === 'centralizar' && await garantirFonte()) {
+                aj = { z: 1, cx: (fonte.naturalWidth || fonte.width) / 2, cy: (fonte.naturalHeight || fonte.height) / 2 };
+                zoom.value = 1;
+                recortar();
+            }
             if (a.dataset.acao === 'fechar-galeria') escolher.hidden = true;
             if (a.dataset.acao === 'galeria') {
                 if (!imagens.length) return msg('A galeria está vazia. Envie imagens na "Galeria de imagens", logo abaixo.', true);
@@ -245,15 +344,15 @@
     const EXT_IMG = /\.(jpe?g|jfif|pjpeg|pjp|png|apng|gif|webp|avif|bmp|dib|ico|cur|svg|heic|heif|tiff?)$/i;
     const abrirImagem = src => new Promise((ok, erro) => { const img = new Image(); img.onload = () => ok(img); img.onerror = erro; img.src = src; });
 
-    async function reduzir(arq, max) {
+    /** Abre o arquivo como <img> já decodificada (no tamanho original). */
+    async function abrirArquivo(arq) {
         const tipo = (arq.type || '').toLowerCase();
         const nome = arq.name || '';
         if (!/^image\//.test(tipo) && !EXT_IMG.test(nome)) throw new Error('Escolha um arquivo de imagem.');
 
-        let fonte;
         const url = URL.createObjectURL(arq);
         try {
-            fonte = await abrirImagem(url); // o Safari abre até HEIC; Chrome e Edge não abrem HEIC nem TIFF
+            return await abrirImagem(url); // o Safari abre até HEIC; Chrome e Edge não abrem HEIC nem TIFF
         } catch (_) {
             throw new Error(/hei[cf]|tiff?/.test(tipo + nome.toLowerCase())
                 ? 'Este navegador não abre fotos HEIC nem TIFF. Salve a imagem como JPEG ou PNG (no iPhone, o envio pelo Safari já converte).'
@@ -261,7 +360,10 @@
         } finally {
             URL.revokeObjectURL(url);
         }
+    }
 
+    async function reduzir(arq, max) {
+        const fonte = await abrirArquivo(arq);
         const w = fonte.naturalWidth || max; // SVG sem tamanho declarado
         const h = fonte.naturalHeight || max;
         const k = Math.min(1, max / Math.max(w, h));
