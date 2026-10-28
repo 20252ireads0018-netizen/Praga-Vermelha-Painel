@@ -57,10 +57,17 @@ t("100 impacto + 100 amaldiçoado, resistência a impacto, natural 10, sem peça
     assert.deepStrictEqual(finais(r), [45, 100]); // (100−10)/2 = 45; amaldiçoado ignora armadura e não sofre a resistência
     assert.strictEqual(r.total, 145);
 });
-t("armadura natural não reduz explosivo nem os tipos que ignoram armadura", () => {
+t("nem peça nem armadura natural reduzem explosivo ou os tipos que ignoram armadura", () => {
     assert.strictEqual(atk([["explosivo", 30]], { peca: null }).total, 30);
-    assert.strictEqual(atk([["explosivo", 30]], { peca: braceiras }).total, 26); // só a defesa da peça (4)
+    assert.strictEqual(atk([["explosivo", 30]], { peca: braceiras }).total, 30); // peça só bloqueia impacto/cortante/perfurante
     assert.strictEqual(atk([["flamejante", 30]], { peca: braceiras }).total, 30);
+    ["congelante", "eletrizante", "tóxico", "amaldiçoado", "queda"].forEach(tp =>
+        assert.strictEqual(atk([[tp, 30]], { peca: braceiras }).total, 30, tp));
+});
+t("a defesa da peça atingida reduz impacto, cortante e perfurante", () => {
+    const peca = { nome: "Peitoral", alcance_min: 1, alcance_max: 100, defesa: 7, contra_corte_impacto: 0, equipada: true };
+    ["impacto", "cortante", "perfurante"].forEach(tp => assert.strictEqual(atk([[tp, 30]], { peca, natural: 0 }).total, 23, tp));
+    assert.deepStrictEqual(finais(atk([["explosivo", 10], ["perfurante", 10]], { peca, natural: 0 })), [10, 3]); // explosivo não gasta a defesa
 });
 t("armadura natural reduz impacto, cortante e perfurante", () => {
     ["impacto", "cortante", "perfurante"].forEach(tp => assert.strictEqual(atk([[tp, 30]], { peca: null }).total, 20, tp));

@@ -6222,7 +6222,8 @@ botaoPreencherTeste.addEventListener("click", function(){
 /*DANO-INICIO*/
 const Dano = {
     TIPOS: ["cortante", "perfurante", "impacto", "explosivo", "flamejante", "congelante", "eletrizante", "tóxico", "amaldiçoado", "queda"],
-    IGNORAM: ["amaldiçoado", "queda", "flamejante", "congelante", "eletrizante", "tóxico"],
+    // Peças de armadura (e a armadura natural) só bloqueiam impacto, cortante e perfurante; os demais passam direto
+    IGNORAM: ["explosivo", "amaldiçoado", "queda", "flamejante", "congelante", "eletrizante", "tóxico"],
     inteiro: function(v){ const n = parseInt(v, 10); return isNaN(n) ? 0 : n; },
     // Primeira peça equipada cujo alcance cobre o número d
     pecaAtingida: function(pecas, d){
@@ -6266,7 +6267,7 @@ const Dano = {
     },
     // Um ataque inteiro. entrada: { linhas:[{tipo, valor}], peca|null, natural, usarRes, resistencias[], imunidades[] }
     // As reduções são "reservas" gastas uma vez por ataque, na ordem das linhas:
-    // contra corte/impacto (só cortante/impacto), defesa da peça (tipos que não ignoram armadura), armadura natural (impacto/cortante/perfurante).
+    // contra corte/impacto (só cortante/impacto), defesa da peça atingida e armadura natural (ambas só impacto/cortante/perfurante).
     // Depois: imunidade → 0; resistência → metade (arredondada para baixo), só na linha do tipo.
     calcularAtaque: function(e){
         const peca = e.peca || null;
@@ -6492,15 +6493,24 @@ const Dano = {
 
     function rolarD100(){ return Math.floor(Math.random() * 100) + 1; }
 
-    document.getElementById("armadura-rolar-local").addEventListener("click", function(){
-        const d = rolarD100();
-        const p = Dano.pecaAtingida(pecas, d);
+    function marcarAtingida(p){
         lista.querySelectorAll(".arm-peca.atingida").forEach(c => c.classList.remove("atingida")); // sem re-renderizar (vale também na leitura)
         if(p){
             const c = lista.querySelector('.arm-peca[data-id="' + p._id + '"]');
             if(c){ c.classList.add("atingida"); c.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
         }
-        document.getElementById("armadura-rolar-res").textContent = "Rolou " + d + " → " + (p ? (p.nome || "peça sem nome") : "sem armadura");
+    }
+
+    // O local rolado aqui é o que o próximo "Aplicar dano" usa (a peça destacada é a que reduz o dano).
+    // Sem local rolado, o "Aplicar dano" rola o d100 sozinho.
+    let localRolado = null;
+    document.getElementById("armadura-rolar-local").addEventListener("click", function(){
+        const d = rolarD100();
+        const p = Dano.pecaAtingida(pecas, d);
+        marcarAtingida(p);
+        if(!somenteLeitura) localRolado = d;
+        document.getElementById("armadura-rolar-res").textContent = "Rolou " + d + " → " + (p ? (p.nome || "peça sem nome") : "sem armadura") +
+            (somenteLeitura ? "" : " (vale para o próximo dano)");
     });
 
     // ---- Linhas de dano (valor/expressão + tipo + ✕); sempre há pelo menos uma ----
@@ -6577,9 +6587,12 @@ const Dano = {
             entradas.push({ tipo: linhasDom[i].querySelector("select").value, valor: r.total });
         }
 
-        // 2) um único d100 de local por ataque
-        const d = rolarD100();
+        // 2) um único d100 de local por ataque: o do botão "Rolar local", se houver; senão rola agora
+        const d = localRolado != null ? localRolado : rolarD100();
+        localRolado = null;
         const peca = Dano.pecaAtingida(pecas, d);
+        marcarAtingida(peca);
+        document.getElementById("armadura-rolar-res").textContent = "Local " + d + " → " + (peca ? (peca.nome || "peça sem nome") : "sem armadura");
         const usarRes = document.getElementById("armadura-dano-usar").checked;
         const res = Dano.calcularAtaque({ linhas: entradas, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades });
 
