@@ -135,6 +135,26 @@ class CampanhaCatalogoController extends Controller
         return response()->json(['ok' => true, 'total' => $total]);
     }
 
+    /** Mestre: apaga uma proposta de catálogo da campanha. */
+    public function destroy(Campanha $campanha, string $catalogo): JsonResponse
+    {
+        $this->autorizar($campanha);
+        if (!$campanha->ehMestre(auth()->id())) {
+            return response()->json(['erro' => 'Só o mestre pode apagar propostas.'], 403);
+        }
+        if (!Schema::hasTable('campanha_catalogos')) {
+            return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
+        }
+
+        $registro = CampanhaCatalogo::where('campanha_id', $campanha->id)->where('id', (int) $catalogo)->first();
+        if (!$registro) {
+            return response()->json(['erro' => 'Proposta não encontrada.'], 404);
+        }
+        $registro->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
     public function store(Request $request, Campanha $campanha): JsonResponse
     {
         $this->autorizar($campanha);

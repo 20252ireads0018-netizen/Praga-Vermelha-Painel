@@ -385,8 +385,11 @@
 .arm-rolar-res { font-size: .88rem; overflow-wrap: anywhere; }
 .arm-dano { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .arm-dano h4, .arm-grupo-titulo { margin: 0; font-size: .95rem; }
-.arm-dano-campos { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
-.arm-dano-campos input, .arm-dano-campos select { width: 100%; box-sizing: border-box; min-width: 0; }
+.arm-dano-linhas { display: flex; flex-direction: column; gap: 8px; }
+.arm-dano-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.arm-dano-linha input, .arm-dano-linha select { width: 100%; box-sizing: border-box; min-width: 0; }
+.arm-dano-linha .arm-mini[disabled] { opacity: .35; }
+.arm-dica { opacity: .7; font-size: .75rem; }
 .arm-log { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; opacity: .9; }
 .arm-log:empty { display: none; }
 .arm-log div { padding: 4px 6px; border-left: 2px solid rgba(220, 70, 70, .6); overflow-wrap: anywhere; }
@@ -1155,7 +1158,8 @@
               <div class="aba-conteudo" data-aba="armaduras">
                 <div class="arm-natural">
                     <label for="armadura-natural">Armadura natural</label>
-                    <input type="number" id="armadura-natural" min="0" step="1" value="0" title="Reduz o dano recebido (ex.: propriedade Duro)">
+                    <input type="number" id="armadura-natural" min="0" step="1" value="0" title="Reduz impacto, cortante e perfurante (ex.: propriedade Duro)">
+                    <small class="arm-dica">reduz impacto, cortante e perfurante</small>
                 </div>
                 <div class="arm-lista" id="armadura-lista"></div>
                 <button type="button" class="botao-adicionar-talento" id="armadura-nova">+ Nova peça</button>
@@ -1167,14 +1171,8 @@
                 </div>
                 <div class="arm-dano">
                     <h4>Aplicar dano</h4>
-                    <div class="arm-dano-campos">
-                        <input type="number" id="armadura-dano-valor" min="0" step="1" value="0" aria-label="Valor do dano">
-                        <select id="armadura-dano-tipo" aria-label="Tipo de dano">
-                            @foreach ($tiposDanoArmadura as $tipoDano)
-                                <option value="{{ $tipoDano }}">{{ ucfirst($tipoDano) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <div class="arm-dano-linhas" id="armadura-dano-linhas"></div>
+                    <button type="button" class="arm-mini" id="armadura-dano-mais">+ Tipo de dano</button>
                     <label class="arm-check"><input type="checkbox" id="armadura-dano-usar" checked> Usar resistências e imunidades</label>
                     <div class="arm-log" id="armadura-log"></div>
                     <button type="button" class="button" id="armadura-aplicar-dano">Aplicar dano</button>
@@ -6179,25 +6177,87 @@ const Dano = {
         }
         return null;
     },
-    // entrada: { valor, tipo, peca|null, natural, usarRes, resistencias[], imunidades[] }
-    calcular: function(e){
-        const valor = Math.max(0, Dano.inteiro(e.valor));
-        const ignora = Dano.IGNORAM.indexOf(e.tipo) >= 0;
-        let defesa = 0, contra = 0, natural = 0;
-        if(!ignora){
-            if(e.peca){
-                defesa = Math.max(0, Dano.inteiro(e.peca.defesa));
-                if(e.tipo === "cortante" || e.tipo === "impacto") contra = Math.max(0, Dano.inteiro(e.peca.contra_corte_impacto));
+    // Tipos reduzidos pela armadura natural
+    NATURAL_TIPOS: ["impacto", "cortante", "perfurante"],
+    // Rola uma expressão: inteiro, "NdM", "NdM+K", "NdM-K" ou soma de termos ("2d6+1d4+3").
+    // rnd: função que devolve [0,1) (padrão Math.random). Devolve { ok, total, dados[], expr } ou { ok:false, erro }.
+    rolar: function(texto, rnd){
+        rnd = rnd || Math.random;
+        const expr = String(texto == null ? "" : texto).replace(/\s+/g, "").toLowerCase();
+        if(!expr) return { ok: false, erro: "Informe o valor do dano." };
+        if(!/^[+-]?(\d+d\d+|\d+)([+-](\d+d\d+|\d+))*$/.test(expr)) return { ok: false, erro: "Dano inválido: \"" + String(texto).trim() + "\". Use número ou dados, ex.: 12, 2d6+3, 1d8-1." };
+        const termos = expr.match(/[+-]?(\d+d\d+|\d+)/g);
+        let total = 0, dice = 0;
+        const dados = [];
+        for(let i = 0; i < termos.length; i++){
+            const t = termos[i];
+            const sinal = t.charAt(0) === "-" ? -1 : 1;
+            const corpo = t.replace(/^[+-]/, "");
+            if(corpo.indexOf("d") >= 0){
+                const p = corpo.split("d");
+                const qtd = parseInt(p[0], 10), lados = parseInt(p[1], 10);
+                if(qtd < 1 || qtd > 100 || lados < 2 || lados > 1000) return { ok: false, erro: "Dados inválidos em \"" + corpo + "\" (1–100 dados de 2–1000 lados)." };
+                dice += qtd;
+                for(let k = 0; k < qtd; k++){
+                    const r = Math.floor(rnd() * lados) + 1;
+                    dados.push(r);
+                    total += sinal * r;
+                }
+            } else {
+                total += sinal * parseInt(corpo, 10);
             }
-            natural = Math.max(0, Dano.inteiro(e.natural));
         }
-        const reduzido = Math.max(0, valor - defesa - contra - natural);
-        let final = reduzido, efeito = "";
-        if(e.usarRes){
-            if((e.imunidades || []).indexOf(e.tipo) >= 0){ final = 0; efeito = "imunidade"; }
-            else if((e.resistencias || []).indexOf(e.tipo) >= 0){ final = Math.floor(reduzido / 2); efeito = "resistência"; }
-        }
-        return { valor: valor, defesa: defesa, contra: contra, natural: natural, reduzido: reduzido, final: final, efeito: efeito, ignora: ignora };
+        return { ok: true, total: Math.max(0, total), dados: dados, expr: expr };
+    },
+    // Um ataque inteiro. entrada: { linhas:[{tipo, valor}], peca|null, natural, usarRes, resistencias[], imunidades[] }
+    // As reduções são "reservas" gastas uma vez por ataque, na ordem das linhas:
+    // contra corte/impacto (só cortante/impacto), defesa da peça (tipos que não ignoram armadura), armadura natural (impacto/cortante/perfurante).
+    // Depois: imunidade → 0; resistência → metade (arredondada para baixo), só na linha do tipo.
+    calcularAtaque: function(e){
+        const peca = e.peca || null;
+        let resDefesa = peca ? Math.max(0, Dano.inteiro(peca.defesa)) : 0;
+        let resContra = peca ? Math.max(0, Dano.inteiro(peca.contra_corte_impacto)) : 0;
+        let resNatural = Math.max(0, Dano.inteiro(e.natural));
+        let total = 0;
+        const linhas = (e.linhas || []).map(function(l){
+            const tipo = l.tipo;
+            const valor = Math.max(0, Dano.inteiro(l.valor));
+            const ignora = Dano.IGNORAM.indexOf(tipo) >= 0;
+            let contra = 0, defesa = 0, natural = 0;
+            let resto = valor;
+            if(!ignora){
+                if(tipo === "cortante" || tipo === "impacto"){ contra = Math.min(resto, resContra); resContra -= contra; resto -= contra; }
+                defesa = Math.min(resto, resDefesa); resDefesa -= defesa; resto -= defesa;
+                if(Dano.NATURAL_TIPOS.indexOf(tipo) >= 0){ natural = Math.min(resto, resNatural); resNatural -= natural; resto -= natural; }
+            }
+            const reduzido = resto;
+            let final = reduzido, efeito = "";
+            if(e.usarRes){
+                if((e.imunidades || []).indexOf(tipo) >= 0){ final = 0; efeito = "imunidade"; }
+                else if((e.resistencias || []).indexOf(tipo) >= 0){ final = Math.floor(reduzido / 2); efeito = "resistência"; }
+            }
+            total += final;
+            return { tipo: tipo, valor: valor, defesa: defesa, contra: contra, natural: natural, reduzido: reduzido, final: final, efeito: efeito, ignora: ignora };
+        });
+        return { linhas: linhas, total: total };
+    },
+    // Compatível com o uso de uma linha só
+    calcular: function(e){
+        const r = Dano.calcularAtaque({ linhas: [{ tipo: e.tipo, valor: e.valor }], peca: e.peca, natural: e.natural, usarRes: e.usarRes, resistencias: e.resistencias, imunidades: e.imunidades });
+        return r.linhas[0];
+    },
+    // Texto de uma linha do log: "impacto 2d6+90 (4,3)=97 − 14 (corte/impacto) − 4 (defesa) − 10 (natural) = 69 → resistência 34"
+    textoLinha: function(l, rolagem){
+        let s = l.tipo + " " + rolagem.expr;
+        if(rolagem.dados.length) s += " (" + rolagem.dados.join(",") + ")=" + l.valor;
+        let red = false;
+        if(l.contra){ s += " − " + l.contra + " (corte/impacto)"; red = true; }
+        if(l.defesa){ s += " − " + l.defesa + " (defesa)"; red = true; }
+        if(l.natural){ s += " − " + l.natural + " (natural)"; red = true; }
+        if(red) s += " = " + l.reduzido;
+        if(l.efeito) s += " → " + l.efeito + " " + l.final;
+        else if(!red && !rolagem.dados.length) s += " = " + l.final;
+        return s;
     }
 };
 /*DANO-FIM*/
@@ -6388,41 +6448,96 @@ const Dano = {
         document.getElementById("armadura-rolar-res").textContent = "Rolou " + d + " → " + (p ? (p.nome || "peça sem nome") : "sem armadura");
     });
 
-    document.getElementById("armadura-aplicar-dano").addEventListener("click", function(){
+    // ---- Linhas de dano (valor/expressão + tipo + ✕); sempre há pelo menos uma ----
+    const caixaLinhas = document.getElementById("armadura-dano-linhas");
+    function novaLinhaDano(tipo, valor){
+        const l = document.createElement("div");
+        l.className = "arm-dano-linha";
+        const v = document.createElement("input");
+        v.type = "text"; v.className = "arm-dano-valor"; v.value = valor == null ? "0" : valor;
+        v.placeholder = "ex.: 12 ou 2d6+3"; v.setAttribute("aria-label", "Valor do dano (número ou dados)");
+        v.setAttribute("autocomplete", "off"); v.setAttribute("autocapitalize", "off"); v.spellcheck = false;
+        const s = document.createElement("select");
+        s.className = "arm-dano-tipo"; s.setAttribute("aria-label", "Tipo de dano");
+        tipos.forEach(function(t){ const o = document.createElement("option"); o.value = t; o.textContent = cap(t); s.appendChild(o); });
+        s.value = tipo || tipos[0];
+        const x = document.createElement("button");
+        x.type = "button"; x.className = "arm-mini"; x.textContent = "✕"; x.setAttribute("aria-label", "Remover este tipo de dano");
+        x.addEventListener("click", function(){
+            if(caixaLinhas.children.length <= 1) return;
+            l.remove(); atualizarX();
+        });
+        l.append(v, s, x);
+        caixaLinhas.appendChild(l);
+        atualizarX();
+        return l;
+    }
+    function atualizarX(){
+        const unica = caixaLinhas.children.length <= 1;
+        caixaLinhas.querySelectorAll(".arm-mini").forEach(b => { b.disabled = unica || somenteLeitura; });
+    }
+    novaLinhaDano();
+    document.getElementById("armadura-dano-mais").addEventListener("click", function(){
         if(somenteLeitura) return;
-        const vidaEl = document.getElementById("vida");
-        const partes = vidaEl.textContent.split("/").map(v => parseInt(v.trim(), 10));
-        const atual = partes[0], maximo = partes[1];
-        if(isNaN(atual) || isNaN(maximo)){ mostrarPopup("Defina sua Vida antes de aplicar dano."); return; }
-        const tipo = document.getElementById("armadura-dano-tipo").value;
-        const valor = Math.max(0, num(document.getElementById("armadura-dano-valor").value));
-        const d = rolarD100();
-        const peca = Dano.pecaAtingida(pecas, d);
-        const usarRes = document.getElementById("armadura-dano-usar").checked;
-        const r = Dano.calcular({ valor: valor, tipo: tipo, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades });
+        const ult = caixaLinhas.lastElementChild.querySelector("select").value;
+        const prox = novaLinhaDano(tipos[(tipos.indexOf(ult) + 1) % tipos.length]);
+        prox.querySelector("input").focus();
+    });
 
-        const novo = atual - r.final;
-        vidaEl.textContent = novo + " / " + maximo;
+    // Muda a Vida pelo mesmo caminho dos demais fluxos (descanso, gastar Aura):
+    // o texto do span "atual / máximo" é a fonte da verdade (lido por prepararFichaParaSalvar e observado por vitais.js);
+    // também grava o campo oculto vida_atual, ajusta a barra e dispara "input" no formulário para o salvamento automático.
+    function lerVida(){
+        const vidaEl = document.getElementById("vida");
+        const p = vidaEl.textContent.split("/").map(v => parseInt(v.trim(), 10));
+        let atual = p[0], maximo = p[1];
+        if(isNaN(atual) || isNaN(maximo)){ // "? / ?": tenta os campos ocultos
+            atual = parseInt(document.getElementById("vida_atual").value, 10);
+            maximo = parseInt(document.getElementById("vida_maxima").value, 10);
+        }
+        return { atual: atual, maximo: maximo };
+    }
+    function gravarVida(novo, maximo){
+        document.getElementById("vida").textContent = novo + " / " + maximo;
         const campo = document.getElementById("vida_atual");
         campo.value = novo;
+        document.getElementById("vida_maxima").value = maximo;
         const barra = document.querySelector(".barra-vida");
         if(barra && maximo > 0) barra.style.width = Math.max(0, Math.min(100, (novo / maximo) * 100)) + "%";
         campo.dispatchEvent(new Event("input", { bubbles: true }));
+    }
 
-        let txt = "Rolou " + d + " → " + (peca ? (peca.nome || "peça").replace(/ de armadura$/i, "") : "sem armadura") + " · " + valor + " (" + tipo + ")";
-        if(r.ignora) txt += " (ignora armadura)";
-        else {
-            if(peca) txt += " − " + r.defesa + " (defesa)";
-            if(r.contra) txt += " − " + r.contra + " (corte/impacto)";
-            if(r.natural) txt += " − " + r.natural + " (armadura natural)";
+    document.getElementById("armadura-aplicar-dano").addEventListener("click", function(){
+        if(somenteLeitura) return;
+        const v = lerVida();
+        if(isNaN(v.atual) || isNaN(v.maximo)){ mostrarPopup("Defina sua Vida antes de aplicar dano."); return; }
+
+        // 1) rola todas as linhas (valida antes de mexer em qualquer coisa)
+        const rolagens = [], entradas = [];
+        const linhasDom = caixaLinhas.querySelectorAll(".arm-dano-linha");
+        for(let i = 0; i < linhasDom.length; i++){
+            const r = Dano.rolar(linhasDom[i].querySelector("input").value);
+            if(!r.ok){ mostrarPopup(r.erro); linhasDom[i].querySelector("input").focus(); return; }
+            rolagens.push(r);
+            entradas.push({ tipo: linhasDom[i].querySelector("select").value, valor: r.total });
         }
-        txt += " = " + r.reduzido;
-        if(r.efeito) txt += " · " + r.efeito + ": " + r.final;
-        txt += " · PV " + atual + " → " + novo;
+
+        // 2) um único d100 de local por ataque
+        const d = rolarD100();
+        const peca = Dano.pecaAtingida(pecas, d);
+        const usarRes = document.getElementById("armadura-dano-usar").checked;
+        const res = Dano.calcularAtaque({ linhas: entradas, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades });
+
+        // 3) desconta dos PVs (pode ficar negativo)
+        const novo = v.atual - res.total;
+        gravarVida(novo, v.maximo);
+
+        let txt = "Rolou " + d + " → " + (peca ? (peca.nome || "peça").replace(/ de armadura$/i, "") : "sem armadura") + " · " +
+            res.linhas.map((l, i) => Dano.textoLinha(l, rolagens[i])).join(" · ");
+        txt += " · total " + res.total + " · PV " + v.atual + " → " + novo;
         logs.unshift(txt);
         logs.length = Math.min(logs.length, 5);
-        const log = document.getElementById("armadura-log");
-        log.innerHTML = logs.map(l => "<div>" + esc(l) + "</div>").join("");
+        document.getElementById("armadura-log").innerHTML = logs.map(l => "<div>" + esc(l) + "</div>").join("");
     });
 
     renderizarLista();

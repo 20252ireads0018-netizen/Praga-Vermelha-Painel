@@ -15,7 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // JSON também para requisições AJAX que pedem JSON (ex.: salvamento automático da ficha).
+        // Antes, um erro de validação virava redirecionamento e o autosave mostrava "Salvo ✓" sem ter salvo.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

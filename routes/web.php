@@ -136,6 +136,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('throttle:6,1')->name('catalogos.recalcular');
         Route::post('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'store'])
             ->middleware('throttle:10,1')->name('catalogos.store');
+        Route::delete('/{campanha}/catalogos/{catalogo}', [CampanhaCatalogoController::class, 'destroy'])
+            ->whereNumber('catalogo')->name('catalogos.destroy');
 
         // Rastreador de iniciativa
         Route::get('/{campanha}/iniciativas', [CampanhaIniciativaController::class, 'index'])->name('iniciativas.index');

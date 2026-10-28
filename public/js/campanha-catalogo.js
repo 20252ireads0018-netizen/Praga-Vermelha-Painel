@@ -59,6 +59,7 @@
     let timerPoll = null;
     let buscando = false;
     let btnRecalcular = null;
+    let souMestreCat = false;
 
     function el(tag, classe, texto) {
         const e = document.createElement(tag);
@@ -189,6 +190,22 @@
             });
             cartao.appendChild(cab);
 
+            if (souMestreCat) {
+                cartao.style.position = 'relative';
+                const x = el('button', 'cat-apagar', '✕');
+                x.type = 'button';
+                x.title = 'Apagar esta proposta';
+                x.setAttribute('aria-label', 'Apagar esta proposta');
+                x.style.cssText = 'position:absolute;top:.2rem;right:.3rem;background:none;border:0;color:inherit;opacity:.45;cursor:pointer;font-size:.8rem;line-height:1;padding:.2rem .3rem';
+                x.addEventListener('mouseenter', function () { x.style.opacity = '1'; });
+                x.addEventListener('mouseleave', function () { x.style.opacity = '.45'; });
+                x.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    apagar(it, x);
+                });
+                cartao.appendChild(x);
+            }
+
             if (aberto) {
                 const corpo = el('div', 'cat-item-corpo');
                 corpo.appendChild(detalhes(it.detalhes));
@@ -199,6 +216,36 @@
             }
             lista.appendChild(cartao);
         });
+    }
+
+    function apagar(it, x) {
+        if (x.disabled) return;
+        if (!window.confirm('Apagar esta proposta de catálogo?')) return;
+        x.disabled = true;
+        mostrarErro('');
+        fetch(urlIndex.replace(/\/?$/, '/') + encodeURIComponent(it.id), {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        })
+            .then(function (r) {
+                return r.json().catch(function () { return {}; }).then(function (d) { return { status: r.status, d: d }; });
+            })
+            .then(function (res) {
+                if (res.d && res.d.ok) {
+                    abertos.delete(it.id);
+                    assinatura = null;
+                    return buscar();
+                }
+                x.disabled = false;
+                mostrarErro(res.status === 419
+                    ? 'Sua sessão expirou. Recarregue a página e tente de novo.'
+                    : (res.d.erro || res.d.message || 'Não foi possível apagar a proposta.'));
+            })
+            .catch(function () {
+                x.disabled = false;
+                mostrarErro('Falha de conexão ao apagar a proposta.');
+            });
     }
 
     function assin(lst) {
@@ -321,6 +368,7 @@
                 if (!d) return;
                 const nova = Array.isArray(d.itens) ? d.itens : [];
                 const a = assin(nova);
+                if (!!d.mestre !== souMestreCat) { souMestreCat = !!d.mestre; assinatura = ''; }
                 if (a !== assinatura) {
                     assinatura = a;
                     itens = nova;
