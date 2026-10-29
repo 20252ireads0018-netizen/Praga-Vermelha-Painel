@@ -197,11 +197,25 @@
         const cmd = comandante && cartas.find(c => String(c.id) === comandante);
         rotCmd.innerHTML = cmd ? `👑 Comandante: <strong>${esc(cmd.nome)}</strong>`
             : '👑 Comandante: <em>sorteado entre as Lendas do deck</em> · clique na coroa de uma Lenda do deck para escolher';
-        // a pesquisa da montagem usa o mesmo critério da lista de cartas (nome sem acento)
+        // pesquisa (nome ou texto, sem acento) e filtros da montagem: tipo, custo, palavra-chave e "só as do deck"
+        const fd = campo => $(`[data-deck-filtro="${campo}"]`);
+        const opcoes = (campo, primeira, valores, rotulo) => {
+            const s = fd(campo);
+            const atual = s.value;
+            s.innerHTML = `<option value="">${primeira}</option>` + valores.map(v => `<option value="${esc(v)}">${esc(rotulo(v))}</option>`).join('');
+            s.value = valores.map(String).includes(atual) ? atual : '';
+        };
+        opcoes('custo', 'Qualquer custo', [...new Set(cartas.map(c => +c.custo))].sort((a, b) => a - b), v => `Custo ${v}`);
+        const PAL = window.JG.PALAVRA || {};
+        opcoes('palavra', 'Qualquer palavra-chave', Object.keys(PAL).filter(k => cartas.some(c => palavrasDa(c).includes(k))), k => PAL[k].nome);
         const busca = semAcento($('#jg-deck-pesquisa').value);
-        const visiveis = cartas.filter(c => !busca || semAcento(c.nome).includes(busca)).sort((a, b) => a.custo - b.custo || a.nome.localeCompare(b.nome, 'pt-BR'));
+        const [tipo, custo, palavra, noDeck] = [fd('tipo').value, fd('custo').value, fd('palavra').value, fd('no-deck').checked];
+        const visiveis = cartas.filter(c => (!busca || semAcento(c.nome).includes(busca) || semAcento(c.descricao).includes(busca)) &&
+            (!tipo || c.tipo === tipo) && (custo === '' || String(c.custo) === custo) && (!palavra || palavrasDa(c).includes(palavra)) &&
+            (!noDeck || montando[c.id] > 0))
+            .sort((a, b) => a.custo - b.custo || a.nome.localeCompare(b.nome, 'pt-BR'));
         $('#jg-deck-lista').innerHTML = !cartas.length ? '<p class="camp-vazio">O mestre ainda não criou cartas.</p>'
-            : !visiveis.length ? '<p class="camp-vazio">Nenhuma carta com esse nome.</p>' : visiveis.map(c => {
+            : !visiveis.length ? '<p class="camp-vazio">Nenhuma carta com esses filtros.</p>' : visiveis.map(c => {
             const q = montando[c.id] || 0;
             const ehCmd = comandante === String(c.id);
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
@@ -215,6 +229,7 @@
         }).join('');
     }
     $('#jg-deck-pesquisa').addEventListener('input', () => renderMontagem());
+    $('#jg-deck-filtros').addEventListener('change', e => { if (e.target.closest('[data-deck-filtro]')) renderMontagem(); });
     const previa = document.createElement('div');
     previa.className = 'jg-previa-flutuante';
     previa.hidden = true;

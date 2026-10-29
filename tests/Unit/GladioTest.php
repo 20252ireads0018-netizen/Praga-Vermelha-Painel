@@ -631,7 +631,98 @@ class GladioTest extends TestCase
                        'descricao' => 'jogue ao cemitério as 10 primeiras cartas do seu deck. Todo início de turno, ative algum feitiço no seu cemitério sem pagar os custos.'],
         'aguinha' => ['nome' => 'Aguinha', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
                       'descricao' => 'Quando invocado ou quando atacar, mate uma lenda alvo. Se essa lenda morrer, devolva as lendas mortas dessa forma.'],
+        'espada' => ['nome' => 'Espada', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                     'descricao' => 'Equipe a uma lenda sua: ela ganha +2/+1 e voar.'],
+        'faxina' => ['nome' => 'Faxina', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                     'descricao' => 'Descarte sua mão.'],
+        'tesouro' => ['nome' => 'Tesouro', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                      'descricao' => 'Recupere 20$.'],
     ] + self::CARTAS;
+
+    public function test_uma_onda_de_ataque_por_turno(): void
+    {
+        $e = $this->lendaPronta($this->novo(), 'a', '1');
+        $e = $this->lendaPronta($e, 'a', '1');
+        [$x, $y] = array_column($e['lados']['a']['mesa'], 'i');
+        $e = Gladio::atacar($e, 'a', [$x]);
+        $e = Gladio::defender($e, 'b');
+        try {
+            Gladio::atacar($e, 'a', [$y]);
+            $this->fail('depois da onda de ataque não dá para atacar de novo no mesmo turno');
+        } catch (\InvalidArgumentException $ex) {
+            $this->assertStringContainsString('já atacou', $ex->getMessage());
+        }
+        $e = Gladio::passar(Gladio::passar($e, 'a'), 'b');
+        $this->assertFalse($e['atacou'], 'no turno seguinte pode atacar de novo');
+    }
+
+    public function test_recuperar_dinheiro_com_pote_vazio_da_mesmo_assim(): void
+    {
+        $e = $this->comTextos(['tesouro', 'tesouro'], [], 100);
+        $this->assertSame(0, Gladio::pote($e));
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'tesouro'));
+        $this->assertSame(120, $e['lados']['a']['vida'], 'o pote estava vazio e ela recebeu os 20 mesmo assim');
+        $this->assertSame(0, Gladio::pote($e), 'o dinheiro novo não sai do pote');
+        // com 10 no pote: 10 saem dele e 10 entram de novo
+        $e['lados']['b']['vida'] = 90;
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'tesouro'));
+        $this->assertSame([140, 0], [$e['lados']['a']['vida'], Gladio::pote($e)]);
+    }
+
+    public function test_descarte_e_sempre_da_mao(): void
+    {
+        $e = $this->comTextos(['faxina', 'cabrito', 'barill']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'cabrito'));
+        $mesa = count($e['lados']['a']['mesa']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'faxina'));
+        $this->assertSame([], $e['lados']['a']['mao'], 'a mão inteira foi para o cemitério');
+        $this->assertCount($mesa, $e['lados']['a']['mesa'], 'o campo não foi tocado');
+        $this->assertNull($e['escolha']);
+    }
+
+    public function test_equipamento_fica_vinculado_a_lenda(): void
+    {
+        $e = $this->comTextos(['espada', 'espada']);
+        $e = $this->lendaPronta($e, 'a', '1');
+        $lenda = end($e['lados']['a']['mesa'])['i'];
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'espada'));
+        $this->assertSame(['a', 'lenda', [$lenda]], [$e['escolha']['lado'], $e['escolha']['tipo'], $e['escolha']['opcoes']]);
+        $e = Gladio::escolher($e, 'a', $lenda);
+        $m = end($e['lados']['a']['mesa']);
+        $this->assertSame([5, 3, 3], [$m['atk'], $m['vida'], $m['max']]);
+        $this->assertContains('voar', $m['pal']);
+        $f = end($e['lados']['a']['feiticos']);
+        $this->assertSame($lenda, $f['em'], 'a Espada fica no campo vinculada à Lenda');
+        // mandar a Espada ao cemitério tira o bônus
+        $e = Gladio::encerrarFeitico($e, 'a', $f['i']);
+        $m = end($e['lados']['a']['mesa']);
+        $this->assertSame([3, 2], [$m['atk'], $m['max']]);
+        $this->assertNotContains('voar', $m['pal']);
+        // a outra Espada cai junto com a Lenda
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'espada'));
+        $e = Gladio::escolher($e, 'a', $lenda);
+        $e = Gladio::sacrificar($e, 'a', $lenda);
+        $this->assertSame([], $e['lados']['a']['feiticos']);
+        $this->assertSame(['espada', 'espada', '1'], array_slice(array_column($e['lados']['a']['cemiterio'], 'c'), -3));
+    }
+
+    public function test_apressar_quem_demora(): void
+    {
+        $e = $this->novo();
+        try {
+            Gladio::apressar($e, 'b', $e['desde'] + 10);
+            $this->fail('ainda no tempo');
+        } catch (\InvalidArgumentException) {
+        }
+        try {
+            Gladio::apressar($e, 'a', $e['desde'] + 100);
+            $this->fail('quem tem a vez não se apressa');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::apressar($e, 'b', $e['desde'] + 100);
+        $this->assertSame(['b', 'a'], [$e['apressado']['por'], $e['apressado']['alvo']]);
+        $this->assertStringContainsString('apressando', end($e['log']));
+    }
 
     private function comTextos(array $a, array $b = [], int $aposta = 100): array
     {
@@ -702,12 +793,12 @@ class GladioTest extends TestCase
         $this->assertSame(1, $e['lados']['b']['shots']);
         $this->assertSame($maoB + 1, count($e['lados']['b']['mao']), 'o mesmo jogador alvo compra');
         $this->assertSame('brinde', end($e['lados']['a']['cemiterio'])['c'], 'feitiço resolvido vai para o cemitério');
-        // Daiki: todo início de turno, todo jogador perde 10
+        // Daiki: "todo início de turno, todo jogador perde 10" vale só no início do turno do dono (a)
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'daiki'));
         $e = Gladio::passar($e, 'a');
-        $this->assertSame([90, 90], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+        $this->assertSame([100, 100], [$e['lados']['a']['vida'], $e['lados']['b']['vida']], 'no turno de b não dispara');
         $e = Gladio::passar($e, 'b');
-        $this->assertSame([80, 80], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+        $this->assertSame([90, 90], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
     }
 
     public function test_hexo_imune_concedido_protege_dos_alvos_do_adversario(): void
@@ -752,8 +843,9 @@ class GladioTest extends TestCase
         $this->assertCount(10, $e['lados']['a']['cemiterio']);
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'tiinho'));
         $e = Gladio::passar($e, 'a');
-        $this->assertContains('cabrito', array_column($e['lados']['a']['mesa'], 'c'), 'Tiinho invocou um Cabrito no início do turno');
+        $this->assertNotContains('cabrito', array_column($e['lados']['a']['mesa'], 'c'), 'no turno do adversário não dispara');
         $e = Gladio::passar($e, 'b');
+        $this->assertContains('cabrito', array_column($e['lados']['a']['mesa'], 'c'), 'Tiinho invocou um Cabrito no início do turno do dono');
         $insts = [];
         foreach (['mao', 'baralho', 'mesa', 'cemiterio'] as $z) {
             array_push($insts, ...array_column($e['lados']['a'][$z], 'i'), ...array_column($e['lados']['b'][$z], 'i'));

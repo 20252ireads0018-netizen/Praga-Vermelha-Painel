@@ -698,6 +698,8 @@ class CampanhaJogoController extends Controller
                         // resposta a uma escolha pedida por um efeito: alvo = instância ou 'j:<lado>'; vazio pula
                         'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
                         'ativar'     => Gladio::ativar($e, $lado, $inst),
+                        'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
+                        'equipar'    => Gladio::equipar($e, $lado, $inst, (int) $outro),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;

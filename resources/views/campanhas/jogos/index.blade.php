@@ -66,7 +66,17 @@
                             <label>Nome do deck<input type="text" name="nome" maxlength="60" required placeholder="Ex.: Fúria dos Kuros"></label>
                             <span class="jg-deck-total" id="jg-deck-total">0 cartas</span>
                         </div>
-                        <input type="search" id="jg-deck-pesquisa" class="jg-deck-pesquisa" placeholder="Pesquisar carta pelo nome…" aria-label="Pesquisar carta para o deck">
+                        <div class="jg-deck-filtros" id="jg-deck-filtros" role="search">
+                            <input type="search" id="jg-deck-pesquisa" class="jg-deck-pesquisa" placeholder="Pesquisar pelo nome ou texto…" aria-label="Pesquisar carta para o deck">
+                            <select data-deck-filtro="tipo" aria-label="Tipo">
+                                <option value="">Lendas e feitiços</option>
+                                <option value="lenda">Só Lendas</option>
+                                <option value="feitico">Só feitiços</option>
+                            </select>
+                            <select data-deck-filtro="custo" aria-label="Custo"><option value="">Qualquer custo</option></select>
+                            <select data-deck-filtro="palavra" aria-label="Palavra-chave"><option value="">Qualquer palavra-chave</option></select>
+                            <label class="jg-deck-so"><input type="checkbox" data-deck-filtro="no-deck"> Só as do deck</label>
+                        </div>
                         <div class="jg-deck-lista" id="jg-deck-lista"></div>
                         <div class="jg-botoes">
                             <button class="camp-btn camp-btn-primario">Salvar deck</button>

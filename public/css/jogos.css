@@ -680,3 +680,69 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
     .jg-cartas { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     .jg-cartas .jg-carta { --cw: 120px; }
 }
+
+/* ---------- Gladio: equipamentos vinculados à Lenda ---------- */
+.gl-equipos { display: flex; flex-wrap: wrap; justify-content: center; gap: .15rem; max-width: calc(var(--cw-campo, 90px) + 1rem); }
+.gl-equipo { font: inherit; font-size: .62rem; line-height: 1.2; padding: .05rem .35rem; border-radius: 999px; cursor: pointer;
+    color: #fde68a; background: rgba(120, 53, 15, .75); border: 1px solid rgba(251, 191, 36, .55); max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-equipo:hover, .gl-equipo:focus-visible { background: rgba(146, 64, 14, .95); }
+.gl-slot--equipada > .jg-carta { box-shadow: 0 0 0 2px rgba(251, 191, 36, .55), 0 0 12px rgba(251, 191, 36, .35); }
+
+/* ---------- Gladio: cronômetro da vez ---------- */
+.gl-relogio { font-size: .78rem; padding: .1rem .55rem; border-radius: 999px; background: rgba(0, 0, 0, .35); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gl-relogio--atencao { color: #fde68a; background: rgba(120, 53, 15, .6); }
+.gl-relogio--urgente { color: #fecaca; background: rgba(127, 29, 29, .8); animation: gl-pulsar 1s ease-in-out infinite; }
+.gl-apressar { white-space: nowrap; }
+.gl-apressar[hidden] { display: none; }
+.gl-apressado .gl-eu-barra { animation: gl-tremer .5s ease-in-out 3; box-shadow: 0 0 0 3px #f59e0b inset; }
+@keyframes gl-pulsar { 50% { transform: scale(1.08); } }
+@keyframes gl-tremer { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+
+/* ---------- Gladio: animações ---------- */
+.gl-anim-entra > .jg-carta { animation: gl-entra .55s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes gl-entra { 0% { transform: translateY(40px) scale(.4) rotate(-8deg); opacity: 0; filter: brightness(2.2); }
+    70% { filter: brightness(1.4); } 100% { transform: none; opacity: 1; filter: none; } }
+.gl-anim-compra > .jg-carta, .gl-verso.gl-anim-compra { animation: gl-compra .5s ease-out; }
+@keyframes gl-compra { 0% { transform: translateX(80px) rotate(12deg) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.gl-anim-dano > .jg-carta { animation: gl-dano .45s ease-in-out; }
+@keyframes gl-dano { 0%, 100% { transform: none; filter: none; } 20% { transform: translateX(-6px) rotate(-3deg); filter: brightness(1.6) sepia(1) hue-rotate(-40deg) saturate(5); }
+    50% { transform: translateX(6px) rotate(3deg); } 75% { transform: translateX(-3px); } }
+.gl-anim-ataca > .jg-carta { animation: gl-ataca-cima .6s cubic-bezier(.3, 0, .2, 1); }
+.gl-anim-ataca-baixo > .jg-carta { animation: gl-ataca-baixo .6s cubic-bezier(.3, 0, .2, 1); }
+@keyframes gl-ataca-cima { 40% { transform: translateY(-38px) scale(1.12); filter: drop-shadow(0 0 10px #f87171); } 100% { transform: none; } }
+@keyframes gl-ataca-baixo { 40% { transform: translateY(38px) scale(1.12); filter: drop-shadow(0 0 10px #f87171); } 100% { transform: none; } }
+.gl-anim-bloqueia > .jg-carta { animation: gl-bloqueia .6s ease-out; }
+@keyframes gl-bloqueia { 0% { box-shadow: 0 0 0 0 rgba(96, 165, 250, .9); transform: scale(1); }
+    40% { box-shadow: 0 0 0 10px rgba(96, 165, 250, 0); transform: scale(1.1); } 100% { transform: none; } }
+.gl-anim-golpe { animation: gl-tremer .45s ease-in-out; }
+.gl-anim-pulso { animation: gl-pulso .7s ease-out; }
+@keyframes gl-pulso { 30% { transform: scale(1.25); background: rgba(127, 29, 29, .9); } }
+.gl-fantasma-anim { position: fixed; z-index: 1900; pointer-events: none; display: flex; justify-content: center; }
+.gl-fantasma-anim > .gl-slot { transform: none !important; margin: 0 !important; }
+.gl-fantasma-anim .gl-mais, .gl-fantasma-anim .gl-etiqueta { display: none; }
+.gl-fantasma-anim.gl-anim-morre { animation: gl-morre 1s ease-in forwards; }
+@keyframes gl-morre { 0% { transform: none; filter: none; opacity: 1; }
+    30% { transform: scale(1.08) rotate(-4deg); filter: grayscale(1) brightness(.7) drop-shadow(0 0 12px #dc2626); opacity: 1; }
+    100% { transform: translate(var(--dx, 0), var(--dy, 40px)) scale(.25) rotate(25deg); filter: grayscale(1) brightness(.4); opacity: 0; } }
+.gl-fantasma-anim.gl-anim-voa { animation: gl-voa .7s ease-in forwards; }
+@keyframes gl-voa { 0% { transform: none; opacity: 1; } 100% { transform: translate(var(--dx, 0), var(--dy, 0)) scale(.25) rotate(-20deg); opacity: .2; } }
+.gl-numero-anim { position: fixed; z-index: 1950; pointer-events: none; font-weight: 800; font-size: 1.35rem; transform: translate(-50%, 0);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, .8); animation: gl-numero 1.2s ease-out forwards; }
+.gl-numero--dano { color: #f87171; }
+.gl-numero--cura { color: #4ade80; }
+@keyframes gl-numero { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+    .gl-relogio--urgente, .gl-apressado .gl-eu-barra { animation: none; }
+}
+
+/* montagem de deck: o contador fica numa linha própria (não vaza da caixa) e os filtros quebram linha */
+.jg-deck-topo { flex-direction: column; align-items: stretch; gap: .35rem; }
+.jg-deck-topo label { flex: 0 0 auto; min-width: 0; }
+.jg-deck-topo label input { width: 100%; box-sizing: border-box; min-width: 0; }
+.jg-deck-total { align-self: flex-start; white-space: normal; }
+.jg-deck-filtros { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.jg-deck-filtros .jg-deck-pesquisa { flex: 1 1 100%; min-width: 0; box-sizing: border-box; }
+.jg-deck-filtros select { flex: 1 1 8rem; min-width: 0; }
+.jg-deck-so { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; white-space: nowrap; }

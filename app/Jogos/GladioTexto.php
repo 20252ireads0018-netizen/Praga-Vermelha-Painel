@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 2;
+    public const VERSAO = 3;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -77,6 +77,9 @@ class GladioTexto
      */
     public static function ler(?string $texto, string $tipo, string $nome = '', array $nomes = []): array
     {
+        if ($tipo !== 'lenda' && preg_match('/\bequip/', self::normalizar((string) $texto))) {
+            return self::equipamento((string) $texto);
+        }
         $eu = self::nomesProprios($nome);
         $hab = [];
         $parcial = false;
@@ -135,6 +138,43 @@ class GladioTexto
         }
 
         return ['hab' => $hab, 'parcial' => $parcial];
+    }
+
+    /**
+     * Feitiço de equipar ("Equipe a uma Lenda sua: ela ganha +2/+1 e Voar"): ao conjurar, pede uma Lenda sua e fica
+     * vinculado a ela com o bônus somado de todas as frases. Frase que não é bônus nem o "equipe…" fica à mão (parcial).
+     */
+    private static function equipamento(string $texto): array
+    {
+        $atk = 0;
+        $vida = 0;
+        $pal = [];
+        $parcial = false;
+        foreach (preg_split('/[.;!\r\n]+/', $texto) as $frase) {
+            $f = trim(self::normalizar($frase), ' ,:-');
+            $f = trim(preg_replace('/^(?:equip(?:e|a|ar|amento)\w*\b(?:\s+(?:a|em|n?uma|o|na|no)\b)*(?:\s+(?:uma\s+)?lendas?(?:\s+(?:sua|aliada|alvo|que voce controla))*)?|custo de equipar\s*\d*)\s*[:,-]?\s*/', '', $f), ' ,:-');
+            if ($f === '') {
+                continue;
+            }
+            $achou = false;
+            if (preg_match_all('/([+-]\d+)\s*\/\s*([+-]\d+)/', $f, $mm, PREG_SET_ORDER)) {
+                foreach ($mm as $m) {
+                    $atk += (int) $m[1];
+                    $vida += (int) $m[2];
+                }
+                $achou = true;
+            }
+            foreach (self::PALAVRAS as $nomePal => $chave) {
+                if (preg_match('/\b' . preg_quote($nomePal, '/') . '\b/', $f)) {
+                    $pal[] = $chave;
+                    $achou = true;
+                }
+            }
+            $parcial = $parcial || !$achou;
+        }
+        $passo = ['a' => 'equipar', 'alvo' => 'lenda', 'filtro' => 'meu', 'atk' => $atk, 'vida' => $vida, 'pal' => array_values(array_unique($pal))];
+
+        return ['hab' => [['g' => 'conjurar', 'passos' => [$passo]]], 'parcial' => $parcial];
     }
 
     /** Jeitos de o texto falar da própria carta: o nome inteiro, o primeiro nome e "esta/essa lenda". */
@@ -214,7 +254,7 @@ class GladioTexto
     {
         return match (true) {
             (bool) preg_match('/\b(?:jogador|adversario|oponente|inimigo) alvo\b/', $antes)                                => 'jogador',
-            (bool) preg_match('/\b(?:cada|todo|todos os|seus|os) (?:adversario|oponente|inimigo)s?\b|\bexceto voce\b|\bos outros jogadores\b|\btodo outro jogador\b|\btodos os outros\b/', $antes) => 'inimigos',
+            (bool) preg_match('/\b(?:cada|todo|todos os|seus|os|o|seu|um) (?:adversario|oponente|inimigo)s?\b|\bexceto voce\b|\bos outros jogadores\b|\btodo outro jogador\b|\btodos os outros\b/', $antes) => 'inimigos',
             (bool) preg_match('/\b(?:cada|todo|todos os|todos) (?:jogador(?:es)?)\b|\btodos\b/', $antes)                  => 'todos',
             (bool) preg_match('/\bvoce\b/', $antes)                                                                        => 'eu',
             default => null,
@@ -292,8 +332,27 @@ class GladioTexto
         if (preg_match('/^(.*?)\b(compr(?:e|a|am|ar))\s+' . $N . '\s+cartas?$/', $c, $m)) {
             return $jogador('comprar', $m, self::num($m[3]));
         }
-        if (preg_match('/^(.*?)\b(descart(?:e|a|am|ar))\s+' . $N . '(?:\s+cartas?)?(?:\s+d[ea] (?:sua )?mao)?$/', $c, $m)) {
-            return $jogador('descartar', $m, self::num($m[3]));
+        // descarte é sempre da mão de quem descarta (nunca do campo): "descarte uma lenda", "descarte 2 cartas
+        // aleatórias", "descarte sua mão", "o oponente descarta uma carta"
+        if (preg_match('/^(.*?)\b(descart(?:e|a|am|ar))\s+(?:(?:a |sua |toda a |todas as cartas d[ea] )?(?:sua )?mao(?: inteira)?|todas as (?:suas )?cartas(?: d[ea] (?:sua )?mao)?)$/', $c, $m)) {
+            return $jogador('descartar', $m, 99) + ['tudo' => true];
+        }
+        if (preg_match('/^(.*?)\b(descart(?:e|a|am|ar))\s+' . $N . '(?:\s+(cartas?|lendas?|feiticos?))?(\s+aleatori[ao]s?|\s+ao acaso)?(?:\s+(?:d[ea]|em) (?:sua |seu |s?ua )?mao)?(\s+aleatori[ao]s?|\s+ao acaso)?$/', $c, $m)) {
+            $p = $jogador('descartar', $m, self::num($m[3]));
+            if ($p === null) {
+                return null;
+            }
+            $tipo = $m[4] ?? '';
+            if (str_starts_with($tipo, 'lenda')) {
+                $p['filtro'] = 'lenda';
+            } elseif (str_starts_with($tipo, 'feitico')) {
+                $p['filtro'] = 'feitico';
+            }
+            if (trim(($m[5] ?? '') . ($m[6] ?? '')) !== '') {
+                $p['aleatorio'] = true;
+            }
+
+            return $p;
         }
         if (preg_match('/^(.*?)\b(sacrifiqu?e|sacrifica|sacrificam|sacrificar)\s+' . $N . '\s+lendas?(?:\s+para invocar\s+' . self::euRe($eu) . ')?$/', $c, $m)) {
             return $jogador('sacrificar', $m, self::num($m[3]));
@@ -424,7 +483,7 @@ class GladioTexto
     /* ================================================================== */
 
     private const GATILHOS = [
-        'entrar' => 'Ao entrar', 'conjurar' => 'Ao conjurar', 'morrer' => 'Ao cair', 'inicio' => 'Todo início de turno',
+        'entrar' => 'Ao entrar', 'conjurar' => 'Ao conjurar', 'morrer' => 'Ao cair', 'inicio' => 'No início do turno do dono',
         'inicio_meu' => 'No início do seu turno', 'fim' => 'Todo fim de turno', 'fim_meu' => 'No fim do seu turno', 'atacar' => 'Ao atacar',
     ];
 
@@ -465,7 +524,9 @@ class GladioTexto
         return match ($p['a']) {
             'shot'       => "$quem toma $n shot" . ($n > 1 ? 's' : ''),
             'comprar'    => "$quem compra $n carta" . ($n > 1 ? 's' : ''),
-            'descartar'  => "$quem descarta $n carta" . ($n > 1 ? 's' : ''),
+            'descartar'  => !empty($p['tudo']) ? "$quem descarta a mão inteira"
+                : "$quem descarta $n " . (['lenda' => 'Lenda', 'feitico' => 'feitiço'][$p['filtro'] ?? ''] ?? 'carta') . ($n > 1 ? 's' : '')
+                  . (!empty($p['aleatorio']) ? ' ao acaso' : '') . ' da mão',
             'sacrificar' => "$quem sacrifica $n Lenda" . ($n > 1 ? 's' : ''),
             'moer'       => "$quem joga $n carta" . ($n > 1 ? 's' : '') . ' do topo do baralho no cemitério',
             'energia'    => "$quem ganha $n de energia",
@@ -478,6 +539,8 @@ class GladioTexto
             'buscar'     => 'busca ' . ($n > 1 ? "$n × " : '') . ($p['dica'] ?? 'uma carta') . ' no seu baralho e põe na mão',
             'ficha'      => "cria $n ficha" . ($n > 1 ? 's' : '') . " {$p['nome']} {$p['atk']}/{$p['vida']}" . ($pal !== '' ? " com $pal" : ''),
             'invocar'    => "invoca $n × " . mb_convert_case($p['carta'] ?? '', MB_CASE_TITLE),
+            'equipar'    => 'equipa uma Lenda sua' . (($b = array_merge(($p['atk'] ?? 0) || ($p['vida'] ?? 0) ? [sprintf('%+d/%+d', $p['atk'], $p['vida'])] : [],
+                array_map(fn ($k) => Gladio::PALAVRAS[$k] ?? $k, $p['pal'] ?? []))) ? ' (' . implode(', ', $b) . ')' : ''),
             'buff'       => sprintf('%+d/%+d em ', $p['atk'], $p['vida']) . self::lendaTexto($p) . $temp,
             'palavra'    => (Gladio::PALAVRAS[$p['pal']] ?? $p['pal']) . ' para ' . self::lendaTexto($p) . $temp,
             default      => $p['a'],

@@ -121,7 +121,8 @@ class Gladio
         $vida = $aposta > 0 ? $aposta : self::VIDA_AMISTOSO;
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
               'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
-              'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n];
+              'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n,
+              'atacou' => false, 'desde' => time(), 'apressado' => null];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -177,6 +178,9 @@ class Gladio
         $e['ataque'] ??= null;
         $e['fila'] ??= [];
         $e['escolha'] ??= null;
+        $e['atacou'] ??= false;
+        $e['desde'] ??= time();
+        $e['apressado'] ??= null;
         if (($e['hv'] ?? 0) !== GladioTexto::VERSAO) { // cartas lidas por uma versão antiga do leitor (ou nunca lidas)
             $e['cartas'] = self::lerTextos($e['cartas']);
             $e['hv'] = GladioTexto::VERSAO;
@@ -409,6 +413,7 @@ class Gladio
      */
     private static function saiDaMesa(array $e, string $lado, array $m, bool $avisar = true): array
     {
+        $e = self::soltarEquipamentos($e, (int) $m['i']);
         if ($m['c'] === null) {
             return $e;
         }
@@ -603,7 +608,8 @@ class Gladio
         $hab = $e['cartas'][$id]['hab'] ?? [];
         if (empty($carta['efeito']) && !$efeitoEscolhido && $hab) {
             $inst = (int) $l['mao'][$k]['i'];
-            $fica = (bool) array_filter($hab, fn ($h) => $h['g'] !== 'conjurar');
+            // fica no campo: gatilho de turno, ou equipamento (vinculado a uma Lenda)
+            $fica = (bool) array_filter($hab, fn ($h) => $h['g'] !== 'conjurar' || in_array('equipar', array_column($h['passos'], 'a'), true));
             if ($fica) {
                 $l['feiticos'][] = ['i' => $inst, 'c' => $id, 'cont' => 0, 'nota' => ''];
             } else {
@@ -723,6 +729,9 @@ class Gladio
     public static function atacar(array $e, string $lado, array $insts, ?string $alvo = null): array
     {
         self::exigirTurno($e, $lado);
+        if (!empty($e['atacou'])) {
+            throw new \InvalidArgumentException('Você já atacou neste turno: é uma onda de ataque por turno.');
+        }
         $inimigos = self::inimigos($e, $lado);
         if ($alvo === null && count($inimigos) === 1) {
             $alvo = $inimigos[0];
@@ -759,6 +768,8 @@ class Gladio
             $e['lados'][$lado]['mesa'][$k]['virada'] = !self::tem($e['lados'][$lado]['mesa'][$k], 'vigilancia');
         }
         $e['fase'] = 'defesa';
+        $e['atacou'] = true; // uma onda de ataque por turno: declarou, atacou, acabou
+        $e['desde'] = time(); // o cronômetro passa a contar a defesa
         $e['ataque'] = ['atacantes' => $insts, 'defensor' => $alvo, 'bloqueios' => (object) []];
         self::log($e, self::quem($e, $lado) . ' atacou ' . self::quem($e, $alvo) . ' com ' . implode(', ', $nomes) . '.');
         foreach ($insts as $i) { // "quando atacar"
@@ -816,12 +827,20 @@ class Gladio
             : !self::tem($m, 'iniciativa') || self::tem($m, 'duplo');
     }
 
+    /**
+     * Recupera vida (Dinheiro): sai do pote enquanto houver; com o pote vazio, o Dinheiro é dado mesmo assim (entra
+     * dinheiro novo na mesa: o total sobe) e a vida pode passar do que foi apostado.
+     */
     private static function curar(array &$e, string $lado, int $quanto): void
     {
-        if ($quanto > 0) {
-            $l = &$e['lados'][$lado];
-            $l['vida'] = min($l['max'], $l['vida'] + $quanto);
+        if ($quanto <= 0) {
+            return;
         }
+        $falta = max(0, $quanto - self::pote($e));
+        $e['total'] += $falta;
+        $l = &$e['lados'][$lado];
+        $l['vida'] += $quanto;
+        $l['max'] = max($l['max'], $l['vida']);
     }
 
     /**
@@ -939,6 +958,7 @@ class Gladio
 
         $e['fase'] = 'principal';
         $e['ataque'] = null;
+        $e['desde'] = time(); // volta a contar a vez de quem atacou
 
         return self::seguir($e);
     }
@@ -953,6 +973,9 @@ class Gladio
         $e['turno']++;
         $e['fase'] = 'compra';
         $e['ataque'] = null;
+        $e['atacou'] = false;
+        $e['desde'] = time(); // cronômetro da vez
+        $e['apressado'] = null;
         $l = &$e['lados'][$lado];
         if ($l['energiaMax'] < self::ENERGIA_MAX) { // energia máxima ajustada à mão acima de 10 não cai
             $l['energiaMax']++;
@@ -985,6 +1008,36 @@ class Gladio
         self::exigirAtivo($e, $lado);
 
         return self::seguir(self::eliminar($e, $lado, 'desistência'));
+    }
+
+    /** Segundos de vez antes de os outros poderem apressar quem está demorando. */
+    public const APRESSAR_APOS = 60;
+
+    /** De quem a mesa está esperando agora: quem escolhe um efeito, quem defende ou quem tem a vez. */
+    public static function esperando(array $e): string
+    {
+        return $e['escolha']['lado'] ?? ($e['fase'] === 'defesa' ? ($e['ataque']['defensor'] ?? $e['vez']) : $e['vez']);
+    }
+
+    /** Outro jogador apressa quem está demorando (depois de APRESSAR_APOS segundos; de novo só a cada 20 s). */
+    public static function apressar(array $e, string $lado, ?int $agora = null): array
+    {
+        self::exigirAtivo($e, $lado);
+        $agora ??= time();
+        $alvo = self::esperando($e);
+        if ($alvo === $lado) {
+            throw new \InvalidArgumentException('A mesa está esperando você.');
+        }
+        if ($agora - (int) ($e['desde'] ?? $agora) < self::APRESSAR_APOS) {
+            throw new \InvalidArgumentException('Ainda está no tempo: dá para apressar depois de ' . self::APRESSAR_APOS . ' segundos.');
+        }
+        if (!empty($e['apressado']) && $agora - (int) $e['apressado']['em'] < 20) {
+            throw new \InvalidArgumentException(self::quem($e, $alvo) . ' acabou de ser apressado.');
+        }
+        $e['apressado'] = ['por' => $lado, 'alvo' => $alvo, 'em' => $agora];
+        self::log($e, self::quem($e, $lado) . ' está apressando ' . self::quem($e, $alvo) . ': ⏳ anda logo!');
+
+        return $e;
     }
 
     /** Toma (ou devolve, com $quanto negativo) shots, a qualquer momento. No 7º shot o jogador está fora. */
@@ -1244,12 +1297,111 @@ class Gladio
         if ($k < 0) {
             throw new \InvalidArgumentException('Esse feitiço não está no seu campo.');
         }
+        $e = self::desequipar($e, $lado, $inst); // o bônus do equipamento sai da Lenda
         $f = $e['lados'][$lado]['feiticos'][$k];
         array_splice($e['lados'][$lado]['feiticos'], $k, 1);
         $e['lados'][$lado]['cemiterio'][] = ['i' => $f['i'], 'c' => $f['c']];
         self::log($e, self::quem($e, $lado) . ' mandou ' . self::nome($e, $f['c']) . ' para o cemitério.');
 
+        return self::seguir($e);
+    }
+
+    /* ================================================================== */
+    /*  Equipamentos (feitiço vinculado a uma Lenda)                       */
+    /* ================================================================== */
+
+    /** Bônus que o texto do feitiço dá à Lenda equipada: { atk, vida, pal[] } (vazio para feitiço sem texto de equipar). */
+    private static function bonusDe(array $e, ?string $c): array
+    {
+        foreach ($e['cartas'][$c]['hab'] ?? [] as $h) {
+            foreach ($h['passos'] as $p) {
+                if ($p['a'] === 'equipar') {
+                    return ['atk' => (int) ($p['atk'] ?? 0), 'vida' => (int) ($p['vida'] ?? 0), 'pal' => (array) ($p['pal'] ?? [])];
+                }
+            }
+        }
+
+        return ['atk' => 0, 'vida' => 0, 'pal' => []];
+    }
+
+    /**
+     * Vincula o feitiço $fi (no campo de $lado) à Lenda $li de $lado: ela recebe o bônus do equipamento e, quando sai da
+     * mesa, o equipamento vai junto para o cemitério. Já equipado em outra, troca de Lenda.
+     */
+    private static function vincular(array $e, string $lado, int $fi, int $li): array
+    {
+        $kf = self::idx($e['lados'][$lado]['feiticos'], $fi);
+        $kl = self::idx($e['lados'][$lado]['mesa'], $li);
+        if ($kf < 0 || $kl < 0) {
+            throw new \InvalidArgumentException('Equipe um feitiço do seu campo numa Lenda sua.');
+        }
+        $e = self::desequipar($e, $lado, $fi);
+        $f = &$e['lados'][$lado]['feiticos'][$kf];
+        $m = &$e['lados'][$lado]['mesa'][$kl];
+        $b = self::bonusDe($e, $f['c']);
+        $novas = array_values(array_diff(array_intersect($b['pal'], array_keys(self::PALAVRAS)), $m['pal'] ?? []));
+        $m['atk'] = max(0, $m['atk'] + $b['atk']);
+        $m['vida'] += $b['vida'];
+        $m['max'] = max(1, $m['max'] + $b['vida']);
+        $m['pal'] = array_values(array_merge($m['pal'] ?? [], $novas));
+        $f['em'] = $li;
+        $f['bonus'] = ['atk' => $b['atk'], 'vida' => $b['vida'], 'pal' => $novas];
+        $nomeF = self::nome($e, $f['c']);
+        $nomeL = self::nomeLenda($e, $m);
+        unset($f, $m);
+        $txt = ($b['atk'] || $b['vida'] ? sprintf(' (%+d/%+d', $b['atk'], $b['vida']) : '')
+            . ($novas ? ($b['atk'] || $b['vida'] ? ', ' : ' (') . implode(', ', array_map(fn ($p) => self::PALAVRAS[$p], $novas)) : '')
+            . ($b['atk'] || $b['vida'] || $novas ? ')' : '');
+        self::log($e, self::quem($e, $lado) . " equipou $nomeF em $nomeL$txt.");
+
         return $e;
+    }
+
+    /** Tira o feitiço $fi de $lado da Lenda em que estava equipado (o bônus some). */
+    private static function desequipar(array $e, string $lado, int $fi): array
+    {
+        $kf = self::idx($e['lados'][$lado]['feiticos'], $fi);
+        if ($kf < 0 || empty($e['lados'][$lado]['feiticos'][$kf]['em'])) {
+            return $e;
+        }
+        $f = $e['lados'][$lado]['feiticos'][$kf];
+        if ($onde = self::acharLenda($e, (int) $f['em'])) {
+            $m = &$e['lados'][$onde[0]]['mesa'][$onde[1]];
+            $b = $f['bonus'] ?? ['atk' => 0, 'vida' => 0, 'pal' => []];
+            $m['atk'] = max(0, $m['atk'] - (int) $b['atk']);
+            $m['max'] = max(1, $m['max'] - (int) $b['vida']);
+            $m['vida'] = min($m['vida'] - (int) $b['vida'], $m['max']); // perder a vida extra pode derrubá-la
+            $m['pal'] = array_values(array_diff($m['pal'] ?? [], (array) ($b['pal'] ?? [])));
+            unset($m);
+        }
+        unset($e['lados'][$lado]['feiticos'][$kf]['em'], $e['lados'][$lado]['feiticos'][$kf]['bonus']);
+
+        return $e;
+    }
+
+    /** A Lenda $li saiu da mesa: os equipamentos vinculados a ela vão para o cemitério de quem os controla. */
+    private static function soltarEquipamentos(array $e, int $li): array
+    {
+        foreach ($e['ordem'] as $lado) {
+            foreach ($e['lados'][$lado]['feiticos'] as $k => $f) {
+                if ((int) ($f['em'] ?? 0) === $li) {
+                    unset($e['lados'][$lado]['feiticos'][$k]);
+                    $e['lados'][$lado]['cemiterio'][] = ['i' => $f['i'], 'c' => $f['c']];
+                    self::log($e, self::nome($e, $f['c']) . ' estava equipado nela e foi para o cemitério.');
+                }
+            }
+            $e['lados'][$lado]['feiticos'] = array_values($e['lados'][$lado]['feiticos']);
+        }
+
+        return $e;
+    }
+
+    /** Equipa (ou troca de Lenda) um feitiço seu do campo numa Lenda sua, no seu turno. */
+    public static function equipar(array $e, string $lado, int $feitico, int $lenda): array
+    {
+        self::exigirTurno($e, $lado);
+
+        return self::seguir(self::vincular($e, $lado, $feitico, $lenda));
     }
 
     /* ================================================================== */
@@ -1418,7 +1570,10 @@ class Gladio
         return $e;
     }
 
-    /** Gatilhos de início ou fim do turno de $vez: os "todo turno" de todas as cartas em jogo e os "seu turno" dele. */
+    /**
+     * Gatilhos de início ou fim do turno de $vez. "Todo início de turno" vale só no início do turno do dono da carta
+     * (como "no início do seu turno"); os de fim de turno "todo turno" disparam para todas as cartas em jogo.
+     */
     private static function gatilhosDeTurno(array $e, string $vez, string $quando): array
     {
         $k = array_search($vez, $e['ordem'], true);
@@ -1428,7 +1583,9 @@ class Gladio
                 continue;
             }
             foreach (array_merge($e['lados'][$lado]['mesa'], $e['lados'][$lado]['feiticos']) as $x) {
-                $e = self::enfileirar($e, $lado, $x['c'] ?? null, (int) $x['i'], $quando);
+                if ($quando !== 'inicio' || $lado === $vez) {
+                    $e = self::enfileirar($e, $lado, $x['c'] ?? null, (int) $x['i'], $quando);
+                }
                 if ($lado === $vez) {
                     $e = self::enfileirar($e, $lado, $x['c'] ?? null, (int) $x['i'], $quando . '_meu');
                 }
@@ -1588,7 +1745,7 @@ class Gladio
         $esc = $p['escolhido'] ?? null;
 
         // ----- ações em Lendas (ou dano em jogadores): primeiro, quem é o alvo -----
-        if (in_array($a, ['dano', 'destruir', 'devolver', 'buff', 'palavra'], true)) {
+        if (in_array($a, ['dano', 'destruir', 'devolver', 'buff', 'palavra', 'equipar'], true)) {
             $lendas = [];  // [lado, inst]
             $jogadores = [];
             if ($alvo === 'lenda') {
@@ -1635,6 +1792,14 @@ class Gladio
                 $jogadores = self::ladosDo($e, $alvo, $dono) ?? [];
             }
 
+            if ($a === 'equipar') { // o feitiço que está resolvendo fica vinculado à Lenda escolhida
+                [$l, $k] = $lendas[0] ?? [null, null];
+                if ($l === $dono && $ef['i'] !== null && self::idx($e['lados'][$dono]['feiticos'], (int) $ef['i']) >= 0) {
+                    $e = self::vincular($e, $dono, (int) $ef['i'], (int) $e['lados'][$l]['mesa'][$k]['i']);
+                }
+
+                return $e;
+            }
             foreach ($lendas as [$l, $k]) {
                 $m = &$e['lados'][$l]['mesa'][$k];
                 $nome = self::nomeLenda($e, $m) . ($l === $dono ? '' : ' de ' . self::quem($e, $l));
@@ -1674,6 +1839,7 @@ class Gladio
                 foreach ($lendas as [$l, $k]) {
                     $m = $e['lados'][$l]['mesa'][$k];
                     array_splice($e['lados'][$l]['mesa'], $k, 1);
+                    $e = self::soltarEquipamentos($e, (int) $m['i']);
                     if ($m['c'] !== null) {
                         $zona = count($e['lados'][$l]['mao']) < self::MAO_MAX ? 'mao' : 'cemiterio';
                         $e['lados'][$l][$zona][] = ['i' => $m['i'], 'c' => $m['c']];
@@ -1695,6 +1861,27 @@ class Gladio
         $lados = self::ladosDo($e, $alvo, $dono);
         if ($lados === null) {
             return self::pedir($e, $p, $dono, 'jogador', array_map(fn ($l) => 'j:' . $l, self::vivos($e)), "$fonte: escolha o jogador");
+        }
+        // descarte da mão inteira ou ao acaso: sem escolha (sempre da mão de cada um, nunca do campo)
+        if ($a === 'descartar' && (!empty($p['tudo']) || !empty($p['aleatorio']))) {
+            foreach ($lados as $l) {
+                $ops = self::cartasDe($e, $e['lados'][$l]['mao'], $p['filtro'] ?? null);
+                if (empty($p['tudo'])) {
+                    shuffle($ops);
+                    $ops = array_slice($ops, 0, $n);
+                }
+                $nomes = [];
+                foreach ($ops as $i) {
+                    $k = self::idx($e['lados'][$l]['mao'], $i);
+                    $c = $e['lados'][$l]['mao'][$k];
+                    array_splice($e['lados'][$l]['mao'], $k, 1);
+                    $e['lados'][$l]['cemiterio'][] = ['i' => $c['i'], 'c' => $c['c']];
+                    $nomes[] = self::nome($e, $c['c']);
+                }
+                self::log($e, "$fonte: " . self::quem($e, $l) . ($nomes ? ' descartou ' . implode(', ', $nomes) : ' não tinha carta para descartar') . '.');
+            }
+
+            return $e;
         }
         // escolhas de carta, uma por vez: cada jogador afetado escolhe as dele
         if (in_array($a, ['descartar', 'sacrificar', 'buscar', 'recuperar'], true) && $esc === null && (count($lados) > 1 || $n > 1)) {
@@ -1779,7 +1966,9 @@ class Gladio
                     if ($esc === null) {
                         unset($L);
 
-                        return self::pedir($e, $p, $l, 'mao', self::cartasDe($e, $e['lados'][$l]['mao'], null), "$fonte: descarte uma carta");
+                        $o = ['lenda' => 'uma Lenda', 'feitico' => 'um feitiço'][$p['filtro'] ?? ''] ?? 'uma carta';
+
+                        return self::pedir($e, $p, $l, 'mao', self::cartasDe($e, $e['lados'][$l]['mao'], $p['filtro'] ?? null), "$fonte: descarte $o da sua mão");
                     }
                     $k = self::idx($L['mao'], (int) $esc);
                     if ($k >= 0) {
@@ -1964,6 +2153,7 @@ class Gladio
             }
         }
         $e['pote'] = self::pote($e);
+        $e['agora'] = time(); // a tela acerta o relógio dela por este (cronômetro da vez)
 
         return $e;
     }
