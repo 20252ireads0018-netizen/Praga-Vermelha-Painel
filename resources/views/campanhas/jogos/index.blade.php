@@ -124,6 +124,10 @@
                                     <div class="jg-palavras-grade" id="jg-palavras-grade"></div>{{-- preenchido com JG.PALAVRA --}}
                                 </fieldset>
                                 <label class="jg-larga">Descrição<textarea name="descricao" rows="2" maxlength="500" placeholder="Texto de ambientação (opcional)"></textarea></label>
+                                <label class="jg-larga" title="As cartas usam isso: &quot;seus hexomantes&quot;, &quot;para cada Kuro&quot;, &quot;forma hexomante&quot;, &quot;carta Aluno&quot;…">Subtipos
+                                    <input type="text" name="subtipos" maxlength="120" list="jg-subtipos" placeholder="Ex.: hexomante, aluno">
+                                    <datalist id="jg-subtipos"><option value="hexomante"><option value="fisiomante"><option value="hexomante, aluno"><option value="hexomante, diretor"><option value="kuro"><option value="forma hexomante"><option value="propriedade fisiomântica"></datalist>
+                                </label>
                                 <div class="jg-larga jg-img-linha">
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="galeria">Da galeria</button>
                                     <label class="camp-btn camp-btn-pequeno">Do computador<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>

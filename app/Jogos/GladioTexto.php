@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 5;
+    public const VERSAO = 6;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -612,6 +612,11 @@ class GladioTexto
         'bloquear' => 'Ao bloquear', 'matar' => 'Ao matar uma Lenda', 'direto' => 'Ao atacar um jogador sem bloqueio',
         'morre_minha' => 'Quando uma Lenda sua morre', 'morre' => 'Quando uma Lenda morre', 'feitico_meu' => 'Quando você conjura',
         'feitico' => 'Quando alguém conjura', 'feitico_outro' => 'Quando outro jogador conjura', 'comprar_meu' => 'Quando você compra',
+        'entra' => 'Quando outra Lenda entra', 'entra_minha' => 'Quando outra Lenda entra para você', 'lancar_minha' => 'Quando você lança outra Lenda',
+        'cemiterio' => 'Quando uma carta vai para um cemitério', 'scry' => 'Quando alguém faz scry ou mill', 'ganha' => 'Quando alguém recupera Dinheiro',
+        'ganha_meu' => 'Quando você recupera Dinheiro', 'perde' => 'Quando alguém perde Dinheiro', 'shot' => 'Quando alguém toma um shot',
+        'dano_feitico' => 'Quando um feitiço causa dano', 'gasto2' => 'Quando você gasta exatamente 2 num feitiço', 'atacado' => 'Quando o jogador marcado é atacado',
+        'descartar_meu' => 'Quando você descarta', 'morrer_combate' => 'Ao morrer em combate',
     ];
 
     public static function resumo(array $hab): string
@@ -644,7 +649,12 @@ class GladioTexto
 
     public static function textoPasso(array $p): string
     {
-        $n = ($p['n'] ?? 1) === 'poder' ? 'X (o ataque desta Lenda)' : (int) ($p['n'] ?? 1);
+        $n = match (true) {
+            ($p['n'] ?? 1) === 'poder' => 'X (o ataque desta Lenda)',
+            is_string($p['n'] ?? null) && str_starts_with($p['n'], '#') => 'X',
+            default => (int) ($p['n'] ?? 1),
+        };
+        $lista = fn (array $ps) => implode(', ', array_map([self::class, 'textoPasso'], $ps));
         $quem = self::quemTexto($p['alvo'] ?? 'eu');
         $temp = !empty($p['temp']) ? ' até o fim do turno' : '';
         $pal = $p['a'] === 'ficha' ? implode(', ', array_map(fn ($k) => Gladio::PALAVRAS[$k] ?? $k, $p['pal'] ?? [])) : '';
@@ -657,7 +667,7 @@ class GladioTexto
                   . (!empty($p['aleatorio']) ? ' ao acaso' : '') . ' da mão',
             'sacrificar' => "$quem sacrifica $n Lenda" . ($n > 1 ? 's' : ''),
             'moer'       => "$quem joga $n carta" . ($n > 1 ? 's' : '') . ' do topo do baralho no cemitério',
-            'energia'    => "$quem ganha $n de energia" . (!empty($p['max']) ? ' máxima' : ''),
+            'energia'    => "$quem " . (!empty($p['neg']) ? 'perde' : 'ganha') . " $n de energia" . (!empty($p['max']) ? ' máxima' : ''),
             'roubar'     => "rouba $n de um adversário",
             'copia'      => 'vira uma cópia de uma Lenda sua',
             'trocamao'   => 'troca de mão com o jogador escolhido',
@@ -673,12 +683,48 @@ class GladioTexto
             'devolver'   => 'devolve ' . self::lendaTexto($p) . ' para a mão do dono',
             'recuperar'  => 'escolhe ' . (($p['filtro'] ?? null) === 'lenda' ? 'uma Lenda' : (($p['filtro'] ?? null) === 'feitico' ? 'um feitiço' : 'uma carta')) . ' do seu cemitério para ' . ($p['destino'] === 'mesa' ? 'a mesa' : 'a mão'),
             'buscar'     => 'busca ' . ($n > 1 ? "$n × " : '') . ($p['dica'] ?? 'uma carta') . ' no seu baralho e põe na mão',
-            'ficha'      => "cria $n ficha" . ($n > 1 ? 's' : '') . " {$p['nome']} {$p['atk']}/{$p['vida']}" . ($pal !== '' ? " com $pal" : ''),
+            'ficha'      => "cria $n ficha" . ($n > 1 ? 's' : '') . (!empty($p['copia']) ? ' cópia desta carta' : ' ' . ($p['nome'] ?? 'Ficha')
+                . (isset($p['atk'], $p['vida']) && !is_string($p['atk']) ? " {$p['atk']}/{$p['vida']}" : '')) . ($pal !== '' ? " com $pal" : ''),
             'invocar'    => "invoca $n × " . mb_convert_case($p['carta'] ?? '', MB_CASE_TITLE),
             'equipar'    => 'equipa uma Lenda sua' . (($b = array_merge(($p['atk'] ?? 0) || ($p['vida'] ?? 0) ? [sprintf('%+d/%+d', $p['atk'], $p['vida'])] : [],
                 array_map(fn ($k) => Gladio::PALAVRAS[$k] ?? $k, $p['pal'] ?? []))) ? ' (' . implode(', ', $b) . ')' : ''),
             'buff'       => sprintf('%+d/%+d em ', $p['atk'], $p['vida']) . self::lendaTexto($p) . $temp,
             'palavra'    => ($p['pal'] === '?' ? 'uma palavra-chave à escolha' : (Gladio::PALAVRAS[$p['pal']] ?? $p['pal'])) . ' para ' . self::lendaTexto($p) . $temp,
+            'se'         => 'se der: ' . $lista($p['passos']) . (!empty($p['senao']) ? '; senão: ' . $lista($p['senao']) : ''),
+            'vezes'      => 'para cada um: ' . $lista($p['passos']),
+            'ou'         => implode(' ou ', array_column($p['ops'], 0)),
+            'laco'       => 'quantas vezes quiser: ' . $p['texto'],
+            'cont'       => 'conta +' . $p['d'] . ' ' . $p['k'],
+            'fixar', 'alvo_jog' => 'escolhe um jogador',
+            'marcar_lenda' => 'escolhe uma Lenda',
+            'atrasar'    => (isset($p['turnos']) ? "daqui a {$p['turnos']} turnos: " : 'no ' . ($p['quando'] === 'fim' ? 'fim' : 'início') . ' do próximo turno: ') . $lista($p['passos']),
+            'pular_compra' => 'você pula a próxima compra',
+            'vencer'     => 'você vence a partida',
+            'derrotar'   => 'o jogador do evento perde a partida',
+            'scry'       => "scry $n",
+            'ordenar'    => "olha as $n do topo e escolhe a ordem",
+            'voltar'     => 'volta para o campo' . (!empty($p['virada']) ? ' virada' : '') . (isset($p['atk']) ? sprintf(' com %+d/%+d', $p['atk'], $p['vida']) : ''),
+            'reviver_mortas' => 'as Lendas que ela matou voltam',
+            'posse'      => 'passa para o jogador atacado',
+            'transformar' => 'a Lenda vira uma cópia desta',
+            'lutar'      => 'duas Lendas escolhidas lutam',
+            'absorver'   => 'cada adversário sofre o ataque desta Lenda em dano (pode pôr nas próprias Lendas)',
+            'fundir'     => 'junta todas as cópias numa só com o dobro do ataque',
+            'barato'     => "uma carta da mão custa -{$p['d']}",
+            'letra'      => 'escolhe uma letra: feitiços com ela não podem ser conjurados',
+            'ver'        => 'escolhe ver o topo do baralho ou a mão de um oponente',
+            'adivinhar'  => 'o jogador escolhido adivinha o tipo do topo do baralho; se errar: ' . $lista($p['errou'] ?? []),
+            'revelar_ate' => 'revela até achar ' . implode(' ou ', (array) $p['sub']) . ', invoca sem pagar e embaralha',
+            'ativar_topo' => "conjura de graça os feitiços entre as $n do topo",
+            'ativar_cem' => 'conjura de graça um feitiço do cemitério',
+            'invocar_comprada' => 'invoca a Lenda comprada sem pagar',
+            'equipar_compradas' => 'equipa nela as propriedades compradas',
+            'serrar'     => 'vira equipamento de outra Lenda sua',
+            'status'     => $p['s'] === 'semdano' ? 'não sofre dano neste turno' : self::lendaTexto($p) . ' fica de cabeça para baixo',
+            'desvirar'   => 'desvira',
+            'dobrar'     => 'dobra o ataque de ' . self::lendaTexto($p),
+            'tirapal_fixa' => 'perde a palavra-chave',
+            'organizar'  => 'soma o ataque a uma Lenda da batalha',
             default      => $p['a'],
         };
     }

@@ -117,6 +117,7 @@ class CampanhaJogoController extends Controller
             'sem_imagem'=> ['nullable', 'boolean'],
             'palavras'  => ['nullable', 'array'],
             'palavras.*'=> [Rule::in(array_keys(Gladio::PALAVRAS))],
+            'subtipos'  => ['nullable', 'string', 'max:120'], // hexomante, aluno, kuro, forma hexomante…
         ]);
         if ($d['tipo'] === 'lenda' && (int) ($d['vida'] ?? 0) < 1) {
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
@@ -144,6 +145,9 @@ class CampanhaJogoController extends Controller
                 return response()->json(['ok' => false, 'erro' => 'Palavras-chave demais numa carta só: escolha menos.'], 422);
             }
             $carta->palavras = $palavras ?: null;
+        }
+        if (Schema::hasColumn('gladio_cartas', 'subtipos')) {
+            $carta->subtipos = trim(preg_replace('/\s*,\s*/', ', ', (string) ($d['subtipos'] ?? '')), ' ,') ?: null;
         }
         if ($request->hasFile('imagem_arquivo')) {
             // A imagem vem como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio com erro 406.
@@ -646,7 +650,8 @@ class CampanhaJogoController extends Controller
             'cont' => ['nullable', 'integer', 'min:-99', 'max:99'],       // contador de uma carta
             'nota' => ['nullable', 'string', 'max:60'],                   // anotação de uma carta
             'palavra' => ['nullable', Rule::in(array_keys(Gladio::PALAVRAS))], // palavra-chave dada/tirada de uma Lenda
-            'origem' => ['nullable', Rule::in(['mao', 'cemiterio', 'comando'])], // invocar sem custo
+            'origem' => ['nullable', Rule::in(['mao', 'cemiterio', 'comando'])], // de onde a carta é jogada
+            'qual' => ['nullable', 'string', 'max:20'],                     // qual habilidade da carta
             'energia' => ['nullable', 'integer', 'min:-99', 'max:99'], 'energia_max' => ['nullable', 'integer', 'min:-99', 'max:99'],
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
             'tx' => ['nullable', 'integer'], 'ty' => ['nullable', 'integer'],
@@ -678,7 +683,10 @@ class CampanhaJogoController extends Controller
                         throw new \InvalidArgumentException('Isso só acontece pelo efeito das cartas.');
                     }
                     $e = match ($acao) {
-                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo')), // sempre pagando energia
+                        // sempre pagando energia; do cemitério só formas hexomantes com Cristian Fernandez em campo
+                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), false, null, 0, $request->input('origem') === 'cemiterio' ? 'cemiterio' : 'mao'),
+                        // habilidade escrita numa carta sua (Josael, Silhueta, Flavinho, Aporium…), pagando o custo dela
+                        'habilidade' => Gladio::habilidade($e, $lado, $inst, (string) $request->input('qual', '')),
                         'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', []), $request->input('alvo') ?: null),
                         'revelar'    => Gladio::revelar($e, $lado, $inst),
                         // anotação de texto numa carta (não muda nada no jogo)

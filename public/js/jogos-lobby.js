@@ -210,7 +210,7 @@
         opcoes('palavra', 'Qualquer palavra-chave', Object.keys(PAL).filter(k => cartas.some(c => palavrasDa(c).includes(k))), k => PAL[k].nome);
         const busca = semAcento($('#jg-deck-pesquisa').value);
         const [tipo, custo, palavra, noDeck] = [fd('tipo').value, fd('custo').value, fd('palavra').value, fd('no-deck').checked];
-        const visiveis = cartas.filter(c => (!busca || semAcento(c.nome).includes(busca) || semAcento(c.descricao).includes(busca)) &&
+        const visiveis = cartas.filter(c => (!busca || semAcento(c.nome).includes(busca) || semAcento(c.descricao).includes(busca) || semAcento(c.subtipos).includes(busca)) &&
             (!tipo || c.tipo === tipo) && (custo === '' || String(c.custo) === custo) && (!palavra || palavrasDa(c).includes(palavra)) &&
             (!noDeck || montando[c.id] > 0))
             .sort((a, b) => a.custo - b.custo || a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -417,6 +417,7 @@
             ataque: +fc.ataque.value || 0, vida: +fc.vida.value || 0,
             descricao: fc.descricao.value, imagem: semImagem ? null : (imagem || imagemAtual),
             palavras: $$('input[name=palavras]:checked', fc).map(x => x.value),
+            subtipos: fc.subtipos ? fc.subtipos.value.trim() : '',
         });
         const previa = () => {
             const lenda = fc.tipo.value === 'lenda';
@@ -529,6 +530,7 @@
             fonte = null; zoom.value = 1;
             fc.registro.value = c ? c.id : '';
             if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
+            if (fc.subtipos) fc.subtipos.value = c ? (c.subtipos || '') : '';
             const pal = c ? String(c.palavras || '').split(',') : [];
             $$('input[name=palavras]', fc).forEach(x => { x.checked = pal.includes(x.value); });
             fc.hidden = false;
@@ -583,7 +585,8 @@
             const c = lerCarta();
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
                             descricao: c.descricao,
-                            palavras: c.palavras }; // qualquer tipo de carta pode ter palavras-chave
+                            palavras: c.palavras, // qualquer tipo de carta pode ter palavras-chave
+                            subtipos: c.subtipos }; // hexomante, aluno, kuro… (as cartas usam para "seus hexomantes", "cada Kuro")
             // a imagem vai como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio (erro 406)
             if (imagem) dados.imagem_arquivo = new File([await (await fetch(imagem)).blob()], 'arte.jpg', { type: 'image/jpeg' });
             if (semImagem) dados.sem_imagem = 1;

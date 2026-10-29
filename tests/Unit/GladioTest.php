@@ -1028,8 +1028,8 @@ class GladioTest extends TestCase
     public function test_leitor_deixa_condicoes_a_mao_e_entende_varios_gatilhos(): void
     {
         $e = $this->comTextos([]);
-        $this->assertSame(['entrar', 'atacar'], array_column($e['cartas']['aguinha']['hab'], 'g'));
-        $this->assertTrue($e['cartas']['aguinha']['parcial'], 'a frase com "se" fica à mão');
+        $this->assertSame(['entrar', 'atacar', 'morrer'], array_column($e['cartas']['aguinha']['hab'], 'g'), 'Aguinha tem roteiro');
+        $this->assertFalse($e['cartas']['aguinha']['parcial']);
         $this->assertSame(['entrar', 'morrer'], array_column($e['cartas']['kaique']['hab'], 'g'));
         $this->assertSame([], $e['cartas']['prop']['hab']);
     }
@@ -1039,7 +1039,7 @@ class GladioTest extends TestCase
         $e = $this->comTextos(['tiinho', 'kaique', 'dividido']);
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'kaique'));
         $ficha = end($e['lados']['a']['mesa']);
-        $this->assertSame(['Carnical', 2, ['toque']], [$ficha['nome'], $ficha['atk'], $ficha['pal']]);
+        $this->assertSame(['Carniçal', 2, ['toque']], [$ficha['nome'], $ficha['atk'], $ficha['pal']]);
         $baralho = count($e['lados']['a']['baralho']);
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'dividido'));
         $this->assertSame($baralho - 10, count($e['lados']['a']['baralho']));

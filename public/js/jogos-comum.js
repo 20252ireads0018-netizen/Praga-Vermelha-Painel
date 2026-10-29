@@ -97,7 +97,7 @@ window.JG = (function () {
             `<span class="jg-carta-custo" title="Custo em energia"><b>${esc(c.custo)}</b></span>` +
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
-            `<div class="jg-carta-tipo">${esc(TIPOS[c.tipo] || 'Feitiço')}</div>` +
+            `<div class="jg-carta-tipo">${esc(TIPOS[c.tipo] || 'Feitiço')}${c.subtipos ? ` · <span class="jg-carta-sub">${esc(c.subtipos)}</span>` : ''}</div>` +
             (pal.length ? `<div class="jg-carta-palavras">${pal.map(p =>
                 `<span class="jg-palavra" tabindex="0" title="${esc(PALAVRA[p].nome + ': ' + PALAVRA[p].desc)}">${esc(PALAVRA[p].nome)}</span>`).join(' · ')}</div>` : '') +
             `<div class="jg-carta-texto">${esc(texto)}</div>` +

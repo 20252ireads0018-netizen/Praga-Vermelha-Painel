@@ -95,6 +95,15 @@
     const ver = (c, inst, dono) => ` data-ver="${c == null ? '' : esc(c)}"${inst != null ? ` data-ver-inst="${inst}"` : ''}${dono ? ` data-ver-dono="${dono}"` : ''}`;
     const custoCmd = l => { const x = (l.comando || [])[0]; return x ? (+cartaDef(x.c).custo || 0) + 2 * (l.taxa || 0) : null; };
     const inicialDe = lado => Array.from(nomeDe(lado).replace(/&[^;]+;/g, '').trim())[0] || '?';
+    // custo de uma carta da mão agora: o servidor manda já com os descontos das cartas em jogo
+    const custoAgora = (l, x, c) => { const m = (l.extras && l.extras.custos) || {}; return m[x.i] != null ? +m[x.i] : +c.custo; };
+    // habilidades de uma carta sua (na mesa ou no cemitério), escritas nela: Josael, Flavinho, Aporium, Silhueta…
+    const habilidades = (x, zona) => {
+        const lista = [];
+        ((x.c != null && (D.estado.cartas[x.c] || {}).ativ) || []).forEach((h, k) => { if ((h.zona || 'mesa') === zona) lista.push([String(k), h.rot]); });
+        if (zona === 'mesa' && x.st && x.st.silhueta) lista.push(['silhueta', 'Pagar 1 de energia: desvirar (sai da Silhueta)']);
+        return lista.map(([q, rot]) => `<button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-hab="${q}" data-inst="${x.i}">${esc(rot)}</button>`).join('');
+    };
 
     /* ---------- estado do momento ---------- */
     function momento() {
@@ -199,6 +208,9 @@
                 (!feitico && x.i === L[lado].cmd ? '<span class="gl-cmd-selo" title="Comandante">👑</span>' : '') +
                 (x.nota ? `<span class="gl-nota" title="${esc(x.nota)}">${esc(x.nota)}</span>` : '') +
                 etiqueta +
+                (!feitico ? (x.regen > 0 ? `<span class="gl-selo gl-selo-regen" title="Regenerar: volta de pé ao morrer (${x.regen}x)">♻${x.regen}</span>` : '') +
+                    (x.st && x.st.silhueta ? '<span class="gl-selo gl-selo-silhueta" title="De cabeça para baixo: hexo-imune, indestrutível e não ataca">🙃</span>' : '') +
+                    ((x.fl || []).includes('semdano') ? '<span class="gl-selo" title="Não sofre dano neste turno">🛡</span>' : '') : '') +
                 (M.jogo ? `<button type="button" class="gl-mais" data-mais-${feitico ? 'feitico' : 'mesa'}="${x.i}" data-dono="${lado}" title="Ações desta carta" aria-label="Ações de ${esc(feitico ? cartaDef(x.c).nome : nomeLenda(x))}">⋯</button>` : '') +
                 `</div>`;
         };
@@ -235,10 +247,10 @@
         // barra do meio: pote, vez e o que dá para fazer agora
         let acoes = '';
         if (M.esc) {
-            const cartasEsc = ['baralho', 'cemiterio', 'palavra', 'confirmar'].includes(M.esc.tipo);
+            const cartasEsc = ['baralho', 'cemiterio', 'palavra', 'confirmar', 'opcao', 'resposta'].includes(M.esc.tipo);
             acoes = M.escolho
                 ? `<span class="gl-dica gl-dica--escolha" title="${esc(M.esc.texto)}">${esc(M.esc.texto)}${M.esc.tipo === 'mao' ? ' (clique numa carta da sua mão)' : (cartasEsc ? '' : ' (clique no alvo destacado)')}</span>` +
-                  (cartasEsc ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="escolha-cartas">${M.esc.tipo === 'confirmar' ? 'Responder' : (M.esc.tipo === 'palavra' ? 'Escolher a palavra-chave' : 'Escolher a carta')}</button>` : '') +
+                  (cartasEsc ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="escolha-cartas">${({ confirmar: 'Responder', palavra: 'Escolher a palavra-chave', opcao: 'Escolher', resposta: 'Responder' })[M.esc.tipo] || 'Escolher a carta'}</button>` : '') +
                   (M.esc.obrig ? '' : `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="pular" title="Não aplicar este efeito">Pular</button>`)
                 : `<span class="gl-dica gl-dica--suave">Esperando ${nomeDe(M.esc.lado)}: ${esc(M.esc.texto)}</span>`;
         } else if (alvo) {
@@ -269,12 +281,12 @@
         // eu: campo, barra e a mão em leque
         const l = L[eu];
         const minhaMao = Array.isArray(l.mao) ? l.mao : null;
-        const podeJogar = c => minhaVez && c.custo <= l.energia; // só no próprio turno (nem Lendas na defesa)
+        const podeJogar = (c, x) => minhaVez && custoAgora(l, x, c) <= l.energia; // só no próprio turno (nem Lendas na defesa)
         const maoHtml = minhaMao
             ? `<div class="gl-mao" style="--n:${minhaMao.length}">${minhaMao.map((x, k) => {
-                const c = cartaDef(x.c);
+                const c = Object.assign(cartaDef(x.c), { custo: custoAgora(l, x, cartaDef(x.c)) });
                 return `<div class="gl-slot gl-slot--mao${x.rev ? ' gl-revelada-minha' : ''}" style="--k:${k}">` +
-                    window.JG.carta(c, { classe: (podeJogar(c) ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : '') +
+                    window.JG.carta(c, { classe: (podeJogar(c, x) ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : '') +
                         (M.escolho && M.esc.tipo === 'mao' && M.esc.opcoes.includes(x.i) ? ' gl-alvo' : ''), attrs: `data-mao="${x.i}"${ver(x.c)}` }) +
                     (x.rev ? '<span class="gl-olho" title="Revelada para os outros jogadores">👁</span>' : '') +
                     (M.jogo ? `<button type="button" class="gl-mais" data-mais-mao="${x.i}" title="Ações desta carta" aria-label="Ações de ${esc(c.nome)}">⋯</button>` : '') +
@@ -287,6 +299,7 @@
             `<span class="gl-energia gl-energia--grande" title="Energia: sobe 1 a cada turno seu">⚡ ${l.energia}/${l.energiaMax}</span>` +
             `<div class="gl-assento-shots">${shots(eu, eu === D.lado)}</div>` +
             `<span class="gl-zona" title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>` +
+            (l.extras && l.extras.topo ? `<button type="button" class="gl-zona"${ver(l.extras.topo)} title="Carta do topo do seu baralho (uma carta em jogo deixa você ver)">👁 ${esc(cartaDef(l.extras.topo).nome)}</button>` : '') +
             cemiterioBotao(eu) +
             comandoBotao(eu) +
             (l.fora ? '<span class="gl-selo-fora">Fora</span>' : '') +
@@ -334,7 +347,19 @@
 
         if (modal.tipo === 'escolha') {
             // carta pedida por um efeito, no próprio baralho ou cemitério
-            if (!M.escolho || !['baralho', 'cemiterio', 'palavra', 'confirmar'].includes(M.esc.tipo)) { modal = null; return ''; }
+            if (!M.escolho || !['baralho', 'cemiterio', 'palavra', 'confirmar', 'opcao', 'resposta'].includes(M.esc.tipo)) { modal = null; return ''; }
+            if (M.esc.tipo === 'opcao') { // "ou" do texto, a letra do Zequinha, o palpite da Estátua, o que a Maria vê
+                const rot = M.esc.rotulos || {};
+                return janela(M.esc.fonte, `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-palavras-mesa">${M.esc.opcoes.map(o =>
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-escolher="${esc(o)}">${esc(rot[o] || o)}</button>`).join('')}</div>`,
+                    M.esc.obrig ? '' : `<button type="button" class="camp-btn" data-gl="pular">Pular</button>`);
+            }
+            if (M.esc.tipo === 'resposta') { // Vergonha de Dante / Imbuir: usar agora, fora do seu turno
+                const mao = Array.isArray(L[eu].mao) ? L[eu].mao : [];
+                return janela('Responder?', `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-grade-cartas">${mao.filter(x => M.esc.opcoes.includes(x.i)).map(x =>
+                    `<div class="gl-slot">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}<span class="gl-cem-botoes"><button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-escolher="${x.i}">Usar</button></span></div>`).join('')}</div>`,
+                    `<button type="button" class="camp-btn" data-gl="pular">Não usar</button>`);
+            }
             if (M.esc.tipo === 'confirmar') { // "você pode…": sim ou não
                 return janela(M.esc.fonte, `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p>`,
                     `<button type="button" class="camp-btn camp-btn-primario" data-escolher="sim">Sim, fazer</button><button type="button" class="camp-btn" data-gl="pular">Não</button>`);
@@ -349,7 +374,7 @@
             const ops = zona.filter(x => M.esc.opcoes.includes(x.i));
             const corpo = `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-grade-cartas">${ops.map(x =>
                 `<div class="gl-slot">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}` +
-                `<span class="gl-cem-botoes"><button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-escolher="${x.i}">Escolher</button></span></div>`).join('')}</div>`;
+                `<span class="gl-cem-botoes"><button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-escolher="${x.i}">${esc(M.esc.rotulo || 'Escolher')}</button></span></div>`).join('')}</div>`;
             return janela(M.esc.fonte, corpo, M.esc.obrig ? '' : `<button type="button" class="camp-btn" data-gl="pular">Pular</button>`);
         }
 
@@ -358,8 +383,12 @@
             const abas = M.ordem.map(l => `<button type="button" class="jg-aba${l === lado ? ' ativo' : ''}" data-gl="aba-cemiterio" data-lado="${l}">` +
                 `${l === D.lado ? 'Seu' : nomeDe(l)} · ${L[l].cemiterio.length}</button>`).join('');
             const cartasCem = L[lado].cemiterio.slice().reverse();
+            const meu = lado === D.lado && M.jogo;
+            const formas = meu && L[lado].extras && L[lado].extras.formas_cem;
             const corpo = `<div class="jg-abas">${abas}</div>` + (cartasCem.length ? `<div class="gl-grade-cartas">${cartasCem.map(x =>
                 `<div class="gl-slot">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}` +
+                (meu ? `<span class="gl-cem-botoes">${habilidades(x, 'cemiterio')}${formas && ((D.estado.cartas[x.c] || {}).sub || []).includes('forma')
+                    ? `<button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-cem-jogar="${x.i}" title="Cristian Fernandez: conjura do cemitério e a carta é banida">Conjurar (banir)</button>` : ''}</span>` : '') +
                 `</div>`).join('')}</div>` : '<p class="camp-vazio">Cemitério vazio.</p>');
             return janela('Cemitério', corpo, '<span class="camp-dica">Lendas que caem, feitiços mandados ao cemitério e cartas descartadas. O mais recente aparece primeiro.</span>');
         }
@@ -381,6 +410,7 @@
             if (!x) { modal = null; return ''; }
             const minha = dono === D.lado;
             const corpo = `<div class="gl-modal-carta">${window.JG.carta(defLenda(x), { atk: x.atk, vida: x.vida, max: x.max, pal: x.pal || [] })}<div class="gl-modal-acoes">` +
+                (minha && M.jogo ? habilidades(x, 'mesa') : '') +
                 marcacao(x, 'na Lenda') +
                 botaoVer(x.c, x.i, dono) +
                 `<p class="camp-dica">${minha ? 'Sua Lenda.' : 'Lenda de ' + nomeDe(dono) + '.'} Tudo o que muda nela vem do efeito das cartas.</p></div></div>`;
@@ -458,8 +488,10 @@
         const x = (Array.isArray(M.L[M.eu].mao) ? M.L[M.eu].mao : []).find(c => c.i === inst);
         const c = x && cartaDef(x.c);
         if (!c) return;
-        if (!(M.minhaVez && c.custo <= M.L[M.eu].energia)) {
-            msg(M.defendo ? 'Na defesa só dá para escolher bloqueadores: cartas, só no seu turno.' : (c.custo > M.L[M.eu].energia ? 'Energia insuficiente.' : 'Agora não é a sua vez.'), true);
+        const custo = custoAgora(M.L[M.eu], x, c);
+        if (c.resp) { msg('Essa carta só é usada em resposta à jogada de outro jogador.', true); return; }
+        if (!(M.minhaVez && custo <= M.L[M.eu].energia)) {
+            msg(M.defendo ? 'Na defesa só dá para escolher bloqueadores: cartas, só no seu turno.' : (custo > M.L[M.eu].energia ? 'Energia insuficiente.' : 'Agora não é a sua vez.'), true);
             return;
         }
         if (c.tipo !== 'lenda' && conjuraSozinho(c)) { acao({ acao: 'jogar', inst }); return; } // alvos são pedidos depois
@@ -481,6 +513,10 @@
         if (verEl) { abrirDetalhe(verEl); return; }
         const escolhida = ev.target.closest('[data-escolher]');
         if (escolhida) { modal = null; acao({ acao: 'escolher', alvo: escolhida.dataset.escolher }); return; }
+        const hab = ev.target.closest('[data-hab]');
+        if (hab) { modal = null; acao({ acao: 'habilidade', inst: +hab.dataset.inst, qual: hab.dataset.hab }); return; }
+        const doCem = ev.target.closest('[data-cem-jogar]');
+        if (doCem) { modal = null; acao({ acao: 'jogar', inst: +doCem.dataset.cemJogar, origem: 'cemiterio' }); return; }
         const m = ev.target.closest('[data-m]');
         if (m && modal) {
             const inst = modal.inst;
@@ -751,6 +787,7 @@
     /* ================================================================== */
     const APRESSAR_APOS = 30; // Gladio::APRESSAR_APOS: depois disso os outros podem apressar
     const TEMPO_VEZ = 90;     // Gladio::TEMPO_VEZ: acabou, a mesa segue sozinha
+    const TEMPO_RESPOSTA = 20; // Gladio::TEMPO_RESPOSTA: quem pode responder fora do turno decide nesse tempo
     let difRelogio = 0;       // relógio do servidor − relógio do navegador (s)
     let ultimoApressado = null;
     let tempoPedido = null;   // "desde" da vez cujo fim de tempo já foi pedido ao servidor
@@ -767,8 +804,11 @@
         const el = box.querySelector('[data-relogio]');
         if (!el) return;
         const e = D.estado;
-        const seg = Math.max(0, Math.floor(agoraServidor() - e.desde));
-        const resta = Math.max(0, TEMPO_VEZ - seg);
+        // resposta fora do turno (Vergonha de Dante, Imbuir): janela curta, com o relógio dela
+        const resp = e.escolha && e.escolha.tipo === 'resposta' && e.escolha.desde;
+        const desde = resp ? e.escolha.desde : e.desde;
+        const seg = Math.max(0, Math.floor(agoraServidor() - desde));
+        const resta = Math.max(0, (resp ? TEMPO_RESPOSTA : TEMPO_VEZ) - seg);
         el.querySelector('b').textContent = Math.floor(resta / 60) + ':' + String(resta % 60).padStart(2, '0');
         const quem = esperandoDe(e);
         el.classList.toggle('gl-relogio--atencao', resta <= 30 && resta > 10);
@@ -777,8 +817,8 @@
         const bt = box.querySelector('[data-gl="apressar"]');
         if (bt) bt.hidden = !(momento().jogo && quem !== D.lado && seg >= APRESSAR_APOS);
         // tempo esgotado: quem estiver na mesa avisa o servidor (uma vez por vez), e a partida segue
-        if (resta === 0 && momento().jogo && tempoPedido !== e.desde && !enviando) {
-            tempoPedido = e.desde;
+        if (resta === 0 && momento().jogo && tempoPedido !== desde && !enviando) {
+            tempoPedido = desde;
             acao({ acao: 'tempo' });
         }
     }

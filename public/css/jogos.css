@@ -762,3 +762,8 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .jg-criador-deck > * { width: 100%; min-width: 0; box-sizing: border-box; }
 .jg-deck-linha { min-width: 0; }
 .jg-deck-linha > :not(.jg-deck-nome) { flex: 0 0 auto; }
+/* selos de regra na Lenda (Regenerar, Silhueta, sem dano neste turno) e subtipos na carta */
+.gl-selo { position: absolute; left: 4px; top: 4px; z-index: 3; font-size: 11px; line-height: 1; padding: 2px 4px; border-radius: 6px; background: rgba(20, 10, 10, .85); color: #fff; }
+.gl-selo-regen { background: #1f6f43; }
+.gl-selo-silhueta { top: 22px; background: #4b2d7a; }
+.jg-carta-sub { text-transform: lowercase; opacity: .85; }
