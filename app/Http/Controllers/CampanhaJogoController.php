@@ -327,6 +327,7 @@ class CampanhaJogoController extends Controller
             'convidado_id' => ['nullable', 'integer'],
             'exercito'     => ['nullable', 'string', 'max:2000'],
             'deck_id'      => ['nullable', 'integer'],
+            'vagas'        => ['nullable', 'integer', 'min:2', 'max:' . Gladio::MAX_JOGADORES], // Gladio: jogadores na mesa
         ]);
         $convidado = !empty($d['convidado_id']) ? (int) $d['convidado_id'] : null;
         if ($convidado !== null && ($convidado === $uid || !$campanha->temMembro($convidado))) {
@@ -344,10 +345,16 @@ class CampanhaJogoController extends Controller
                 return $this->erro('Você não tem Dinheiro suficiente para essa aposta.');
             }
             try {
-                $config = ['deck' => $this->deckDe($campanha, $uid, $d['deck_id'] ?? null, $this->catalogo($campanha))];
+                $deck = $this->deckDe($campanha, $uid, $d['deck_id'] ?? null, $this->catalogo($campanha));
             } catch (\InvalidArgumentException $e) {
                 return $this->erro($e->getMessage());
             }
+            $vagas = (int) ($d['vagas'] ?? 2);
+            if ($vagas > 2) {
+                $convidado = null; // mesa com várias vagas fica aberta a qualquer um da campanha
+            }
+            // quem entra na mesa, na ordem da roda, e o deck de cada um (null: 20 sorteadas)
+            $config = ['vagas' => $vagas, 'jogadores' => [$uid], 'decks' => [(string) $uid => $deck]];
         } else {
             $ex = json_decode((string) ($d['exercito'] ?? ''), true) ?: PelaDama::exercitoPadrao();
             if ($msg = PelaDama::validarExercito($ex, $this->tiposDe($campanha, $uid))) {
@@ -364,16 +371,20 @@ class CampanhaJogoController extends Controller
         return response()->json(['ok' => true] + $this->dadosLobby($campanha));
     }
 
-    /** Aceitar um desafio: no Gladio as duas apostas saem da carteira agora e voltam para quem vencer. */
+    /**
+     * Aceitar um desafio. No Gladio é entrar na mesa: a partida começa sozinha quando as vagas enchem (ou quando quem
+     * criou manda começar). Pela Dama começa na hora.
+     */
     public function aceitar(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
     {
         $this->exigirMembro($campanha);
         $this->daCampanha($campanha, $partida);
         $uid = (int) auth()->id();
         $request->validate(['exercito' => ['nullable', 'string', 'max:2000'], 'deck_id' => ['nullable', 'integer']]);
+        $comecou = true;
 
         try {
-            DB::transaction(function () use ($request, $campanha, $partida, $uid) {
+            DB::transaction(function () use ($request, $campanha, $partida, $uid, &$comecou) {
                 $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
                 if ($p->status !== 'aberta') {
                     throw new \InvalidArgumentException('Esse desafio não está mais aberto.');
@@ -386,23 +397,28 @@ class CampanhaJogoController extends Controller
                 }
 
                 if ($p->jogo === 'gladio') {
-                    $cartas = $this->catalogo($campanha);
-                    $deck2 = $this->deckDe($campanha, $uid, $request->input('deck_id'), $cartas);
-                    if ($p->aposta > 0) {
-                        foreach ([(int) $p->jogador1_id, $uid] as $quem) {
-                            $c = $this->carteira($campanha, $quem, true);
-                            if ($c->dinheiro < $p->aposta) {
-                                throw new \InvalidArgumentException($quem === $uid
-                                    ? 'Você não tem Dinheiro suficiente para essa aposta.'
-                                    : 'Quem desafiou não tem mais Dinheiro suficiente para a aposta.');
-                            }
-                            $c->dinheiro -= $p->aposta;
-                            $c->save();
-                        }
+                    $cfg = $this->configMesa($p);
+                    if (in_array($uid, $cfg['jogadores'], true)) {
+                        throw new \InvalidArgumentException('Você já está nessa mesa.');
                     }
-                    // cartas do deck de quem desafiou que o mestre apagou nesse meio-tempo ficam de fora
-                    $deck1 = array_values(array_filter((array) ($p->config['deck'] ?? []), fn ($id) => isset($cartas[(string) $id])));
-                    $estado = Gladio::iniciar($cartas, (int) $p->aposta, ['a' => $deck1 ?: null, 'b' => $deck2]);
+                    if (count($cfg['jogadores']) >= $cfg['vagas']) {
+                        throw new \InvalidArgumentException('Essa mesa já está cheia.');
+                    }
+                    if ($p->aposta > $this->saldo($campanha, $uid)) {
+                        throw new \InvalidArgumentException('Você não tem Dinheiro suficiente para essa aposta.');
+                    }
+                    $cfg['jogadores'][] = $uid;
+                    $cfg['decks'][(string) $uid] = $this->deckDe($campanha, $uid, $request->input('deck_id'), $this->catalogo($campanha));
+                    $p->config = $cfg;
+                    $comecou = count($cfg['jogadores']) >= $cfg['vagas'];
+                    if ($comecou) {
+                        $this->comecarMesa($campanha, $p);
+                    } else {
+                        $p->versao = (int) $p->versao + 1;
+                        $p->save();
+                    }
+
+                    return;
                 } else {
                     $ex2 = json_decode((string) $request->input('exercito', ''), true) ?: PelaDama::exercitoPadrao();
                     $tipos = $this->tiposDe($campanha, (int) $p->jogador1_id) + $this->tiposDe($campanha, $uid);
@@ -426,7 +442,83 @@ class CampanhaJogoController extends Controller
             return $this->erro($e->getMessage());
         }
 
+        return response()->json(['ok' => true, 'comecou' => $comecou, 'url' => route('campanhas.jogos.partida', [$campanha, $partida])]
+            + ($comecou ? [] : $this->dadosLobby($campanha)));
+    }
+
+    /** Gladio: quem criou a mesa começa a partida antes de encher as vagas (precisa de pelo menos 2 jogadores). */
+    public function comecar(Campanha $campanha, JogoPartida $partida): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $this->daCampanha($campanha, $partida);
+        $uid = (int) auth()->id();
+        try {
+            DB::transaction(function () use ($campanha, $partida, $uid) {
+                $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
+                if ($p->jogo !== 'gladio' || $p->status !== 'aberta') {
+                    throw new \InvalidArgumentException('Essa mesa não está esperando jogadores.');
+                }
+                if ((int) $p->jogador1_id !== $uid) {
+                    throw new \InvalidArgumentException('Só quem criou a mesa pode começar a partida.');
+                }
+                if (count($this->configMesa($p)['jogadores']) < 2) {
+                    throw new \InvalidArgumentException('Espere pelo menos mais um jogador entrar.');
+                }
+                $this->comecarMesa($campanha, $p);
+            });
+        } catch (\InvalidArgumentException $e) {
+            return $this->erro($e->getMessage());
+        }
+
         return response()->json(['ok' => true, 'url' => route('campanhas.jogos.partida', [$campanha, $partida])]);
+    }
+
+    /** Config da mesa de Gladio, completando desafios criados antes das vagas (2 jogadores, deck em config.deck). */
+    private function configMesa(JogoPartida $p): array
+    {
+        $cfg = (array) ($p->config ?? []);
+        $cfg['vagas'] = max(2, min(Gladio::MAX_JOGADORES, (int) ($cfg['vagas'] ?? 2)));
+        $cfg['jogadores'] = array_map('intval', (array) ($cfg['jogadores'] ?? [(int) $p->jogador1_id]));
+        $cfg['decks'] = (array) ($cfg['decks'] ?? [(string) $p->jogador1_id => $cfg['deck'] ?? null]);
+        unset($cfg['deck']);
+
+        return $cfg;
+    }
+
+    /**
+     * Começa a mesa de Gladio (dentro da transação, com a partida travada): a aposta sai da carteira de cada jogador e
+     * o motor monta a roda na ordem em que entraram.
+     */
+    private function comecarMesa(Campanha $campanha, JogoPartida $p): void
+    {
+        $cfg = $this->configMesa($p);
+        $cartas = $this->catalogo($campanha);
+        if ($p->aposta > 0) {
+            foreach ($cfg['jogadores'] as $quem) {
+                $c = $this->carteira($campanha, $quem, true);
+                if ($c->dinheiro < $p->aposta) {
+                    $nome = User::whereKey($quem)->value('name') ?? 'Um jogador';
+                    throw new \InvalidArgumentException("$nome não tem mais Dinheiro suficiente para a aposta.");
+                }
+                $c->dinheiro -= $p->aposta;
+                $c->save();
+            }
+        }
+        $decks = [];
+        $nomes = [];
+        foreach ($cfg['jogadores'] as $k => $quem) {
+            $lado = Gladio::LADOS[$k];
+            // cartas do deck que o mestre apagou nesse meio-tempo ficam de fora
+            $deck = array_values(array_filter((array) ($cfg['decks'][(string) $quem] ?? []), fn ($id) => isset($cartas[(string) $id])));
+            $decks[$lado] = $deck ?: null;
+            $nomes[$lado] = (string) (User::whereKey($quem)->value('name') ?? 'Jogador');
+        }
+        $p->config = $cfg;
+        $p->jogador2_id = $cfg['jogadores'][1] ?? null;
+        $p->estado = Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes);
+        $p->status = 'andamento';
+        $p->versao = (int) $p->versao + 1;
+        $p->save();
     }
 
     /** Desafio aberto: quem criou ou o mestre cancela. Em andamento: só o mestre, e as apostas voltam. */
@@ -441,6 +533,17 @@ class CampanhaJogoController extends Controller
             DB::transaction(function () use ($campanha, $partida, $uid, $mestre) {
                 $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
                 if ($p->status === 'aberta') {
+                    // quem só entrou na mesa (não criou) sai dela; a mesa continua aberta
+                    if ($p->jogo === 'gladio' && (int) $p->jogador1_id !== $uid && in_array($uid, $this->configMesa($p)['jogadores'], true)) {
+                        $cfg = $this->configMesa($p);
+                        $cfg['jogadores'] = array_values(array_diff($cfg['jogadores'], [$uid]));
+                        unset($cfg['decks'][(string) $uid]);
+                        $p->config = $cfg;
+                        $p->versao = (int) $p->versao + 1;
+                        $p->save();
+
+                        return;
+                    }
                     if (!$mestre && (int) $p->jogador1_id !== $uid) {
                         throw new \InvalidArgumentException('Só quem criou o desafio ou o mestre pode cancelar.');
                     }
@@ -449,7 +552,7 @@ class CampanhaJogoController extends Controller
                         throw new \InvalidArgumentException('Só o mestre pode cancelar uma partida em andamento.');
                     }
                     if ($p->jogo === 'gladio' && $p->aposta > 0) {
-                        foreach ([(int) $p->jogador1_id, (int) $p->jogador2_id] as $quem) {
+                        foreach ($p->jogadores() as $quem) {
                             $c = $this->carteira($campanha, $quem, true);
                             $c->dinheiro += $p->aposta;
                             $c->save();
@@ -502,6 +605,9 @@ class CampanhaJogoController extends Controller
             'gratis' => ['nullable', 'boolean'],
             'efeito' => ['nullable', Rule::in(Gladio::EFEITOS)],          // feitiço: efeito escolhido por quem joga
             'valor' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'quanto' => ['nullable', 'integer', 'min:-7', 'max:7'],       // shots
+            'cont' => ['nullable', 'integer', 'min:-99', 'max:99'],       // contador de uma carta
+            'nota' => ['nullable', 'string', 'max:60'],                   // anotação de uma carta
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
             'tx' => ['nullable', 'integer'], 'ty' => ['nullable', 'integer'],
         ]);
@@ -526,7 +632,12 @@ class CampanhaJogoController extends Controller
                     $e = match ($acao) {
                         'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), $request->boolean('gratis'),
                             $request->input('efeito') ?: null, (int) $request->input('valor', 0)),
-                        'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', [])),
+                        'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', []), $request->input('alvo') ?: null),
+                        'shot'       => Gladio::shot($e, $lado, (int) $request->input('quanto', 1)),
+                        'revelar'    => Gladio::revelar($e, $lado, $inst),
+                        'marcar'     => Gladio::marcar($e, $lado, $inst, (int) $request->input('cont', 0),
+                            $request->has('nota') ? (string) $request->input('nota', '') : null),
+                        'encerrar'   => Gladio::encerrarFeitico($e, $lado, $inst),
                         'bloquear'   => Gladio::bloquear($e, $lado, $inst, $outro),
                         'defender'   => Gladio::defender($e, $lado),
                         'passar'     => Gladio::passar($e, $lado),
@@ -562,15 +673,20 @@ class CampanhaJogoController extends Controller
                 $p->versao = (int) $p->versao + 1;
                 if ($e['fim']) {
                     $p->status = 'fim';
-                    // lado de quem criou o desafio: 'a' no Gladio, 'b' (brancas) no Pela Dama; empate não tem vencedor
-                    $ladoJ1 = $p->jogo === 'gladio' ? 'a' : 'b';
-                    $vencedorId = $venceu === null ? null : ($venceu === $ladoJ1 ? $p->jogador1_id : $p->jogador2_id);
-                    $p->vencedor_id = $vencedorId;
-                    if ($p->jogo === 'gladio' && $p->aposta > 0 && $vencedorId) {
-                        $c = $this->carteira($campanha, (int) $vencedorId, true);
-                        $c->dinheiro += 2 * $p->aposta; // as duas apostas
-                        $c->save();
+                    if ($p->jogo === 'gladio') {
+                        // o vencedor leva o pote inteiro: a aposta de todos os jogadores da mesa
+                        $k = $venceu === null ? false : array_search($venceu, Gladio::LADOS, true);
+                        $vencedorId = $k === false ? null : ($p->jogadores()[$k] ?? null);
+                        if ($p->aposta > 0 && $vencedorId) {
+                            $c = $this->carteira($campanha, (int) $vencedorId, true);
+                            $c->dinheiro += $p->aposta * count($p->jogadores());
+                            $c->save();
+                        }
+                    } else {
+                        // Pela Dama: brancas ('b') é quem criou o desafio; empate não tem vencedor
+                        $vencedorId = $venceu === null ? null : ($venceu === 'b' ? $p->jogador1_id : $p->jogador2_id);
                     }
+                    $p->vencedor_id = $vencedorId;
                 }
                 $p->save();
 
@@ -719,24 +835,37 @@ class CampanhaJogoController extends Controller
             ->orderByRaw("CASE status WHEN 'andamento' THEN 0 WHEN 'aberta' THEN 1 WHEN 'fim' THEN 2 ELSE 3 END")
             ->orderByDesc('updated_at')
             ->limit(40)
-            ->get(['id', 'jogo', 'jogador1_id', 'jogador2_id', 'convidado_id', 'aposta', 'status', 'vencedor_id', 'updated_at']);
+            ->get(['id', 'jogo', 'jogador1_id', 'jogador2_id', 'convidado_id', 'aposta', 'status', 'vencedor_id', 'config', 'updated_at']);
 
         return [
             'carteiras' => JogoCarteira::where('campanha_id', $campanha->id)->pluck('dinheiro', 'user_id'),
-            'partidas'  => $partidas->map(fn ($p) => [
-                'id'        => $p->id,
-                'jogo'      => $p->jogo,
-                'status'    => $p->status,
-                'aposta'    => (int) $p->aposta,
-                'j1'        => $nome($p->jogador1_id),
-                'j2'        => $nome($p->jogador2_id),
-                'convidado' => $nome($p->convidado_id),
-                'vencedor'  => $nome($p->vencedor_id),
-                'meu'       => (int) $p->jogador1_id === $uid || (int) $p->jogador2_id === $uid,
-                'aceitar'   => $p->status === 'aberta' && (int) $p->jogador1_id !== $uid && (!$p->convidado_id || (int) $p->convidado_id === $uid),
-                'cancelar'  => ($p->status === 'aberta' && ($mestre || (int) $p->jogador1_id === $uid)) || ($p->status === 'andamento' && $mestre),
-                'url'       => route('campanhas.jogos.partida', [$campanha, $p->id]),
-            ])->values(),
+            'partidas'  => $partidas->map(function ($p) use ($nome, $uid, $mestre, $campanha) {
+                $gladio = $p->jogo === 'gladio';
+                $cfg = $gladio ? $this->configMesa($p) : null;
+                $jogadores = $gladio && $p->status === 'aberta' ? $cfg['jogadores'] : ($gladio ? $p->jogadores() : array_filter([$p->jogador1_id, $p->jogador2_id]));
+                $estou = in_array($uid, array_map('intval', $jogadores), true);
+                $vagas = $gladio ? $cfg['vagas'] : 2;
+                $criador = (int) $p->jogador1_id === $uid;
+
+                return [
+                    'id'        => $p->id,
+                    'jogo'      => $p->jogo,
+                    'status'    => $p->status,
+                    'aposta'    => (int) $p->aposta,
+                    'j1'        => $nome($p->jogador1_id),
+                    'j2'        => $nome($p->jogador2_id),
+                    'jogadores' => array_values(array_map(fn ($id) => $nome($id), $jogadores)),
+                    'vagas'     => $vagas,
+                    'convidado' => $nome($p->convidado_id),
+                    'vencedor'  => $nome($p->vencedor_id),
+                    'meu'       => $estou,
+                    'aceitar'   => $p->status === 'aberta' && !$estou && count($jogadores) < $vagas && (!$p->convidado_id || (int) $p->convidado_id === $uid),
+                    'comecar'   => $gladio && $p->status === 'aberta' && $criador && count($jogadores) >= 2 && count($jogadores) < $vagas,
+                    'sair'      => $gladio && $p->status === 'aberta' && $estou && !$criador,
+                    'cancelar'  => ($p->status === 'aberta' && ($mestre || $criador)) || ($p->status === 'andamento' && $mestre),
+                    'url'       => route('campanhas.jogos.partida', [$campanha, $p->id]),
+                ];
+            })->values(),
         ];
     }
 
@@ -752,19 +881,25 @@ class CampanhaJogoController extends Controller
             $e['legais'] = $lado && $p->status === 'andamento' && ($e['vez'] ?? null) === $lado ? PelaDama::mapaLegais($e) : (object) [];
         }
         $p->loadMissing(['jogador1', 'jogador2']);
+        // Gladio: os jogadores em roda ({ lado, nome }), na mesma ordem dos lados do motor
+        $roda = $p->jogo === 'gladio'
+            ? array_map(fn ($id, $k) => ['lado' => Gladio::LADOS[$k], 'nome' => (string) (User::whereKey($id)->value('name') ?? 'Jogador')],
+                $p->jogadores(), array_keys($p->jogadores()))
+            : [];
 
         return [
-            'v'        => (int) $p->versao,
-            'jogo'     => $p->jogo,
-            'status'   => $p->status,
-            'aposta'   => (int) $p->aposta,
-            'lado'     => $lado,
-            'nomes'    => [
+            'v'         => (int) $p->versao,
+            'jogo'      => $p->jogo,
+            'status'    => $p->status,
+            'aposta'    => (int) $p->aposta,
+            'lado'      => $lado,
+            'nomes'     => [
                 'j1' => (string) optional($p->jogador1)->name,
                 'j2' => (string) optional($p->jogador2)->name,
             ],
-            'vencedor' => $p->vencedor_id ? ((int) $p->vencedor_id === (int) $p->jogador1_id ? 'j1' : 'j2') : null,
-            'estado'   => $e,
+            'jogadores' => $roda,
+            'vencedor'  => $p->vencedor_id ? ((int) $p->vencedor_id === (int) $p->jogador1_id ? 'j1' : 'j2') : null,
+            'estado'    => $e,
         ];
     }
 }

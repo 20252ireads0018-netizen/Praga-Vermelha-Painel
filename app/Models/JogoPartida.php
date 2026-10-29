@@ -29,11 +29,30 @@ class JogoPartida extends Model
         return $this->belongsTo(User::class, 'convidado_id');
     }
 
-    /** Lado do usuário: Gladio 'a'/'b'; Pela Dama 'b' (brancas)/'p' (pretas); null para quem só assiste. */
+    /**
+     * Jogadores do Gladio na ordem da roda (lado 'a', 'b', 'c'…). Ficam em config.jogadores; partidas antigas de 2
+     * jogadores só têm jogador1/jogador2.
+     */
+    public function jogadores(): array
+    {
+        $lista = array_map('intval', (array) ($this->config['jogadores'] ?? []));
+        if (!$lista) {
+            $lista = array_values(array_filter([(int) $this->jogador1_id, (int) $this->jogador2_id]));
+        }
+
+        return $lista;
+    }
+
+    /** Lado do usuário: Gladio 'a'…'f' (ordem da roda); Pela Dama 'b' (brancas)/'p' (pretas); null para quem só assiste. */
     public function ladoDe(?int $uid): ?string
     {
         if ($uid === null) {
             return null;
+        }
+        if ($this->jogo === 'gladio') {
+            $k = array_search($uid, $this->jogadores(), true);
+
+            return $k === false ? null : (\App\Jogos\Gladio::LADOS[$k] ?? null);
         }
         if ((int) $this->jogador1_id === $uid) {
             return $this->jogo === 'gladio' ? 'a' : 'b';

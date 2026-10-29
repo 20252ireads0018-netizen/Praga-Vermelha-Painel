@@ -110,7 +110,7 @@ class CampanhaJogosTest extends TestCase
 
         // a Bia não vê a mão da Ana
         $estado = $this->getJson($this->url("/partidas/{$p->id}/estado"))->assertOk()->json('estado');
-        $this->assertIsInt($estado['lados']['a']['mao']);
+        $this->assertSame(array_fill(0, 5, ['oculta' => true]), $estado['lados']['a']['mao'], 'a mão da Ana vem virada');
         $this->assertIsArray($estado['lados']['b']['mao']);
         // fora da vez
         $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
@@ -183,6 +183,41 @@ class CampanhaJogosTest extends TestCase
         // arquivo que não é imagem é recusado
         $this->post($this->url('/cartas'), ['nome' => 'X', 'tipo' => 'lenda', 'custo' => 1, 'vida' => 1,
             'imagem_arquivo' => UploadedFile::fake()->create('x.pdf', 5, 'application/pdf')], ['Accept' => 'application/json'])->assertStatus(422);
+    }
+
+    public function test_mesa_de_tres_entrar_sair_comecar_e_vencedor_leva_o_pote(): void
+    {
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        foreach ([$this->mestre, $this->ana, $this->bia] as $u) {
+            JogoCarteira::create(['campanha_id' => $this->camp->id, 'user_id' => $u->id, 'dinheiro' => 10]);
+        }
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 10, 'vagas' => 3])->assertOk();
+        $p = JogoPartida::firstOrFail();
+
+        // a Bia entra e sai; a mesa continua aberta e ninguém pagou nada ainda
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk()->assertJsonPath('comecou', false);
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/cancelar"))->assertOk();
+        $this->assertSame([$this->ana->id], $p->fresh()->config['jogadores']);
+        $this->assertSame('aberta', $p->fresh()->status);
+        // só quem criou começa, e precisa de 2
+        $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/comecar"))->assertStatus(422);
+
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk()->assertJsonPath('comecou', false);
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/comecar"))->assertStatus(422);
+        $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk()->assertJsonPath('comecou', true);
+        $p->refresh();
+        $this->assertSame('andamento', $p->status);
+        $this->assertSame(['a', 'b', 'c'], $p->estado['ordem']);
+        $this->assertSame(['a' => 'Ana', 'b' => 'Bia', 'c' => 'Mestre'], $p->estado['nomes']);
+        $this->assertSame([0, 0, 0], [$this->dinheiro($this->ana), $this->dinheiro($this->bia), $this->dinheiro($this->mestre)]);
+        $this->assertSame('c', $p->ladoDe($this->mestre->id));
+
+        // Bia toma 7 shots fora da vez; o mestre desiste: a Ana leva as 3 apostas
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'shot', 'quanto' => 7])->assertOk();
+        $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])
+            ->assertOk()->assertJsonPath('status', 'fim');
+        $this->assertSame(30, $this->dinheiro($this->ana));
+        $this->assertSame($this->ana->id, (int) $p->fresh()->vencedor_id);
     }
 
     public function test_mestre_cancela_partida_em_andamento_e_devolve_apostas(): void

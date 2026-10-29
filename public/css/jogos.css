@@ -377,67 +377,171 @@
 .jg-ex-casa select { width: 100%; font-size: .72rem; padding: .15rem; }
 
 /* ==========================================================
-   Partida de Gladio
+   Partida de Gladio: mesa de feltro, adversários no alto,
+   pote no meio, o seu campo embaixo e a mão em leque
    ========================================================== */
-/* tamanho das cartas acompanha a altura da tela: o tabuleiro inteiro cabe sem rolar */
-.gl { --cw-campo: clamp(64px, 11.5vh, 122px); --cw-mao: clamp(70px, 12.5vh, 130px);
-      display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: .8rem; align-items: start; }
-.jg-partida-pagina .jg-topo--partida { margin-bottom: .5rem; }
+/* tamanho das cartas acompanha a altura da tela: a mesa inteira cabe sem rolar */
+.gl { --cw-campo: clamp(58px, 10.5vh, 112px); --cw-op: clamp(50px, 8.6vh, 92px); --cw-mao: clamp(70px, 13vh, 132px);
+      --feltro: #1f4a35; --feltro-escuro: #0f2a1d; --madeira: #4a2c17; --ouro: var(--pv-gold, #c9a45c);
+      display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: .8rem; align-items: start; }
+.jg-partida-pagina { gap: .4rem; }
+.jg-partida-pagina .jg-topo--partida { margin-bottom: 0; padding-bottom: 0; }
 .jg-partida-pagina .jg-topo--partida h1 { font-size: 1.4rem; }
-.gl-tabuleiro { display: flex; flex-direction: column; gap: .45rem; min-width: 0; padding: .6rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio);
-                background: radial-gradient(ellipse at center, rgba(120, 40, 30, .22), rgba(0, 0, 0, .4)); }
-.gl-tabuleiro.gl-em-combate { border-color: rgba(220, 38, 38, .55); box-shadow: inset 0 0 40px rgba(127, 29, 29, .35); }
-.gl-lado { display: flex; flex-direction: column; gap: .4rem; }
-.gl-heroi { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto; gap: .6rem; align-items: center; padding: .35rem .7rem; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .4); }
-.gl-heroi.gl-vez { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 0 1px var(--pv-gold, #c9a45c); }
-.gl-heroi-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gl-heroi-info { display: flex; gap: .5rem; align-items: center; font-size: .85rem; white-space: nowrap; flex-wrap: wrap; justify-content: flex-end; }
-.gl-energia { color: #fde68a; font-weight: 700; }
-.gl-zona { font: inherit; color: inherit; cursor: pointer; padding: .1rem .45rem; border: 1px solid var(--camp-borda-forte); border-radius: 6px; background: rgba(255, 255, 255, .05); }
-.gl-zona:hover { border-color: var(--pv-gold, #c9a45c); }
-.gl-vida { position: relative; height: 1.3rem; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
-.gl-vida span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #7f1d1d, #dc2626); transition: width .3s; }
-.gl-vida b { position: relative; display: block; text-align: center; font-size: .8rem; line-height: 1.3rem; }
 
-.gl-campo { display: flex; gap: .45rem; min-height: calc(var(--cw-campo) * 1.42 + .8rem); align-items: center; justify-content: center; flex-wrap: wrap; padding: .4rem; border-radius: var(--camp-raio); background: rgba(0, 0, 0, .2); }
+.gl-mesa { position: relative; display: flex; flex-direction: column; gap: .4rem; min-width: 0; padding: .6rem .7rem 0;
+           border: 10px solid var(--madeira); border-radius: 22px; overflow: hidden;
+           box-shadow: inset 0 0 0 2px rgba(201, 164, 92, .35), inset 0 0 80px rgba(0, 0, 0, .55), 0 10px 30px rgba(0, 0, 0, .6);
+           background:
+               radial-gradient(ellipse at 50% 45%, rgba(255, 255, 255, .07), transparent 60%),
+               repeating-radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .012) 0 2px, transparent 2px 4px),
+               linear-gradient(var(--feltro), var(--feltro-escuro)); }
+.gl-mesa.gl-em-combate { box-shadow: inset 0 0 0 2px rgba(220, 38, 38, .6), inset 0 0 90px rgba(127, 29, 29, .55), 0 10px 30px rgba(0, 0, 0, .6); }
+.gl-arrastando-carta .gl-mesa { cursor: grabbing; }
+
+/* ---------- adversários ---------- */
+.gl-oponentes { display: grid; gap: .5rem; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); }
+.gl-op-1 { --cols: 1; } .gl-op-2 { --cols: 2; } .gl-op-3 { --cols: 3; } .gl-op-4 { --cols: 2; } .gl-op-5 { --cols: 3; }
+.gl-op-1 .gl-campo { --cw-op: var(--cw-campo); }
+.gl-op-4, .gl-op-5 { --cw-op: clamp(40px, 6vh, 70px); }
+.gl-assento { display: flex; flex-direction: column; gap: .25rem; min-width: 0; padding: .3rem .4rem .4rem; border-radius: 14px;
+              background: rgba(0, 0, 0, .18); border: 1px solid rgba(255, 255, 255, .06); transition: box-shadow .2s, border-color .2s; }
+.gl-assento.gl-vez { border-color: var(--ouro); box-shadow: 0 0 0 1px var(--ouro), 0 0 18px rgba(201, 164, 92, .3); }
+.gl-assento.gl-atacado, .gl-eu-barra.gl-atacado { border-color: #dc2626; box-shadow: 0 0 0 1px #dc2626, 0 0 20px rgba(220, 38, 38, .4); }
+.gl-assento.gl-fora, .gl-eu-barra.gl-fora { opacity: .45; filter: grayscale(.7); }
+.gl-assento-cab { position: relative; display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; padding: .2rem .35rem; border-radius: 10px; }
+.gl-assento-info { flex: 1 1 120px; min-width: 0; display: flex; flex-direction: column; gap: .15rem; }
+.gl-assento-info strong { font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-assento-info small { font-weight: 400; opacity: .65; }
+.gl-assento-numeros { display: flex; gap: .4rem; align-items: center; font-size: .78rem; white-space: nowrap; }
+.gl-avatar { flex: 0 0 auto; display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 50%;
+             font-family: var(--fonte-titulo, serif); font-weight: 800; font-size: 1.05rem; color: #2a1a0a;
+             background: radial-gradient(circle at 35% 30%, #f7e2a8, var(--ouro) 60%, #7a5a22); box-shadow: 0 0 0 2px #2a1a0a, 0 2px 6px rgba(0, 0, 0, .6); }
+.gl-vez .gl-avatar { animation: gl-pulso 1.6s ease-in-out infinite; }
+@keyframes gl-pulso { 50% { box-shadow: 0 0 0 2px #2a1a0a, 0 0 0 5px rgba(201, 164, 92, .45), 0 2px 6px rgba(0, 0, 0, .6); } }
+.gl-selo-fora { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-8deg); padding: .1rem .7rem; border: 2px solid #fca5a5;
+                border-radius: 6px; color: #fca5a5; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; background: rgba(0, 0, 0, .55); }
+
+.gl-vida { position: relative; height: 1.15rem; border-radius: 999px; background: rgba(0, 0, 0, .45); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .6); }
+.gl-vida span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(180deg, #ef4444, #991b1b); transition: width .4s; }
+.gl-vida b { position: relative; display: block; text-align: center; font-size: .74rem; line-height: 1.15rem; text-shadow: 0 1px 2px #000; }
+.gl-energia { color: #fde68a; font-weight: 700; }
+.gl-energia--grande { padding: .15rem .55rem; border-radius: 999px; background: rgba(0, 0, 0, .4); border: 1px solid rgba(253, 230, 138, .35); font-size: .9rem; white-space: nowrap; }
+
+.gl-shots { display: inline-flex; gap: 3px; vertical-align: middle; }
+.gl-shots i { width: 9px; height: 13px; border-radius: 1px 1px 3px 3px; border: 1px solid rgba(253, 230, 138, .5); background: rgba(255, 255, 255, .05); }
+.gl-shots i.cheio { background: linear-gradient(#fde68a, #d97706); border-color: #f59e0b; box-shadow: 0 0 4px rgba(245, 158, 11, .6); }
+.gl-assento-shots { display: flex; align-items: center; gap: .3rem; }
+.gl-shot-botoes { display: inline-flex; gap: 2px; }
+.gl-mini { font: inherit; font-size: .7rem; padding: .05rem .4rem; border-radius: 6px; cursor: pointer; color: #fde68a; background: rgba(0, 0, 0, .4); border: 1px solid rgba(253, 230, 138, .35); }
+.gl-mini:hover:not(:disabled) { border-color: #fde68a; }
+.gl-mini:disabled { opacity: .35; cursor: default; }
+
+.gl-zona { font: inherit; color: inherit; cursor: pointer; padding: .1rem .45rem; border: 1px solid rgba(255, 255, 255, .18); border-radius: 6px; background: rgba(0, 0, 0, .3); white-space: nowrap; }
+.gl-zona:hover { border-color: var(--ouro); }
+.gl-zona.gl-sobre { border-color: #f87171; background: rgba(127, 29, 29, .7); transform: scale(1.15); }
+
+/* mão dos adversários: versos em leque pequeno e as cartas reveladas */
+.gl-mao-op { display: flex; align-items: center; justify-content: center; min-height: 1.5rem; flex-wrap: wrap; gap: 0 .4rem; }
+.gl-mao-op small { font-size: .68rem; opacity: .55; margin-left: .3rem; }
+.gl-verso { width: 1.05rem; height: 1.5rem; border-radius: 3px; border: 1px solid #b08a45; margin-left: -.45rem;
+            background: radial-gradient(circle, #6b1d1d 30%, transparent 32%) center / 100% 100%, repeating-linear-gradient(45deg, #3a1414 0 3px, #24100e 3px 6px);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+.gl-verso:first-child { margin-left: 0; }
+.gl-reveladas { display: inline-flex; gap: .25rem; }
+.gl-reveladas .jg-carta { --cw: calc(var(--cw-op) * .8); }
+.gl-revelada { box-shadow: 0 0 0 2px #93c5fd, 0 3px 8px rgba(0, 0, 0, .6); }
+
+/* ---------- campos (Lendas e feitiços em jogo) ---------- */
+.gl-campo { display: flex; gap: .45rem; align-items: center; justify-content: center; flex-wrap: wrap; padding: .35rem;
+            border-radius: 12px; border: 1px dashed rgba(255, 255, 255, .1); min-height: calc(var(--cw-campo) * 1.4 + .7rem); transition: background .15s, border-color .15s; }
 .gl-campo .jg-carta { --cw: var(--cw-campo); }
-.gl-vazio { opacity: .45; font-size: .85rem; margin: 0; }
+.gl-assento .gl-campo { min-height: calc(var(--cw-op) * 1.4 + .6rem); }
+.gl-assento .gl-campo .jg-carta { --cw: var(--cw-op); }
+.gl-arrastando-carta [data-zona="campo"] { border-color: rgba(201, 164, 92, .55); background: rgba(201, 164, 92, .06); }
+.gl-campo.gl-sobre { border: 2px solid var(--ouro); background: rgba(201, 164, 92, .16); }
+.gl-feiticos { display: flex; gap: .35rem; padding: .2rem .35rem; margin-left: .4rem; border-left: 1px solid rgba(255, 255, 255, .15); }
+.gl-feiticos .jg-carta { --cw: calc(var(--cw-campo) * .82); }
+.gl-assento .gl-feiticos .jg-carta { --cw: calc(var(--cw-op) * .82); }
+.gl-vazio { opacity: .4; font-size: .8rem; margin: 0; font-style: italic; }
+
 .gl-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: .2rem; }
-.gl-mais { position: absolute; top: -6px; right: -6px; z-index: 3; width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 1px solid var(--pv-gold, #c9a45c); background: #1a0f0f; color: #f3e9d6; font: inherit; line-height: 1; cursor: pointer; }
+.gl-campo > .gl-slot { animation: gl-entra .28s ease-out; }
+@keyframes gl-entra { from { transform: translateY(14px) scale(.9); opacity: 0; } }
+.gl-mais { position: absolute; top: -6px; right: -6px; z-index: 3; width: 1.4rem; height: 1.4rem; border-radius: 50%; border: 1px solid var(--ouro);
+           background: #1a0f0f; color: #f3e9d6; font: inherit; font-size: .8rem; line-height: 1; cursor: pointer; opacity: .8; }
+.gl-slot:hover > .gl-mais, .gl-mais:focus-visible { opacity: 1; }
 .gl-mais:hover { background: #3a1616; }
-.gl-etiqueta { position: absolute; bottom: -.55rem; left: 50%; transform: translateX(-50%); z-index: 2; font-size: .68rem; padding: .05rem .4rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .8); border-radius: 999px; background: #4a3a1c; color: #f3e2b8; white-space: nowrap; max-width: calc(var(--cw-campo) + 1rem); overflow: hidden; text-overflow: ellipsis; }
+.gl-contador { position: absolute; top: -7px; left: -7px; z-index: 3; min-width: 1.45rem; height: 1.45rem; padding: 0 .25rem; border-radius: 999px;
+               display: grid; place-items: center; font-size: .75rem; font-weight: 800; color: #0b1a12; background: radial-gradient(circle at 35% 30%, #d9f99d, #65a30d);
+               box-shadow: 0 0 0 2px #0b1a12, 0 2px 4px rgba(0, 0, 0, .6); }
+.gl-nota { position: absolute; top: 34%; left: 50%; z-index: 2; transform: translateX(-50%) rotate(-3deg); max-width: calc(100% + .6rem); padding: .1rem .35rem;
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .66rem; line-height: 1.25; color: #3b2f0b;
+           background: #fef08a; border-radius: 2px; box-shadow: 0 2px 4px rgba(0, 0, 0, .55); pointer-events: none; }
+.gl-etiqueta { position: absolute; bottom: -.5rem; left: 50%; transform: translateX(-50%); z-index: 2; font-size: .64rem; padding: .03rem .4rem; box-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+               border-radius: 999px; background: #4a3a1c; color: #f3e2b8; white-space: nowrap; max-width: calc(100% + 1rem); overflow: hidden; text-overflow: ellipsis; }
 .gl-etiqueta--ataque { background: #7f1d1d; color: #fecaca; }
 .gl-etiqueta--cansada { background: #2a2020; color: #a89494; }
 
-.gl-mao { display: flex; gap: .4rem; justify-content: center; padding-top: .3rem; }
-.gl-mao .jg-carta { --cw: var(--cw-mao); }
-.gl-mao--cheia .gl-slot + .gl-slot { margin-left: calc(var(--cw-mao) * -.32); } /* mão cheia: as cartas se sobrepõem */
-.gl-mao--cheia .gl-slot:hover { z-index: 4; }
-.gl-mao-op { display: flex; gap: .2rem; justify-content: center; min-height: 1.6rem; flex-wrap: wrap; }
-.gl-verso { width: 1.2rem; height: 1.6rem; border-radius: 3px; border: 1px solid #8a6a32; background: repeating-linear-gradient(45deg, #3a1d1d 0 4px, #24110f 4px 8px); }
-
-.gl-jogavel { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); transition: transform .12s; }
-.gl-jogavel:hover { transform: translateY(-8px); }
-.gl-cara { filter: saturate(.55) brightness(.8); }
-.gl-virada { filter: saturate(.5) brightness(.72); transform: rotate(-4deg); } /* atacou: não bloqueia até o próximo turno de quem a controla */
+/* estados das cartas */
+.gl-jogavel { cursor: grab; box-shadow: 0 0 0 2px #4ade80, 0 0 14px rgba(74, 222, 128, .35), 0 4px 12px rgba(0, 0, 0, .5); }
+.gl-cara { filter: saturate(.6) brightness(.82); }
+.gl-virada { filter: saturate(.5) brightness(.72); transform: rotate(-6deg); } /* atacou: não bloqueia até o próximo turno de quem a controla */
 .gl-pode { cursor: pointer; box-shadow: 0 0 0 2px #4ade80, 0 4px 12px rgba(0, 0, 0, .5); }
-.gl-escolhido { box-shadow: 0 0 0 3px #f59e0b, 0 0 16px rgba(245, 158, 11, .55) !important; transform: translateY(-6px); }
-.gl-atacando { box-shadow: 0 0 0 3px #dc2626, 0 0 18px rgba(220, 38, 38, .6); }
+.gl-pode:hover { transform: translateY(-3px); }
+.gl-escolhido { box-shadow: 0 0 0 3px #f59e0b, 0 0 16px rgba(245, 158, 11, .55) !important; transform: translateY(-8px); }
+.gl-atacando { box-shadow: 0 0 0 3px #dc2626, 0 0 18px rgba(220, 38, 38, .6); animation: gl-tremor .5s ease-in-out 2; }
+@keyframes gl-tremor { 25% { transform: translateX(-2px) rotate(-1deg); } 75% { transform: translateX(2px) rotate(1deg); } }
+.gl-virada.gl-atacando { filter: none; }
 .gl-bloqueando { box-shadow: 0 0 0 3px #60a5fa, 0 0 14px rgba(96, 165, 250, .5); }
 .gl-defensor { cursor: pointer; }
-.gl-mirando { box-shadow: 0 0 0 3px var(--pv-gold, #c9a45c), 0 4px 12px rgba(0, 0, 0, .5) !important; transform: translateY(-4px); }
+.gl-mirando { box-shadow: 0 0 0 3px var(--ouro), 0 4px 12px rgba(0, 0, 0, .5) !important; transform: translateY(-4px); }
 .gl-alvo { cursor: crosshair; box-shadow: 0 0 0 3px #f87171, 0 0 16px rgba(248, 113, 113, .6) !important; }
 
-.gl-meio { display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap; padding: .35rem 0; border-top: 1px dashed var(--camp-borda); border-bottom: 1px dashed var(--camp-borda); }
-.gl-turno { font-size: .8rem; opacity: .7; }
-.gl-dica { color: #fca5a5; font-weight: 600; font-size: .9rem; }
-.gl-dica--suave { color: var(--camp-texto-suave); font-weight: 400; }
-.gl-desistir { margin-left: auto; opacity: .75; }
+/* ---------- centro: pote e ações ---------- */
+.gl-centro { display: flex; align-items: center; gap: .7rem; padding: .3rem .5rem; border-radius: 999px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(201, 164, 92, .25); }
+.gl-pote { flex: 0 0 auto; display: flex; align-items: center; gap: .45rem; padding: .15rem .8rem .15rem .4rem; border-radius: 999px;
+           background: radial-gradient(ellipse at 50% 30%, rgba(201, 164, 92, .3), rgba(0, 0, 0, .5)); border: 1px solid var(--ouro); }
+.gl-pote small { display: block; font-size: .62rem; text-transform: uppercase; letter-spacing: .12em; opacity: .75; line-height: 1; }
+.gl-pote b { font-size: 1.05rem; color: #fde68a; line-height: 1.1; }
+.gl-moedas { display: inline-flex; flex-direction: column-reverse; align-items: center; }
+.gl-moedas i { width: 1.4rem; height: .38rem; margin-top: -.12rem; border-radius: 50%; background: linear-gradient(#fde68a, #b45309); box-shadow: 0 1px 0 #78350f; }
+.gl-centro-acoes { flex: 1 1 auto; display: flex; align-items: center; gap: .45rem; justify-content: center; min-width: 0; }
+.gl-centro-acoes > * { flex: 0 0 auto; }
+.gl-centro-acoes > .gl-dica { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-turno { font-size: .74rem; opacity: .7; padding: .1rem .5rem; border-radius: 999px; background: rgba(0, 0, 0, .35); }
+.gl-dica { color: #fca5a5; font-weight: 600; font-size: .86rem; }
+.gl-dica--suave { color: rgba(243, 233, 214, .7); font-weight: 400; }
+.gl-desistir { margin-left: auto; opacity: .7; color: #fca5a5; border-color: rgba(252, 165, 165, .35); }
+
+/* ---------- o meu lado ---------- */
+.gl-meu-lado { display: flex; flex-direction: column; gap: .3rem; }
+.gl-eu-barra { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; padding: .3rem .55rem; border-radius: 12px; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .08); }
+.gl-eu-barra .gl-assento-info { flex: 1 1 160px; max-width: 320px; }
+.gl-eu-barra.gl-vez { border-color: var(--ouro); box-shadow: 0 0 0 1px var(--ouro); }
+.gl-eu-barra.gl-alvo { cursor: crosshair; }
+
+/* mão em leque: as cartas se abrem em arco e a carta sob o mouse sobe */
+.gl-mao { --abre: clamp(2deg, calc(26deg / var(--n, 1)), 6deg); display: flex; justify-content: center; align-items: flex-end;
+          padding: .9rem 0 0; margin-bottom: calc(var(--cw-mao) * -.42); min-height: calc(var(--cw-mao) * 1.05); }
+.gl-mao .jg-carta { --cw: var(--cw-mao); }
+.gl-slot--mao { --meio: calc((var(--n) - 1) / 2); --d: calc(var(--k) - var(--meio));
+                margin-left: calc(var(--cw-mao) * -.18); transform-origin: 50% 160%;
+                transform: rotate(calc(var(--d) * var(--abre))) translateY(calc(var(--d) * var(--d) * 1.2px));
+                transition: transform .18s ease, margin .18s ease; }
+.gl-slot--mao:first-child { margin-left: 0; }
+.gl-slot--mao:hover, .gl-slot--mao:focus-within { z-index: 6; transform: translateY(calc(var(--cw-mao) * -.45)) scale(1.12); }
+.gl-slot--mao.gl-revelada-minha .jg-carta { outline: 2px solid #93c5fd; outline-offset: 1px; }
+.gl-olho { position: absolute; top: -8px; left: -6px; z-index: 3; font-size: .85rem; filter: drop-shadow(0 1px 2px #000); }
+.gl-slot--mao .jg-carta { touch-action: none; }
+.gl-arrastando { opacity: .25; }
+.gl-fantasma { position: fixed; z-index: 2000; pointer-events: none; transform: translate(-50%, -60%) rotate(4deg) scale(1.05); filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .7)); }
+
 .gl-log { padding: .7rem .8rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: var(--camp-fundo-card); max-height: calc(100vh - 180px); overflow: auto; position: sticky; top: 80px; }
 .gl-log h3 { margin: 0 0 .4rem; font-size: .95rem; }
-.gl-log ol { margin: 0; padding-left: 1.1rem; font-size: .8rem; display: flex; flex-direction: column; gap: .2rem; }
+.gl-log ol { margin: 0; padding-left: 1.1rem; font-size: .78rem; display: flex; flex-direction: column; gap: .2rem; }
+.gl-log li:first-child { color: #fde68a; }
 
-/* janelas (baralho, cemitério, ficha, ações de uma carta) */
+/* janelas (baralho, cemitério, ficha, conjurar, ações de uma carta) */
 .gl-modal { position: fixed; inset: 0; z-index: 1300; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .65); }
 .gl-modal-caixa { width: min(640px, 100%); max-height: calc(100vh - 2rem); display: flex; flex-direction: column; border: 1px solid var(--camp-borda-forte); border-radius: var(--camp-raio); background: var(--pv-bg-alt, #130d0d); box-shadow: 0 18px 40px rgba(0, 0, 0, .7); }
 .gl-modal-cab { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .7rem .9rem; border-bottom: 1px solid var(--camp-borda); }
@@ -453,12 +557,21 @@
 .gl-modal-carta > .jg-carta { --cw: 150px; }
 .gl-modal-acoes { flex: 1 1 220px; display: flex; flex-direction: column; gap: .5rem; align-items: stretch; }
 .gl-ajustes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+.gl-marcacao { display: flex; align-items: center; gap: .4rem; }
+.gl-marcacao span { flex: 1 1 auto; font-size: .88rem; }
+.gl-form-nota { display: flex; gap: .4rem; align-items: flex-end; flex-wrap: wrap; }
+.gl-form-nota label { flex: 1 1 180px; display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-conjurar label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-conjurar label[hidden] { display: none; }
-.gl-conjurar-texto { margin: 0; padding: .55rem .7rem; border-left: 2px solid var(--pv-gold, #c9a45c); background: rgba(0, 0, 0, .3); font-size: .9rem; line-height: 1.35; }
+.gl-conjurar-texto { margin: 0; padding: .55rem .7rem; border-left: 2px solid var(--ouro); background: rgba(0, 0, 0, .3); font-size: .9rem; line-height: 1.35; }
 .gl-form-ficha { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .6rem; align-items: end; }
 .gl-form-ficha label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-ficha button { grid-column: 1 / -1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-campo > .gl-slot, .gl-atacando, .gl-vez .gl-avatar { animation: none; }
+    .gl-slot--mao { transition: none; }
+}
 
 /* ==========================================================
    Partida de Pela Dama
@@ -501,9 +614,12 @@
 }
 @media (max-width: 600px) {
     .jg-criador-campos { grid-template-columns: minmax(0, 1fr); }
-    .gl-heroi { grid-template-columns: minmax(0, 1fr); }
-    .gl-heroi-info { justify-content: flex-start; }
-    .gl { --cw-campo: 70px; --cw-mao: 76px; }
+    .gl { --cw-campo: 62px; --cw-op: 50px; --cw-mao: 76px; }
+    .gl-oponentes { --cols: 1 !important; }
+    .gl-mesa { border-width: 6px; padding: .4rem .4rem 0; }
+    .gl-centro { border-radius: 14px; flex-wrap: wrap; }
+    .gl-centro-acoes { flex-wrap: wrap; }
+    .gl-centro-acoes > .gl-dica { white-space: normal; }
     .gl-form-ficha { grid-template-columns: 1fr 1fr; }
     .gl-form-ficha label:first-child { grid-column: 1 / -1; }
     .jg-cartas { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }

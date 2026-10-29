@@ -149,7 +149,7 @@ class GladioTest extends TestCase
         $this->assertSame([], $e['lados']['b']['mesa']);
     }
 
-    public function test_feitico_de_dano_vence_vai_ao_cemiterio_e_precisa_de_alvo(): void
+    public function test_feitico_de_dano_vence_fica_no_campo_e_precisa_de_alvo(): void
     {
         $e = $this->novo(4, ['a' => array_merge(['2'], array_fill(0, 19, '1'))]);
         $fogo = $this->primeira($e, 'a', '2');
@@ -160,7 +160,7 @@ class GladioTest extends TestCase
         }
         $e = Gladio::jogar($e, 'a', $fogo, 'inimigo');
         $this->assertSame(['vencedor' => 'a', 'motivo' => 'vida'], $e['fim']);
-        $this->assertSame(['2'], array_column($e['lados']['a']['cemiterio'], 'c'));
+        $this->assertSame(['2'], array_column($e['lados']['a']['feiticos'], 'c'), 'o feitiço fica no campo');
     }
 
     public function test_ferramentas_de_baralho(): void
@@ -389,9 +389,9 @@ class GladioTest extends TestCase
         $cartas = self::CARTAS + ['6' => ['nome' => 'Sopro', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => null, 'valor' => 0, 'palavras' => '']];
         $e = Gladio::iniciar($cartas, 10, ['a' => array_merge(['6', '6'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a);
         $e['lados']['a']['energia'] = 5;
-        // sem escolha: só é conjurado e vai ao cemitério
+        // sem escolha: só é conjurado e fica no campo
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'));
-        $this->assertSame(['6'], array_column($e['lados']['a']['cemiterio'], 'c'));
+        $this->assertSame(['6'], array_column($e['lados']['a']['feiticos'], 'c'));
         $this->assertSame(10, $e['lados']['b']['vida']);
         // com escolha: dano 3 no adversário, registrado
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'), 'inimigo', false, 'dano', 3);
@@ -400,12 +400,134 @@ class GladioTest extends TestCase
         $this->assertSame(3, $e['lados']['a']['energia']);
     }
 
+    /* ---------- vários jogadores, pote, shots e ferramentas novas ---------- */
+
+    private function tres(int $aposta = 10): array
+    {
+        $deck = array_fill(0, 20, '1');
+
+        return Gladio::iniciar(self::CARTAS, $aposta, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($x) => $x, ['a' => 'Ana', 'b' => 'Bia', 'c' => 'Caio']);
+    }
+
+    public function test_tres_jogadores_em_roda_e_ataque_escolhe_o_alvo(): void
+    {
+        $e = $this->tres();
+        $this->assertSame(['a', 'b', 'c'], $e['ordem']);
+        $this->assertSame(30, $e['total']);
+        $e = Gladio::passar($e, 'a');
+        $this->assertSame('b', $e['vez']);
+        $e = Gladio::passar($e, 'b');
+        $this->assertSame('c', $e['vez']);
+        $e = Gladio::passar($e, 'c');
+        $this->assertSame(['a', 2], [$e['vez'], $e['lados']['a']['energiaMax']], 'volta para a Ana com +1 de energia');
+
+        [$e, $g] = $this->por($e, 'a', 'Gladiador', 3, 2);
+        try {
+            Gladio::atacar($e, 'a', [$g]);
+            $this->fail('com dois adversários precisa escolher o alvo');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::atacar($e, 'a', [$g], 'c');
+        $this->assertSame('c', $e['ataque']['defensor']);
+        try {
+            Gladio::defender($e, 'b');
+            $this->fail('quem não foi atacado defendeu');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::defender($e, 'c');
+        $this->assertSame([10, 7], [$e['lados']['b']['vida'], $e['lados']['c']['vida']]);
+        $this->assertSame(3, Gladio::visao($e, 'a')['pote'], 'a vida perdida vai para o pote');
+    }
+
+    public function test_eliminado_sai_da_roda_e_ultimo_de_pe_vence(): void
+    {
+        $e = $this->tres(5);
+        $e['lados']['b']['vida'] = 0;
+        $e = Gladio::passar($e, 'a'); // b começaria, mas está sem vida: conferir tira b
+        $this->assertTrue($e['lados']['b']['fora']);
+        $this->assertNull($e['fim']);
+        $this->assertSame('c', $e['vez'], 'quem saiu é pulado');
+        $e = Gladio::desistir($e, 'c');
+        $this->assertSame(['vencedor' => 'a', 'motivo' => 'desistencia'], $e['fim']);
+        $this->assertSame(10, Gladio::pote($e), 'Ana leva o pote: as apostas de Bia e Caio');
+    }
+
+    public function test_shots_a_qualquer_momento_e_o_setimo_elimina(): void
+    {
+        $e = $this->tres();
+        $e = Gladio::shot($e, 'b', 2); // fora da vez dela
+        $e = Gladio::shot($e, 'b', -1);
+        $this->assertSame(1, $e['lados']['b']['shots']);
+        for ($n = 0; $n < 6; $n++) {
+            $e = Gladio::shot($e, 'b');
+        }
+        $this->assertTrue($e['lados']['b']['fora']);
+        $this->assertStringContainsString('7 shots', implode(' ', $e['log']));
+        $this->assertNull($e['fim'], 'ainda sobram dois');
+    }
+
+    public function test_revelar_carta_da_mao_e_descartar_fora_da_vez(): void
+    {
+        $e = $this->novo();
+        $carta = $e['lados']['b']['mao'][0]['i'];
+        $e = Gladio::revelar($e, 'b', $carta); // não é a vez dela
+        $v = Gladio::visao($e, 'a');
+        $this->assertSame(['i' => $carta, 'c' => '1', 'rev' => true], $v['lados']['b']['mao'][0]);
+        $this->assertSame(['oculta' => true], $v['lados']['b']['mao'][1]);
+        $e = Gladio::descartar($e, 'b', $carta);
+        $this->assertCount(4, $e['lados']['b']['mao']);
+        $this->assertSame([$carta], array_column($e['lados']['b']['cemiterio'], 'i'));
+    }
+
+    public function test_ajustar_lenda_inimiga_contadores_e_anotacoes(): void
+    {
+        [$e, $inimiga] = $this->por($this->novo(), 'b', 'Fera', 3, 3);
+        $e = Gladio::ajustar($e, 'a', $inimiga, -1, -1);
+        $this->assertSame([2, 2], [$e['lados']['b']['mesa'][0]['atk'], $e['lados']['b']['mesa'][0]['vida']]);
+        $e = Gladio::marcar($e, 'b', $inimiga, 3, 'envenenada');
+        $e = Gladio::marcar($e, 'a', $inimiga, -1);
+        $this->assertSame([2, 'envenenada'], [$e['lados']['b']['mesa'][0]['cont'], $e['lados']['b']['mesa'][0]['nota']]);
+        $this->expectException(\InvalidArgumentException::class);
+        Gladio::marcar($e, 'a', 999, 1);
+    }
+
+    public function test_feitico_fica_no_campo_ate_o_dono_mandar_ao_cemiterio(): void
+    {
+        $e = $this->novo(10, ['a' => array_merge(['3'], array_fill(0, 19, '1'))]);
+        $bencao = $this->primeira($e, 'a', '3');
+        $e = Gladio::jogar($e, 'a', $bencao, 'eu');
+        $e = Gladio::marcar($e, 'a', $bencao, 1, 'dura 2 turnos');
+        $this->assertSame(1, $e['lados']['a']['feiticos'][0]['cont']);
+        try {
+            Gladio::encerrarFeitico($e, 'b', $bencao);
+            $this->fail('outro jogador encerrou o feitiço');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::encerrarFeitico($e, 'a', $bencao);
+        $this->assertSame([], $e['lados']['a']['feiticos']);
+        $this->assertSame(['3'], array_column($e['lados']['a']['cemiterio'], 'c'));
+    }
+
+    public function test_estado_antigo_de_dois_jogadores_continua_valendo(): void
+    {
+        $e = $this->novo();
+        unset($e['ordem'], $e['total'], $e['nomes']);
+        foreach (['a', 'b'] as $l) {
+            unset($e['lados'][$l]['feiticos'], $e['lados'][$l]['shots'], $e['lados'][$l]['fora']);
+        }
+        $e = Gladio::completar($e);
+        $this->assertSame(['a', 'b'], $e['ordem']);
+        $this->assertSame(20, $e['total']);
+        $e = Gladio::passar($e, 'a');
+        $this->assertSame('b', $e['vez']);
+    }
+
     public function test_visao_esconde_mao_e_baralho_do_outro(): void
     {
         $v = Gladio::visao($this->novo(), 'a');
         $this->assertIsArray($v['lados']['a']['mao']);
         $this->assertIsArray($v['lados']['a']['baralho'], 'cada um consulta o próprio baralho');
-        $this->assertSame(5, $v['lados']['b']['mao']);
+        $this->assertSame(array_fill(0, 5, ['oculta' => true]), $v['lados']['b']['mao'], 'a mão do outro vem virada');
         $this->assertSame(15, $v['lados']['b']['baralho']);
         $this->assertIsArray($v['lados']['b']['cemiterio'], 'cemitério é público');
     }

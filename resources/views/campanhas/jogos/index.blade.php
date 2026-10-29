@@ -25,13 +25,20 @@
             <div class="jg-col">
                 <section class="camp-card">
                     <div class="camp-card-cab"><h2>Desafiar no Gladio</h2></div>
-                    <p class="camp-dica">A aposta vira a vida de cada um na partida. Ela sai do seu Dinheiro quando o desafio é aceito, e quem vencer leva as duas. Aposta 0 é amistoso (30 de vida, sem Dinheiro).</p>
+                    <p class="camp-dica">De 2 a 6 jogadores, todos contra todos. A aposta vira a vida de cada um e sai do Dinheiro de todos quando a partida começa; toda vida perdida vai para o pote no centro da mesa e o último de pé leva tudo. Aposta 0 é amistoso (30 de vida, sem Dinheiro).</p>
                     <form class="camp-form jg-desafio" data-jogo="gladio">
                         <label>Oponente
                             <select name="convidado_id" class="jg-oponente"></select>
                         </label>
                         <label>Aposta (Dinheiro)
                             <input type="number" name="aposta" min="0" value="0">
+                        </label>
+                        <label>Jogadores na mesa
+                            <select name="vagas">
+                                @for ($n = 2; $n <= \App\Jogos\Gladio::MAX_JOGADORES; $n++)
+                                    <option value="{{ $n }}">{{ $n }} jogadores</option>
+                                @endfor
+                            </select>
                         </label>
                         <label>Seu deck (também ao aceitar)
                             <select name="deck_id" id="jg-deck-escolhido"></select>

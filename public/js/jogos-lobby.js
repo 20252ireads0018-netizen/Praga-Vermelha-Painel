@@ -52,6 +52,7 @@
 
     /* ---------- partidas e Dinheiro ---------- */
     function rotulo(p) {
+        if (p.status === 'aberta' && p.jogo === 'gladio' && p.vagas > 2) return `Mesa aberta · ${p.jogadores.length}/${p.vagas} jogadores`;
         if (p.status === 'aberta') return p.convidado ? `Aguardando ${esc(p.convidado)}` : 'Aberto a qualquer um';
         if (p.status === 'andamento') return 'Em andamento';
         if (p.status === 'fim') return p.vencedor ? `Venceu: ${esc(p.vencedor)}` : 'Empate';
@@ -61,10 +62,12 @@
         $$('[data-lista]').forEach(box => {
             const lista = lobby.partidas.filter(p => p.jogo === box.dataset.lista);
             box.innerHTML = lista.length ? lista.map(p => {
-                const nomes = esc(p.j1) + (p.j2 ? ' × ' + esc(p.j2) : '');
+                const nomes = (p.jogadores && p.jogadores.length ? p.jogadores : [p.j1, p.j2].filter(Boolean)).map(esc).join(' × ');
                 const aposta = p.jogo === 'gladio' ? (p.aposta ? ` · aposta ${p.aposta}` : ' · amistoso') : '';
                 let botoes = '';
-                if (p.aceitar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}">Aceitar</button>`;
+                if (p.aceitar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}">${p.jogo === 'gladio' && p.vagas > 2 ? 'Entrar' : 'Aceitar'}</button>`;
+                if (p.comecar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-comecar="${p.id}">Começar com ${p.jogadores.length}</button>`;
+                if (p.sair) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-sair="${p.id}">Sair da mesa</button>`;
                 if (p.status === 'andamento' || p.status === 'fim')
                     botoes += `<a class="camp-btn camp-btn-pequeno${p.meu && p.status === 'andamento' ? ' camp-btn-primario' : ''}" href="${esc(p.url)}">${p.meu && p.status === 'andamento' ? 'Jogar' : (p.status === 'fim' ? 'Ver' : 'Assistir')}</a>`;
                 if (p.cancelar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-cancelar="${p.id}" data-andamento="${p.status === 'andamento' ? 1 : 0}">Cancelar</button>`;
@@ -104,9 +107,16 @@
                 b.disabled = true;
                 const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : { deck_id: deckEscolhido() };
                 const r = await post(urlPartida(b.dataset.aceitar, 'aceitar'), dados, D.csrf);
+                if (r.comecou === false) { lobby = r; renderPartidas(); msg('Você entrou na mesa. A partida começa quando as vagas encherem ou quando quem criou mandar começar.'); return; }
                 location.href = r.url;
+            } else if (b.dataset.comecar) {
+                b.disabled = true;
+                location.href = (await post(urlPartida(b.dataset.comecar, 'comecar'), {}, D.csrf)).url;
+            } else if (b.dataset.sair) {
+                lobby = await post(urlPartida(b.dataset.sair, 'cancelar'), {}, D.csrf);
+                renderPartidas();
             } else if (b.dataset.cancelar) {
-                const aviso = b.dataset.andamento === '1' ? 'Cancelar a partida em andamento? As apostas voltam para os dois.' : 'Cancelar este desafio?';
+                const aviso = b.dataset.andamento === '1' ? 'Cancelar a partida em andamento? As apostas voltam para cada jogador.' : 'Cancelar este desafio?';
                 if (!confirm(aviso)) return;
                 lobby = await post(urlPartida(b.dataset.cancelar, 'cancelar'), {}, D.csrf);
                 renderPartidas();
@@ -124,7 +134,7 @@
     $$('.jg-desafio').forEach(f => f.addEventListener('submit', async e => {
         e.preventDefault();
         const dados = { jogo: f.dataset.jogo, convidado_id: f.convidado_id.value || null };
-        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); }
+        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); dados.vagas = f.vagas.value; }
         else {
             const ex = exercito();
             if (ex.filter(t => t === 'rei').length !== 1) return msg('Seu exército precisa de exatamente um Rei.', true);
@@ -133,7 +143,7 @@
         try {
             lobby = await post(D.url.partidas, dados, D.csrf);
             renderPartidas();
-            msg('Desafio lançado! A partida começa quando alguém aceitar.');
+            msg(+dados.vagas > 2 ? `Mesa aberta para ${dados.vagas} jogadores! Ela começa quando lotar ou quando você clicar em Começar.` : 'Desafio lançado! A partida começa quando alguém aceitar.');
         } catch (err) { falhou(err); }
     }));
 
