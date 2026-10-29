@@ -755,3 +755,10 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .jg-carta--t-encanto .jg-carta-tipo { color: #c4b5fd; }
 .jg-carta--t-equipo .jg-carta-tipo { color: #fcd34d; }
 .jg-carta-bonus b { color: #fde68a; }
+
+/* caixa de montar deck: em coluna sem quebra (o flex-wrap do criador fazia cada item ter a largura do conteúdo mais
+   comprido e os botões −/+ vazavam da caixa); tudo fica na largura da caixa */
+.jg-criador-deck { flex-wrap: nowrap; min-width: 0; }
+.jg-criador-deck > * { width: 100%; min-width: 0; box-sizing: border-box; }
+.jg-deck-linha { min-width: 0; }
+.jg-deck-linha > :not(.jg-deck-nome) { flex: 0 0 auto; }
