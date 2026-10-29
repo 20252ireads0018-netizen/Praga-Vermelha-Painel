@@ -152,7 +152,7 @@ class GladioTest extends TestCase
         $this->assertSame([], $e['lados']['b']['mesa']);
     }
 
-    public function test_feitico_de_dano_vence_fica_no_campo_e_precisa_de_alvo(): void
+    public function test_feitico_de_dano_vence_vai_ao_cemiterio_e_precisa_de_alvo(): void
     {
         $e = $this->novo(4, ['a' => array_merge(['2'], array_fill(0, 19, '1'))]);
         $fogo = $this->primeira($e, 'a', '2');
@@ -163,7 +163,7 @@ class GladioTest extends TestCase
         }
         $e = Gladio::jogar($e, 'a', $fogo, 'inimigo');
         $this->assertSame(['vencedor' => 'a', 'motivo' => 'vida'], $e['fim']);
-        $this->assertSame(['2'], array_column($e['lados']['a']['feiticos'], 'c'), 'o feitiço fica no campo');
+        $this->assertSame(['2'], array_column($e['lados']['a']['cemiterio'], 'c'), 'feitiço resolve e vai para o cemitério');
     }
 
     public function test_ferramentas_de_baralho(): void
@@ -192,10 +192,18 @@ class GladioTest extends TestCase
         $this->assertCount(6, Gladio::comprar($e, 'b')['lados']['b']['mao']);
     }
 
-    public function test_ficha_ajuste_copia_sacrificio_e_jogar_sem_pagar(): void
+    /** Peças do motor usadas pelos efeitos das cartas (a mesa não oferece mais nada disso à mão). */
+    public function test_motor_ficha_ajuste_copia_sacrificio_e_jogar_sempre_pagando(): void
     {
         $e = $this->novo(10, ['a' => array_merge(['4'], array_fill(0, 19, '1'))]);
         $e['lados']['a']['energia'] = 0;
+        try {
+            Gladio::jogar($e, 'a', $this->primeira($e, 'a', '4'), null, true);
+            $this->fail('jogou sem energia pedindo "grátis"');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertSame('Energia insuficiente.', $x->getMessage());
+        }
+        $e['lados']['a']['energia'] = 1;
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '4'), null, true);
         $this->assertSame(0, $e['lados']['a']['energia']);
         $e = Gladio::ficha($e, 'a', 'Olhinho', 1, 1);
@@ -386,20 +394,26 @@ class GladioTest extends TestCase
         Gladio::jogar($e, 'a', $this->primeira($e, 'a', '2'), (string) $monge);
     }
 
-    public function test_feitico_sem_efeito_proprio_usa_o_que_quem_jogou_escolheu(): void
+    public function test_feitico_com_texto_ignora_o_efeito_fixo_antigo_e_ninguem_escolhe_efeito(): void
     {
-        $cartas = self::CARTAS + ['6' => ['nome' => 'Sopro', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => null, 'valor' => 0, 'palavras' => '']];
-        $e = Gladio::iniciar($cartas, 10, ['a' => array_merge(['6', '6'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a);
+        // carta antiga com "dano 1" guardado: o texto manda (Máscara de constructo criava 1 de dano em vez das fichas)
+        $cartas = self::CARTAS + [
+            'mascara' => ['nome' => 'Máscara de constructo', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => 'dano', 'valor' => 1,
+                          'palavras' => '', 'descricao' => 'Crie duas fichas de constructo 2/2'],
+            'sopro' => ['nome' => 'Sopro', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => null, 'valor' => 0,
+                        'palavras' => '', 'descricao' => 'Algo que o jogo não entende'],
+        ];
+        $e = Gladio::iniciar($cartas, 10, ['a' => array_merge(['mascara', 'sopro'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '1', 'b' => '1']);
         $e['lados']['a']['energia'] = 5;
-        // sem escolha: só é conjurado e fica no campo
-        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'));
-        $this->assertSame(['6'], array_column($e['lados']['a']['feiticos'], 'c'));
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'mascara'));
+        $this->assertSame([['Constructo', 2, 2], ['Constructo', 2, 2]],
+            array_map(fn ($m) => [$m['nome'], $m['atk'], $m['vida']], $e['lados']['a']['mesa']));
+        $this->assertSame(10, $e['lados']['b']['vida'], 'o "dano 1" antigo não acontece');
+        // texto não entendido: é conjurado, vai para o cemitério e não faz nada; o efeito "escolhido" é ignorado
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'sopro'), 'inimigo', true, 'dano', 9);
         $this->assertSame(10, $e['lados']['b']['vida']);
-        // com escolha: dano 3 no adversário, registrado
-        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'), 'inimigo', false, 'dano', 3);
-        $this->assertSame(7, $e['lados']['b']['vida']);
-        $this->assertStringContainsString('efeito escolhido por quem jogou', end($e['log']));
-        $this->assertSame(3, $e['lados']['a']['energia']);
+        $this->assertSame(3, $e['lados']['a']['energia'], 'pagou o custo mesmo pedindo "grátis"');
+        $this->assertSame(['mascara', 'sopro'], array_column($e['lados']['a']['cemiterio'], 'c'));
     }
 
     /* ---------- vários jogadores, pote, shots e ferramentas novas ---------- */
@@ -493,21 +507,12 @@ class GladioTest extends TestCase
         Gladio::marcar($e, 'a', 999, 1);
     }
 
-    public function test_feitico_fica_no_campo_ate_o_dono_mandar_ao_cemiterio(): void
+    public function test_anotacao_numa_carta_em_jogo(): void
     {
-        $e = $this->novo(10, ['a' => array_merge(['3'], array_fill(0, 19, '1'))]);
-        $bencao = $this->primeira($e, 'a', '3');
-        $e = Gladio::jogar($e, 'a', $bencao, 'eu');
-        $e = Gladio::marcar($e, 'a', $bencao, 1, 'dura 2 turnos');
-        $this->assertSame(1, $e['lados']['a']['feiticos'][0]['cont']);
-        try {
-            Gladio::encerrarFeitico($e, 'b', $bencao);
-            $this->fail('outro jogador encerrou o feitiço');
-        } catch (\InvalidArgumentException) {
-        }
-        $e = Gladio::encerrarFeitico($e, 'a', $bencao);
-        $this->assertSame([], $e['lados']['a']['feiticos']);
-        $this->assertSame(['3'], array_column($e['lados']['a']['cemiterio'], 'c'));
+        [$e, $lenda] = $this->por($this->novo(), 'a', 'Fera', 3, 3);
+        $e = Gladio::marcar($e, 'b', $lenda, 0, 'envenenada');
+        $this->assertSame('envenenada', $e['lados']['a']['mesa'][0]['nota']);
+        $this->assertSame(3, $e['lados']['a']['mesa'][0]['atk'], 'a anotação não muda nada no jogo');
     }
 
     public function test_estado_antigo_de_dois_jogadores_continua_valendo(): void

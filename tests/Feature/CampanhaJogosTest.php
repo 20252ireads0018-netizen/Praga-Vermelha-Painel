@@ -92,7 +92,7 @@ class CampanhaJogosTest extends TestCase
     public function test_gladio_aposta_sai_no_aceite_e_vencedor_leva_tudo(): void
     {
         $this->actingAs($this->mestre)->postJson($this->url('/cartas'), [
-            'nome' => 'Raio', 'tipo' => 'feitico', 'custo' => 0, 'efeito' => 'dano', 'valor' => 50,
+            'nome' => 'Raio', 'tipo' => 'feitico', 'custo' => 0, 'descricao' => 'Cause 50 de dano a um adversário',
         ])->assertOk();
         foreach ([$this->ana, $this->bia] as $j) {
             $this->postJson($this->url('/dinheiro'), ['user_id' => $j->id, 'dinheiro' => 100])->assertOk();
@@ -115,10 +115,10 @@ class CampanhaJogosTest extends TestCase
         $this->assertIsArray($estado['lados']['b']['mao']);
         // fora da vez
         $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
-
+        // a Ana joga o Raio (o texto dá 50 de dano a um adversário) no rosto da Bia (40 de vida) e vence
         // a Ana joga o Raio escolhendo 50 de dano (o feitiço não tem efeito próprio) no rosto da Bia (40 de vida) e vence
         $mao = $this->actingAs($this->ana)->getJson($this->url("/partidas/{$p->id}/estado"))->json('estado.lados.a.mao');
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $mao[0]['i'], 'alvo' => 'inimigo', 'efeito' => 'dano', 'valor' => 50])
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $mao[0]['i']])
             ->assertOk()->assertJsonPath('status', 'fim')->assertJsonPath('vencedor', 'j1');
         $this->assertSame([140, 60], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
         $this->assertSame($this->ana->id, (int) $p->fresh()->vencedor_id);
@@ -155,26 +155,28 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame(10, count($e['lados']['a']['baralho']), 'deck de 16 menos 5 na mão e o comandante');
         $this->assertSame(14, count($e['lados']['b']['baralho']));
 
-        // Ana arruma o baralho, compra e coloca uma Lenda; vê o próprio baralho, não o da Bia
+        // a Ana vê o próprio baralho (quantas cartas e quais), não o da Bia
         $this->actingAs($this->ana);
         $v = $this->getJson($this->url("/partidas/{$p->id}/estado"))->json('estado');
         $this->assertIsArray($v['lados']['a']['baralho']);
         $this->assertIsInt($v['lados']['b']['baralho']);
-        $ordem = array_reverse(array_column($v['lados']['a']['baralho'], 'i'));
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'reordenar', 'ordem' => $ordem])->assertOk();
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();
-        $mao = $p->fresh()->estado['lados']['a']['mao'];
-        $this->assertSame($ordem[0], end($mao)['i'], 'comprou o novo topo');
-        // fichas, ataque/vida, palavras-chave e contadores só mudam pelas cartas, não à mão
-        foreach ([['acao' => 'ficha', 'nome' => 'Olhinho', 'atk' => 1, 'vida' => 1], ['acao' => 'ajustar', 'inst' => 1, 'atk' => 1, 'vida' => 1],
-                  ['acao' => 'palavra', 'inst' => 1, 'palavra' => 'voar']] as $manual) {
-            $this->postJson($this->url("/partidas/{$p->id}/acao"), $manual)->assertStatus(422)->assertJsonFragment(['erro' => 'Fichas, ataque, vida e palavras-chave só mudam pelo efeito das cartas.']);
+        // nada à mão: tudo o que muda cartas, vida, energia, mão ou baralho vem do efeito das cartas
+        $antes = $p->fresh()->estado;
+        foreach (['comprar', 'reordenar', 'embaralhar', 'buscar', 'descartar', 'recuperar', 'invocar', 'sacrificar', 'copiar', 'ficha',
+                  'ajustar', 'palavra', 'energia', 'vida', 'shot', 'encerrar', 'comando', 'ativar', 'equipar'] as $manual) {
+            $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => $manual, 'inst' => 1, 'quanto' => 5, 'energia' => 5, 'energia_max' => 5])
+                ->assertStatus(422)->assertJsonFragment(['erro' => 'Isso só acontece pelo efeito das cartas.']);
         }
-        $this->assertSame([], $p->fresh()->estado['lados']['a']['mesa']);
+        $this->assertSame($antes['lados'], $p->fresh()->estado['lados']);
+        // jogar sem pagar também não: o "grátis" é ignorado e a energia é cobrada
+        $carta = $antes['lados']['a']['mao'][0];
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $carta['i'], 'gratis' => 1])->assertOk();
+        $custo = (int) $antes['cartas'][$carta['c']]['custo'];
+        $this->assertSame($antes['lados']['a']['energia'] - $custo, $p->fresh()->estado['lados']['a']['energia']);
+        $this->assertNotContains('(sem pagar energia)', array_map(fn ($l) => substr($l, -20), $p->fresh()->estado['log']));
 
-        // mesa livre: a Bia compra fora da vez, mas não ataca nem passa o turno da Ana
-        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
+        // a Bia não age no turno da Ana
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
     }
 
     public function test_imagem_da_carta_enviada_como_arquivo(): void
@@ -217,8 +219,9 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame([0, 0, 0], [$this->dinheiro($this->ana), $this->dinheiro($this->bia), $this->dinheiro($this->mestre)]);
         $this->assertSame('c', $p->ladoDe($this->mestre->id));
 
-        // Bia toma 7 shots fora da vez; o mestre desiste: a Ana leva as 3 apostas
-        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'shot', 'quanto' => 7])->assertOk();
+        // shots só pelas cartas; a Bia e o mestre desistem: a Ana leva as 3 apostas
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'shot', 'quanto' => 7])->assertStatus(422);
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
         $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])
             ->assertOk()->assertJsonPath('status', 'fim');
         $this->assertSame(30, $this->dinheiro($this->ana));
@@ -372,9 +375,9 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame([(string) $lenda->id], array_column($e['lados']['a']['comando'], 'c'));
         $this->assertSame('lenda', $e['cartas'][$e['lados']['b']['comando'][0]['c']]['tipo'], 'Bia sem deck: Lenda sorteada');
 
-        // mesa livre pelas rotas: a Bia ajusta a própria energia fora da vez
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'energia', 'energia' => 2, 'energia_max' => 2])->assertOk();
-        $this->assertSame(2, $p->fresh()->estado['lados']['b']['energiaMax']);
+        // energia não se ajusta à mão
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'energia', 'energia' => 2, 'energia_max' => 2])->assertStatus(422);
+        $this->assertSame(0, $p->fresh()->estado['lados']['b']['energiaMax']);
 
         // em andamento não apaga; terminada, a Bia tira do histórico dela e o mestre apaga de vez
         $this->deleteJson($this->url("/partidas/{$p->id}"))->assertStatus(422);

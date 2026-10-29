@@ -669,41 +669,30 @@ class CampanhaJogoController extends Controller
                     $e = Gladio::completar($e);
                     $inst = (int) $request->input('inst', 0);
                     $outro = $request->filled('outro') ? (int) $request->input('outro') : null;
+                    // Só as ações que são regra do jogo. Tudo o que muda cartas, vida, energia, mão ou baralho acontece
+                    // pelo efeito das cartas: não há mais ferramentas manuais (invocar sem pagar, ajustar vida/energia,
+                    // comprar, buscar, sacrificar, shots à mão…), para ninguém quebrar a partida.
+                    $manuais = ['shot', 'encerrar', 'comprar', 'embaralhar', 'reordenar', 'descartar', 'recuperar', 'ficha', 'ajustar',
+                                'palavra', 'copiar', 'sacrificar', 'invocar', 'buscar', 'comando', 'energia', 'vida', 'ativar', 'equipar'];
+                    if (in_array($acao, $manuais, true)) {
+                        throw new \InvalidArgumentException('Isso só acontece pelo efeito das cartas.');
+                    }
                     $e = match ($acao) {
-                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), $request->boolean('gratis'),
-                            $request->input('efeito') ?: null, (int) $request->input('valor', 0)),
+                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo')), // sempre pagando energia
                         'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', []), $request->input('alvo') ?: null),
-                        'shot'       => Gladio::shot($e, $lado, (int) $request->input('quanto', 1)),
                         'revelar'    => Gladio::revelar($e, $lado, $inst),
-                        // contadores, fichas, ataque/vida e palavras-chave só mudam pelas cartas: à mão, só a anotação
+                        // anotação de texto numa carta (não muda nada no jogo)
                         'marcar'     => Gladio::marcar($e, $lado, $inst, 0,
                             $request->has('nota') ? (string) $request->input('nota', '') : null),
-                        'encerrar'   => Gladio::encerrarFeitico($e, $lado, $inst),
                         'bloquear'   => Gladio::bloquear($e, $lado, $inst, $outro),
                         'defender'   => Gladio::defender($e, $lado),
                         'passar'     => Gladio::passar($e, $lado),
                         'desistir'   => Gladio::desistir($e, $lado),
-                        'comprar'    => Gladio::comprar($e, $lado),
-                        'embaralhar' => Gladio::embaralhar($e, $lado),
-                        'reordenar'  => Gladio::reordenar($e, $lado, (array) $request->input('ordem', [])),
-                        'descartar'  => Gladio::descartar($e, $lado, $inst),
-                        'recuperar'  => Gladio::recuperar($e, $lado, $inst),
-                        'ficha', 'ajustar', 'palavra'
-                                     => throw new \InvalidArgumentException('Fichas, ataque, vida e palavras-chave só mudam pelo efeito das cartas.'),
-                        'copiar'     => Gladio::copiar($e, $lado, $inst, (int) $outro),
-                        'sacrificar' => Gladio::sacrificar($e, $lado, $inst),
-                        'comandar'   => Gladio::comandar($e, $lado),
-                        'invocar'    => Gladio::invocar($e, $lado, $inst, (string) $request->input('origem', 'mao')),
-                        'buscar'     => Gladio::buscar($e, $lado, $inst),
-                        'comando'    => Gladio::paraComando($e, $lado, $inst),
-                        'energia'    => Gladio::energia($e, $lado, (int) $request->input('energia', 0), (int) $request->input('energia_max', 0)),
-                        'vida'       => Gladio::vida($e, $lado, (int) $request->input('quanto', 0)),
+                        'comandar'   => Gladio::comandar($e, $lado), // invocar o comandante pagando o custo + taxa
                         // resposta a uma escolha pedida por um efeito: alvo = instância ou 'j:<lado>'; vazio pula
                         'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
-                        'ativar'     => Gladio::ativar($e, $lado, $inst),
                         'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
                         'tempo'      => Gladio::tempo($e, $lado), // acabou o tempo da vez: a mesa segue sozinha
-                        'equipar'    => Gladio::equipar($e, $lado, $inst, (int) $outro),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;

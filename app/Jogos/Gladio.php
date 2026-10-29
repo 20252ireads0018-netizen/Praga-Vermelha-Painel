@@ -226,7 +226,9 @@ class Gladio
     {
         $nomes = array_values(array_unique(array_map(fn ($c) => GladioTexto::normalizar((string) ($c['nome'] ?? '')), $cartas)));
         foreach ($cartas as $id => $c) {
-            if (!empty($c['efeito'])) { // feitiço antigo com efeito fixo: o motor já resolve
+            // efeito fixo do criador antigo: só vale para carta sem texto (com texto, quem manda é o texto; várias
+            // cartas antigas ficaram com "dano 1" guardado e o texto nunca era aplicado)
+            if (!empty($c['efeito']) && trim((string) ($c['descricao'] ?? '')) === '') {
                 $cartas[$id]['hab'] = [];
                 $cartas[$id]['parcial'] = false;
                 $cartas[$id]['auto'] = '';
@@ -583,13 +585,13 @@ class Gladio
         if (!$carta) {
             throw new \InvalidArgumentException('Carta desconhecida.');
         }
-        $custo = $gratis ? 0 : (int) $carta['custo'];
+        $custo = (int) $carta['custo']; // sempre pagando: não existe jogar de graça à mão ($gratis é ignorado)
         if ($custo > $l['energia']) {
             throw new \InvalidArgumentException('Energia insuficiente.');
         }
         $nome = $carta['nome'];
         $quem = self::quem($e, $lado);
-        $semCusto = $gratis ? ' (sem pagar energia)' : '';
+        $semCusto = '';
 
         if ($carta['tipo'] === 'lenda') {
             $pal = self::palavrasDe($e, $id);
@@ -608,7 +610,7 @@ class Gladio
         // feitiço com texto entendido pelo motor: os efeitos vão para a fila e ele vai para o cemitério
         // (fica no campo se ainda tiver gatilho de início/fim de turno)
         $hab = $e['cartas'][$id]['hab'] ?? [];
-        if (empty($carta['efeito']) && !$efeitoEscolhido && $hab) {
+        if ($hab) { // o texto manda (o efeito fixo antigo só vale para carta sem texto)
             $inst = (int) $l['mao'][$k]['i'];
             // Encantamento e Equipamento ficam no campo; Feitiço só fica se tiver gatilho de turno/morte (senão, cemitério)
             $fica = in_array($carta['tipo'], ['encanto', 'equipo'], true)
@@ -628,17 +630,9 @@ class Gladio
             return self::seguir(self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst]));
         }
 
-        // feitiço: o efeito é o da carta (feitiços antigos) ou o que quem jogou escolheu conforme a descrição
-        $efeito = $carta['efeito'] ?? null;
+        // feitiço sem texto entendido: só o efeito fixo antigo de uma carta sem texto; quem joga não escolhe efeito à mão
+        $efeito = trim((string) ($carta['descricao'] ?? '')) === '' ? ($carta['efeito'] ?? null) : null;
         $valor = max(0, (int) ($carta['valor'] ?? 0));
-        if (!$efeito && $efeitoEscolhido) {
-            if (!in_array($efeitoEscolhido, self::EFEITOS, true)) {
-                throw new \InvalidArgumentException('Efeito desconhecido.');
-            }
-            $efeito = $efeitoEscolhido;
-            $valor = max(0, min(9999, $valorEscolhido));
-            $semCusto .= ' (efeito escolhido por quem jogou)';
-        }
         $precisa = $efeito ? (self::ALVOS[$efeito] ?? null) : null;
         $alvoLenda = null; // [lado, índice]
         $alvoHeroi = null; // lado
@@ -665,15 +659,20 @@ class Gladio
             }
         }
 
-        // o feitiço fica no campo até o dono mandá-lo para o cemitério
-        $l['feiticos'][] = ['i' => $l['mao'][$k]['i'], 'c' => $id, 'cont' => 0, 'nota' => ''];
+        // Feitiço resolve e vai para o cemitério; Encantamento e Equipamento ficam no campo
+        $inst = (int) $l['mao'][$k]['i'];
+        if ($carta['tipo'] === 'feitico') {
+            $l['cemiterio'][] = ['i' => $inst, 'c' => $id];
+        } else {
+            $l['feiticos'][] = ['i' => $inst, 'c' => $id, 'cont' => 0, 'nota' => ''];
+        }
         array_splice($l['mao'], $k, 1);
         $l['energia'] -= $custo;
         unset($l);
-        if (!$efeito) { // sem efeito automático: o texto da carta é resolvido à mão
-            self::log($e, "$quem conjurou $nome$semCusto.");
+        if (!$efeito) { // o jogo ainda não sabe aplicar o texto desta carta
+            self::log($e, "$quem " . self::verbo($carta['tipo']) . " $nome$semCusto (o efeito do texto ainda não é aplicado pelo jogo).");
 
-            return self::seguir($e);
+            return self::seguir(self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst]));
         }
 
         switch ($efeito) {
