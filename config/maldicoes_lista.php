@@ -2,13 +2,14 @@
 
 // Lista completa das maldições (inclui as não catalogadas). 'restrita' = só mestre/chave.
 // 'slug' aponta para config/maldicoes.php quando há texto detalhado.
+// 'catalogavel' = entra na disputa de catálogos mesmo sem ser restrita (as restritas sempre entram).
 
 return [
     ['nome' => 'Irrestrição', 'categoria' => 'pessoal', 'orgao' => 'coração', 'apelido' => 'irrestrito', 'restrita' => true, 'slug' => 'irrestricao'],
     ['nome' => 'Intensificação emocional', 'categoria' => 'pessoal', 'orgao' => 'cérebro', 'apelido' => 'bravato', 'restrita' => false, 'slug' => 'intensificacao-emocional'],
     ['nome' => 'Demonização', 'categoria' => 'racial', 'orgao' => 'coração', 'apelido' => 'demônio', 'restrita' => false, 'slug' => 'demonizacao'],
     ['nome' => 'Distorção sensorial', 'categoria' => 'impessoal', 'orgao' => 'boca&olhos&ouvidos', 'apelido' => 'mudado', 'restrita' => false, 'slug' => 'distorcao-sensorial'],
-    ['nome' => 'Maldição da permanência', 'categoria' => 'impessoal', 'orgao' => 'mãos', 'apelido' => 'fixo', 'restrita' => false, 'slug' => 'maldicao-da-permanencia'],
+    ['nome' => 'Maldição da permanência', 'categoria' => 'impessoal', 'orgao' => 'mãos', 'apelido' => 'fixo', 'restrita' => false, 'catalogavel' => true, 'slug' => 'maldicao-da-permanencia'],
     ['nome' => 'Demônios do inferno', 'categoria' => 'pessoal', 'orgao' => 'ouvidos', 'apelido' => 'cliente', 'restrita' => false, 'slug' => 'demonios-do-inferno'],
     ['nome' => 'Retração aquática', 'categoria' => 'mundial', 'orgao' => 'pulmões', 'apelido' => 'canal', 'restrita' => false, 'slug' => 'retracao-aquatica'],
     ['nome' => 'Fala profana', 'categoria' => 'impessoal', 'orgao' => 'língua', 'apelido' => 'falador', 'restrita' => false, 'slug' => 'fala-profana'],

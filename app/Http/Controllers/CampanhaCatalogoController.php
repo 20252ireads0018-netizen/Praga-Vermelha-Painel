@@ -22,7 +22,7 @@ class CampanhaCatalogoController extends Controller
     }
 
     /**
-     * Maldições restritas que o usuário ainda não pode ver [{slug, nome}].
+     * Maldições restritas que o usuário ainda não pode ver, mais as marcadas como catalogáveis [{slug, nome}].
      * Quem já vê as restritas recebe lista vazia.
      */
     // $mestreDaCampanha: para testes, o mestre da campanha recebe todas as restritas mesmo já podendo vê-las
@@ -36,7 +36,7 @@ class CampanhaCatalogoController extends Controller
         $itens = [];
         foreach ((array) config('maldicoes_lista', []) as $m) {
             $slug = $m['slug'] ?? null;
-            if (!empty($m['restrita']) && $slug && isset($catalogo[$slug])) {
+            if ((!empty($m['restrita']) || !empty($m['catalogavel'])) && $slug && isset($catalogo[$slug])) {
                 $itens[] = ['slug' => $slug, 'nome' => $m['nome'] ?? $slug];
             }
         }
