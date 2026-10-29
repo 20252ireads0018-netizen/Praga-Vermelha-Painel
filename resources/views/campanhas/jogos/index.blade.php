@@ -59,6 +59,7 @@
                             <label>Nome do deck<input type="text" name="nome" maxlength="60" required placeholder="Ex.: Fúria dos Kuros"></label>
                             <span class="jg-deck-total" id="jg-deck-total">0 cartas</span>
                         </div>
+                        <input type="search" id="jg-deck-pesquisa" class="jg-deck-pesquisa" placeholder="Pesquisar carta pelo nome…" aria-label="Pesquisar carta para o deck">
                         <div class="jg-deck-lista" id="jg-deck-lista"></div>
                         <div class="jg-botoes">
                             <button class="camp-btn camp-btn-primario">Salvar deck</button>
@@ -138,6 +139,25 @@
                             <div class="jg-criador-previa" id="jg-previa-carta"></div>
                         </form>
                     @endif
+                    <div class="jg-filtros" id="jg-filtros-cartas" role="search">
+                        <input type="search" data-filtro="nome" placeholder="Pesquisar carta pelo nome…" aria-label="Pesquisar carta pelo nome">
+                        <select data-filtro="tipo" aria-label="Tipo">
+                            <option value="">Lendas e feitiços</option>
+                            <option value="lenda">Só Lendas</option>
+                            <option value="feitico">Só feitiços</option>
+                        </select>
+                        <select data-filtro="custo" aria-label="Custo"></select>
+                        <select data-filtro="palavra" aria-label="Palavra-chave"></select>
+                        <select data-filtro="ordem" aria-label="Ordenar">
+                            <option value="custo">Ordenar por custo</option>
+                            <option value="nome">Ordenar por nome</option>
+                            <option value="ataque">Maior ataque</option>
+                            <option value="vida">Maior vida</option>
+                            <option value="recentes">Mais recentes</option>
+                        </select>
+                        <button type="button" class="camp-btn camp-btn-pequeno" data-filtro-limpar hidden>Limpar filtros</button>
+                    </div>
+                    <p class="camp-dica jg-filtros-resumo" id="jg-filtros-resumo" hidden></p>
                     <div class="jg-cartas" id="jg-cartas"></div>
                 </section>
 

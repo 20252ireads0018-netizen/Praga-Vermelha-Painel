@@ -82,6 +82,14 @@
 
 /* ---------- carta de Gladio ---------- */
 .jg-cartas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; margin-top: .8rem; }
+
+/* pesquisa e filtros das cartas */
+.jg-filtros { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; margin-top: .8rem; padding: .55rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .22); }
+.jg-filtros[hidden], .jg-filtros [hidden] { display: none; } /* .camp-btn tem display próprio e venceria o hidden */
+.jg-filtros input[type=search] { flex: 1 1 220px; min-width: 0; }
+.jg-filtros select { flex: 1 1 140px; width: auto; min-width: 0; }
+.jg-filtros-resumo { margin: .4rem 0 0; }
+.jg-deck-pesquisa { width: 100%; box-sizing: border-box; }
 .jg-carta-item { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
 .jg-carta-acoes { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: center; }
 
@@ -262,7 +270,43 @@
 /* mais específico que ".jg-criador-campos label/input" (coluna e largura 100%): caixinha à esquerda, nome ao lado */
 .jg-criador-campos .jg-palavras-grade label { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: .45rem;
                                               text-align: left; line-height: 1.25; cursor: help; }
-.jg-criador-campos .jg-palavras-grade input[type=checkbox] { width: auto; flex: 0 0 auto; margin: 0; accent-color: #b62525; }
+/* caixinha própria: quadrado de tinta com borda de sangue; marcada, fica vermelha com o visto em pergaminho */
+.jg-criador-campos .jg-palavras-grade input[type=checkbox] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 0 0 auto;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #7a1515;
+    border-radius: 3px;
+    background: #140b0b;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .7);
+    cursor: pointer;
+    display: grid;
+    place-content: center;
+    transition: background-color .12s, border-color .12s, box-shadow .12s;
+}
+.jg-criador-campos .jg-palavras-grade input[type=checkbox]::after {
+    content: '';
+    width: .32rem;
+    height: .62rem;
+    margin-top: -.12rem;
+    border: solid #f3e6cc;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    transition: transform .12s ease-out;
+}
+.jg-criador-campos .jg-palavras-grade input[type=checkbox]:checked {
+    background: radial-gradient(circle at 35% 30%, #cf4a42, #8a1a1a 70%);
+    border-color: #c9a45c;
+    box-shadow: 0 0 6px rgba(182, 37, 37, .55);
+}
+.jg-criador-campos .jg-palavras-grade input[type=checkbox]:checked::after { transform: rotate(45deg) scale(1); }
+.jg-criador-campos .jg-palavras-grade input[type=checkbox]:hover { border-color: #c9a45c; }
+.jg-criador-campos .jg-palavras-grade input[type=checkbox]:focus-visible { outline: 2px solid #c9a45c; outline-offset: 2px; }
+.jg-criador-campos .jg-palavras-grade label:has(input:checked) { color: #f3d58f; }
 
 /* palavra-chave na carta: passar o mouse (ou focar) mostra o efeito */
 .jg-palavra { cursor: help; border-bottom: 1px dotted rgba(216, 178, 106, .7); }

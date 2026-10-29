@@ -174,7 +174,11 @@
         const ok = n >= R.min && n <= R.max;
         $('#jg-deck-total').textContent = `${n} carta${n === 1 ? '' : 's'} (${R.min} a ${R.max})`;
         $('#jg-deck-total').classList.toggle('jg-deck-total--ok', ok);
-        $('#jg-deck-lista').innerHTML = cartas.length ? cartas.map(c => {
+        // a pesquisa da montagem usa o mesmo critério da lista de cartas (nome sem acento)
+        const busca = semAcento($('#jg-deck-pesquisa').value);
+        const visiveis = cartas.filter(c => !busca || semAcento(c.nome).includes(busca)).sort((a, b) => a.custo - b.custo || a.nome.localeCompare(b.nome, 'pt-BR'));
+        $('#jg-deck-lista').innerHTML = !cartas.length ? '<p class="camp-vazio">O mestre ainda não criou cartas.</p>'
+            : !visiveis.length ? '<p class="camp-vazio">Nenhuma carta com esse nome.</p>' : visiveis.map(c => {
             const q = montando[c.id] || 0;
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
@@ -183,8 +187,9 @@
                 `<b class="jg-deck-qtd">${q}</b>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= R.copias ? ' disabled' : ''}>+</button>` +
                 `</div>`;
-        }).join('') : '<p class="camp-vazio">O mestre ainda não criou cartas.</p>';
+        }).join('');
     }
+    $('#jg-deck-pesquisa').addEventListener('input', () => renderMontagem());
     function abrirDeck(d) {
         formDeck.reset();
         formDeck.registro.value = d ? d.id : '';
@@ -231,15 +236,68 @@
         }
     });
 
-    /* ---------- cartas (Gladio) ---------- */
+    /* ---------- cartas (Gladio): pesquisa pelo nome, filtros e ordem ---------- */
+    const semAcento = s => String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    const palavrasDa = c => String(c.palavras || '').split(',').map(p => p.trim()).filter(Boolean);
+    const barraFiltros = $('#jg-filtros-cartas');
+    const filtro = campo => barraFiltros.querySelector(`[data-filtro="${campo}"]`);
+    /** Aplica pesquisa (sem acento, em qualquer parte do nome), tipo, custo, palavra-chave e ordem. */
+    function filtrarCartas(lista) {
+        const nome = semAcento(filtro('nome').value);
+        const tipo = filtro('tipo').value;
+        const custo = filtro('custo').value;
+        const palavra = filtro('palavra').value;
+        const out = lista.filter(c => (!nome || semAcento(c.nome).includes(nome)) &&
+            (!tipo || c.tipo === tipo) &&
+            (custo === '' || String(c.custo) === custo) &&
+            (!palavra || palavrasDa(c).includes(palavra)));
+        const ordem = filtro('ordem').value;
+        const porNome = (a, b) => a.nome.localeCompare(b.nome, 'pt-BR');
+        const regra = {
+            nome: porNome,
+            custo: (a, b) => a.custo - b.custo || porNome(a, b),
+            ataque: (a, b) => (b.ataque || 0) - (a.ataque || 0) || porNome(a, b),
+            vida: (a, b) => (b.vida || 0) - (a.vida || 0) || porNome(a, b),
+            recentes: (a, b) => b.id - a.id,
+        }[ordem] || ((a, b) => a.custo - b.custo || porNome(a, b));
+        return out.sort(regra);
+    }
+    /** Opções de custo e de palavra-chave saem das cartas que existem (sem opção que não acharia nada). */
+    function opcoesFiltros() {
+        const sel = (campo, primeira, valores, rotulo) => {
+            const s = filtro(campo);
+            const atual = s.value;
+            s.innerHTML = `<option value="">${primeira}</option>` + valores.map(v => `<option value="${esc(v)}">${esc(rotulo(v))}</option>`).join('');
+            s.value = valores.map(String).includes(atual) ? atual : '';
+        };
+        sel('custo', 'Qualquer custo', [...new Set(cartas.map(c => +c.custo))].sort((a, b) => a - b), v => `Custo ${v}`);
+        const PAL = window.JG.PALAVRA;
+        sel('palavra', 'Qualquer palavra-chave', Object.keys(PAL).filter(k => cartas.some(c => palavrasDa(c).includes(k))), k => PAL[k].nome);
+    }
     function renderCartas() {
         $('#jg-cont-cartas').textContent = cartas.length;
-        $('#jg-cartas').innerHTML = cartas.length ? cartas.map(c =>
+        opcoesFiltros();
+        const lista = filtrarCartas(cartas.slice());
+        const filtrando = !!(filtro('nome').value.trim() || filtro('tipo').value || filtro('custo').value || filtro('palavra').value);
+        barraFiltros.querySelector('[data-filtro-limpar]').hidden = !filtrando;
+        const resumo = $('#jg-filtros-resumo');
+        resumo.hidden = !filtrando;
+        resumo.textContent = `Mostrando ${lista.length} de ${cartas.length} cartas.`;
+        barraFiltros.hidden = !cartas.length;
+        $('#jg-cartas').innerHTML = lista.length ? lista.map(c =>
             `<div class="jg-carta-item">${window.JG.carta(c)}` +
             (D.souMestre ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-carta="${c.id}">Editar</button>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-carta="${c.id}">Excluir</button></div>` : '') +
-            `</div>`).join('') : `<p class="camp-vazio">${D.souMestre ? 'Crie a primeira carta do Gladio.' : 'O mestre ainda não criou cartas.'}</p>`;
+            `</div>`).join('')
+            : `<p class="camp-vazio">${cartas.length ? 'Nenhuma carta com esses filtros.' : (D.souMestre ? 'Crie a primeira carta do Gladio.' : 'O mestre ainda não criou cartas.')}</p>`;
     }
+    barraFiltros.addEventListener('input', renderCartas);
+    barraFiltros.addEventListener('click', e => {
+        if (!e.target.closest('[data-filtro-limpar]')) return;
+        ['nome', 'tipo', 'custo', 'palavra'].forEach(c => { filtro(c).value = ''; });
+        renderCartas();
+        filtro('nome').focus();
+    });
 
     const fc = $('#jg-criador-carta');
     if (fc) {
