@@ -19,14 +19,19 @@
             </button>
             <button type="submit" name="objetivo" value="livros" class="bv-escolha">
                 <span class="bv-escolha__icone">📖</span>
-                <strong>Quero comprar os livros</strong>
-                <span>O livro do sistema e os livros de histórias, digitais ou físicos.</span>
+                <strong>Quero ler os livros</strong>
+                <span>O livro do sistema e os livros de histórias, em PDF ou impressos.</span>
+            </button>
+            <button type="submit" name="objetivo" value="ambos" class="bv-escolha">
+                <span class="bv-escolha__icone">✠</span>
+                <strong>Os dois</strong>
+                <span>Ler os livros e jogar o RPG no painel.</span>
             </button>
         </form>
 
         @if ($diasTeste > 0)
-            <p class="bv-nota">Sua conta tem {{ $diasTeste }} {{ $diasTeste === 1 ? 'dia' : 'dias' }} de acesso completo, sem anúncios e sem limites.
-                Comprando o livro do sistema, esse acesso fica para sempre. <a href="{{ route('planos.index') }}">Ver planos</a></p>
+            <p class="bv-nota">Sua conta tem {{ $diasTeste }} {{ $diasTeste === 1 ? 'dia' : 'dias' }} de painel completo, sem anúncios e sem limites.
+                Comprando o livro do sistema por {{ $preco }}, você recebe o PDF do livro e o painel completo para sempre. <a href="{{ route('planos.index') }}">Ver planos</a></p>
         @endif
     </div>
 </section>

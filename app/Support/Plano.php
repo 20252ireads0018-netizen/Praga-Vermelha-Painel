@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  *  - vitalicio: comprou o livro do sistema (users.livro_comprado_em);
  *  - teste:     até 45 dias depois de criar a conta (ou do lançamento dos planos, para contas antigas);
  *  - gratis:    o resto; vê anúncios e tem limite de fichas e campanhas.
- * Visitante (sem conta) conta como grátis para os anúncios.
+ * Visitante (sem conta) não vê anúncios: eles são só do plano grátis, depois do teste.
  */
 class Plano
 {
@@ -77,9 +77,10 @@ class Plano
         return $fim->isFuture() ? (int) ceil(Carbon::now()->diffInHours($fim) / 24) : 0;
     }
 
+    /** Anúncios só para a conta no plano grátis (teste acabou e não comprou o livro); visitante não vê. */
     public static function veAnuncios(?User $user): bool
     {
-        return self::de($user) === self::GRATIS;
+        return $user !== null && self::de($user) === self::GRATIS;
     }
 
     public static function nome(string $plano): string

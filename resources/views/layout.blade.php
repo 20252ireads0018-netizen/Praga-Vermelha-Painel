@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tabletop.css') }}">
     <link rel="stylesheet" href="{{ asset('css/planos.css') }}?v={{ @filemtime(public_path('css/planos.css')) ?: 1 }}">
-    {{-- Anúncios só no plano grátis (e para visitantes), com o AdSense configurado em config/planos.php --}}
+    {{-- Anúncios só no plano grátis (depois dos 45 dias, sem o livro). Com os anúncios automáticos ligados no AdSense, o mesmo script mostra anúncios de tela cheia entre as páginas, de tempos em tempos --}}
     @if (config('planos.adsense_cliente') && \App\Support\Plano::veAnuncios(auth()->user()))
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ config('planos.adsense_cliente') }}" crossorigin="anonymous"></script>
     @endif

@@ -27,7 +27,8 @@
                 </div>
                 <div class="pl-atual__uso">
                     @if ($plano === 'vitalicio')
-                        Livro do sistema ativado{{ $compradoEm ? ' em ' . $compradoEm->format('d/m/Y') : '' }}: sem anúncios, sem limites e todos os livros liberados.
+                        Livro do sistema comprado{{ $compradoEm ? ' em ' . $compradoEm->format('d/m/Y') : '' }}: sem anúncios, sem limites e todos os livros liberados.
+                        <a href="{{ route('livro.pdf', 'completo') }}?baixar=1">Baixar o PDF</a>
                     @elseif ($plano === 'teste')
                         Faltam {{ $diasTeste }} {{ $diasTeste === 1 ? 'dia' : 'dias' }} de acesso completo. Depois, a conta passa para o plano grátis.
                     @else
@@ -72,7 +73,7 @@
                 <ul>
                     <li>Painel sem anúncios, para sempre</li>
                     <li>Fichas e campanhas sem limite</li>
-                    <li>Livro do sistema completo</li>
+                    <li>PDF do livro do sistema completo, para baixar</li>
                     <li>Todos os livros de histórias em info-produto</li>
                 </ul>
                 @if ($plano !== 'vitalicio')
@@ -90,7 +91,8 @@
                         @endauth
                     @endif
                 @else
-                    <a href="{{ route('livro.index') }}" class="pv-btn pv-btn--primary">Abrir o livro do sistema</a>
+                    <a href="{{ route('livro.pdf', 'completo') }}?baixar=1" class="pv-btn pv-btn--primary">Baixar o PDF do livro</a>
+                    <a href="{{ route('livro.index') }}" class="pv-btn pv-btn--outline">Ler no site</a>
                 @endif
             </article>
         </div>

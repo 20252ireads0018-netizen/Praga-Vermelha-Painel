@@ -33,18 +33,19 @@ class PlanoController extends Controller
         ]);
     }
 
-    // Boas-vindas para quem acabou de chegar: veio comprar os livros ou jogar o RPG?
+    // Boas-vindas para quem acabou de chegar: veio ler os livros, jogar o RPG ou os dois?
     public function boasVindas()
     {
         return view('boas-vindas', [
             'diasPlano' => (int) config('planos.dias_teste', 45),
             'diasTeste' => Plano::diasDeTeste(auth()->user()),
+            'preco'     => CompraLivro::precoTexto(),
         ]);
     }
 
     public function objetivo(Request $request)
     {
-        $dados = $request->validate(['objetivo' => 'required|in:livros,jogar']);
+        $dados = $request->validate(['objetivo' => 'required|in:livros,jogar,ambos']);
 
         if (Plano::temColunas()) {
             $request->user()->forceFill(['objetivo' => $dados['objetivo']])->save();
@@ -53,6 +54,6 @@ class PlanoController extends Controller
 
         return $dados['objetivo'] === 'livros'
             ? redirect()->route('planos.index')
-            : redirect('/')->with('boas_vindas', 'jogar');
+            : redirect('/')->with('boas_vindas', $dados['objetivo']);
     }
 }

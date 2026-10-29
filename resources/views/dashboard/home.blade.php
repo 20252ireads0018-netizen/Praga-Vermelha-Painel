@@ -37,8 +37,8 @@
                     </article>
                     <article class="pv-card">
                         <div class="pv-card__icon">📖</div>
-                        <h3 class="pv-card__title">Quero comprar os livros</h3>
-                        <p class="pv-card__text">Livro do sistema e livros de histórias, em info-produto ou impressos.</p>
+                        <h3 class="pv-card__title">Quero ler os livros</h3>
+                        <p class="pv-card__text">Livro do sistema e livros de histórias, em PDF ou impressos. Dá para jogar e ler: as duas coisas cabem na mesma conta.</p>
                         <a href="{{ route('planos.index') }}" class="pv-card__link">Ver livros e planos ▸</a>
                     </article>
                 </div>
@@ -46,10 +46,14 @@
         </section>
     @endguest
 
-    @if (session('boas_vindas') === 'jogar')
+    @if (in_array(session('boas_vindas'), ['jogar', 'ambos'], true))
         <section class="pv-section">
             <div class="pv-container">
-                <div class="pl-alerta pl-alerta--ok">Bom jogo! Comece criando sua primeira ficha e depois monte ou entre em uma campanha.</div>
+                <div class="pl-alerta pl-alerta--ok">Bom jogo! Comece criando sua primeira ficha e depois monte ou entre em uma campanha.
+                    @if (session('boas_vindas') === 'ambos')
+                        Os livros ficam em <a href="{{ route('planos.index') }}">Planos e livros</a>.
+                    @endif
+                </div>
             </div>
         </section>
     @endif

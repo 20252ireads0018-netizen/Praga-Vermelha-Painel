@@ -88,7 +88,7 @@ class PlanosTest extends TestCase
         $this->assertTrue(Plano::veAnuncios($nova));
         $this->assertSame(5, Plano::limite($nova, 'fichas'));
         $this->assertSame(1, Plano::limite($nova, 'campanhas'));
-        $this->assertTrue(Plano::veAnuncios(null)); // visitante
+        $this->assertFalse(Plano::veAnuncios(null)); // visitante não vê anúncio
     }
 
     public function test_plano_gratis_limita_fichas_e_campanhas(): void
@@ -187,7 +187,8 @@ class PlanosTest extends TestCase
         $this->flushSession();
         $this->actingAs($u)->get('/historias/o-cavaleiro-negro')->assertOk();
         $this->get('/livro')->assertOk();
-        $this->get('/planos')->assertOk()->assertSee('Vitalício');
+        $this->get('/livro/pdf/completo?baixar=1')->assertOk()->assertDownload('praga-vermelha.pdf'); // o PDF comprado
+        $this->get('/planos')->assertOk()->assertSee('Vitalício')->assertSee('Baixar o PDF do livro');
     }
 
     public function test_volta_da_fatura_confere_o_pagamento_sem_webhook(): void
@@ -210,7 +211,8 @@ class PlanosTest extends TestCase
         ])->assertRedirect(route('boas-vindas'));
 
         $this->get('/')->assertRedirect(route('boas-vindas'));
-        $this->get('/boas-vindas')->assertOk()->assertSee('Quero comprar os livros')->assertSee('Quero jogar o RPG');
+        $this->get('/boas-vindas')->assertOk()->assertSee('Quero ler os livros')->assertSee('Quero jogar o RPG')->assertSee('Os dois');
+        $this->post('/boas-vindas', ['objetivo' => 'ambos'])->assertRedirect('/')->assertSessionHas('boas_vindas', 'ambos');
         $this->post('/boas-vindas', ['objetivo' => 'outra'])->assertSessionHasErrors('objetivo');
         $this->post('/boas-vindas', ['objetivo' => 'livros'])->assertRedirect(route('planos.index'));
         $this->assertSame('livros', User::where('email', 'novo@t.test')->value('objetivo'));

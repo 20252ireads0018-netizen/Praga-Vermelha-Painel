@@ -1,4 +1,4 @@
-{{-- Faixa de anúncio (AdSense) do plano grátis e de visitantes. Só aparece com o ADSENSE_CLIENTE configurado. --}}
+{{-- Faixa de anúncio (AdSense) do plano grátis. Só aparece com o ADSENSE_CLIENTE configurado. --}}
 @php
     $adsCliente = (string) config('planos.adsense_cliente');
     $adsSlot    = (string) config('planos.adsense_slot');
