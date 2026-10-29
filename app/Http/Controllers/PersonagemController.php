@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Personagem;
 
@@ -83,6 +84,12 @@ class PersonagemController extends Controller
             'propriedades_fisiomantes' => json_decode($request->input('propriedades_fisiomantes') ?: '[]', true) ?: [],
         ]);
 
+        // Campos que só são gravados se vieram no formulário (o merge abaixo cria a chave, então a presença é lida antes)
+        $veio = [];
+        foreach (['armaduras', 'artes_marciais', 'niveis_profissao'] as $campo) {
+            $veio[$campo] = $request->has($campo);
+        }
+
         // Armaduras, resistências e imunidades (aba Armaduras dos atributos vitais). Só decodifica se veio no formulário,
         // para não apagar o que está salvo quando outra tela grava a ficha sem esse campo.
         $request->merge([
@@ -94,12 +101,19 @@ class PersonagemController extends Controller
             'artes_marciais' => $request->has('artes_marciais') ? (json_decode($request->input('artes_marciais') ?: 'null', true) ?: null) : null,
         ]);
 
+        // Distribuição dos níveis mundanos entre as profissões (um item por nível). Mesmo cuidado das armaduras.
+        $request->merge([
+            'niveis_profissao' => $request->has('niveis_profissao') ? (json_decode($request->input('niveis_profissao') ?: 'null', true) ?: null) : null,
+        ]);
+
         $dados = $request->validate([
             'nome' => 'required|string|max:255',
             'raca' => 'required|string',
             'maldicoes' => 'nullable|string',
             'idade' => 'required|integer',
             'profissao' => 'nullable|string',
+            'niveis_profissao' => 'nullable|array|max:500',
+            'niveis_profissao.*' => ['string', Rule::in(Personagem::PROFISSOES)],
             'nivel_mundano' => 'nullable|integer',
             'experiencia_mundana' => 'nullable|integer',
             'porte_fisico' => 'nullable|string',
@@ -287,13 +301,20 @@ class PersonagemController extends Controller
         }
 
         // Propriedades fisiomantes: só grava se a migration que cria a coluna já rodou
+        // Níveis por profissão: só grava se a coluna existir e se o formulário enviou o campo
+        if (!Schema::hasColumn('fichas', 'niveis_profissao') || !$veio['niveis_profissao']) {
+            unset($dados['niveis_profissao']);
+        } elseif (isset($dados['niveis_profissao'])) {
+            $dados['niveis_profissao'] = array_values($dados['niveis_profissao']);
+        }
+
         // Armaduras: só grava se a coluna existir e se o formulário enviou o campo
-        if (!Schema::hasColumn('fichas', 'armaduras') || !$request->has('armaduras')) {
+        if (!Schema::hasColumn('fichas', 'armaduras') || !$veio['armaduras']) {
             unset($dados['armaduras']);
         }
 
         // Artes marciais: só as artes conhecidas e só se a coluna existir e o formulário enviou o campo
-        if (!Schema::hasColumn('fichas', 'artes_marciais') || !$request->has('artes_marciais')) {
+        if (!Schema::hasColumn('fichas', 'artes_marciais') || !$veio['artes_marciais']) {
             unset($dados['artes_marciais']);
         } else {
             $artes = [];

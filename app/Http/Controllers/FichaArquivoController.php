@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Baixar e importar fichas como arquivo .json.
@@ -170,6 +171,8 @@ class FichaArquivoController extends Controller
             'maldicoes' => 'nullable|string',
             'idade' => 'required|integer',
             'profissao' => 'nullable|string',
+            'niveis_profissao' => 'nullable|array|max:500',
+            'niveis_profissao.*' => ['string', Rule::in(Personagem::PROFISSOES)],
             'nivel_mundano' => 'nullable|integer',
             'experiencia_mundana' => 'nullable|integer',
             'porte_fisico' => 'nullable|string',
@@ -227,7 +230,7 @@ class FichaArquivoController extends Controller
         $dados['habilidades'] = $habilidades;
 
         // Colunas que podem não existir na tabela são descartadas.
-        foreach (['itens', 'anotacoes', 'vitais_extras'] as $coluna) {
+        foreach (['itens', 'anotacoes', 'vitais_extras', 'niveis_profissao'] as $coluna) {
             if (array_key_exists($coluna, $dados) && !Schema::hasColumn($tabela, $coluna)) {
                 unset($dados[$coluna]);
             }
