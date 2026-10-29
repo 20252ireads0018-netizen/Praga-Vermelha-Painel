@@ -254,6 +254,22 @@
             return janela('Cemitério', corpo, '<span class="camp-dica">Lendas que caem, feitiços usados e cartas descartadas. O mais recente aparece primeiro.</span>');
         }
 
+        if (modal.tipo === 'conjurar') {
+            const x = (Array.isArray(L[eu].mao) ? L[eu].mao : []).find(c => c.i === modal.inst);
+            if (!x) { modal = null; return ''; }
+            const c = cartaDef(x.c);
+            const opcoes = [['', 'Nenhum: só conjurar (o texto é resolvido à mão)'], ['dano', 'Dano numa Lenda inimiga ou no adversário'],
+                ['dano_todos', 'Dano em todas as Lendas inimigas'], ['cura', 'Cura numa Lenda sua ou em você'], ['comprar', 'Comprar cartas'],
+                ['fortalecer', '+ataque numa Lenda sua'], ['energia', 'Ganhar energia neste turno']];
+            const corpo = `<div class="gl-modal-carta">${window.JG.carta(c)}<form class="gl-modal-acoes gl-form-conjurar" data-gl-form="conjurar">` +
+                `<p class="gl-conjurar-texto">${esc(c.descricao || 'Este feitiço não tem descrição.')}</p>` +
+                `<label>Efeito que o texto pede<select name="efeito">${opcoes.map(o => `<option value="${o[0]}">${esc(o[1])}</option>`).join('')}</select></label>` +
+                `<label data-valor hidden>Valor<input type="number" name="valor" min="0" max="9999" value="1"></label>` +
+                `<button class="camp-btn camp-btn-primario">Conjurar${modal.gratis ? ' sem pagar energia' : ''}</button>` +
+                `<p class="camp-dica">O efeito escolhido fica registrado nos acontecimentos para o adversário ver.</p></form></div>`;
+            return janela('Conjurar ' + c.nome, corpo, '');
+        }
+
         if (modal.tipo === 'ficha') {
             const corpo = `<form class="gl-form-ficha" data-gl-form="ficha">` +
                 `<label>Nome<input type="text" name="nome" maxlength="40" value="Olhinho" required></label>` +
@@ -325,6 +341,7 @@
             if (tipo === 'gratis') {
                 const x = L[eu].mao.find(c => c.i === inst);
                 const c = x && cartaDef(x.c);
+                if (c && c.tipo === 'feitico' && !c.efeito) { modal = { tipo: 'conjurar', inst, gratis: true }; render(); return; }
                 const precisa = c && c.tipo === 'feitico' ? PRECISA[c.efeito] : null;
                 if (precisa) { alvo = { tipo: 'feitico', inst, precisa, gratis: true }; render(); return; }
                 acao({ acao: 'jogar', inst, gratis: 1 });
@@ -394,7 +411,7 @@
             if (escolhido == null) return;
             const a = alvo;
             alvo = null;
-            acao({ acao: 'jogar', inst: a.inst, alvo: escolhido, gratis: a.gratis ? 1 : null });
+            acao({ acao: 'jogar', inst: a.inst, alvo: escolhido, gratis: a.gratis ? 1 : null, efeito: a.efeito || null, valor: a.efeito ? a.valor : null });
             return;
         }
 
@@ -402,6 +419,7 @@
             const x = L[eu].mao.find(c => String(c.i) === cartaMao.dataset.mao);
             const c = x && cartaDef(x.c);
             if (!c) return;
+            if (c.tipo === 'feitico' && !c.efeito) { modal = { tipo: 'conjurar', inst: x.i }; render(); return; }
             const precisa = c.tipo === 'feitico' ? PRECISA[c.efeito] : null;
             if (precisa) { alvo = { tipo: 'feitico', inst: x.i, precisa }; render(); }
             else acao({ acao: 'jogar', inst: x.i });
@@ -414,6 +432,24 @@
             render();
         }
     }
+
+    // janela "Conjurar": o valor só aparece quando há efeito
+    box.addEventListener('change', ev => {
+        const sel = ev.target.closest('[data-gl-form="conjurar"] select[name=efeito]');
+        if (sel) sel.form.querySelector('[data-valor]').hidden = !sel.value;
+    });
+    box.addEventListener('submit', ev => {
+        const f = ev.target.closest('[data-gl-form="conjurar"]');
+        if (!f) return;
+        ev.preventDefault();
+        const { inst, gratis } = modal;
+        const efeito = f.efeito.value || null;
+        const valor = Math.max(0, +f.valor.value || 0);
+        modal = null;
+        const precisa = efeito ? PRECISA[efeito] : null;
+        if (precisa) { alvo = { tipo: 'feitico', inst, precisa, gratis, efeito, valor }; render(); return; }
+        acao({ acao: 'jogar', inst, gratis: gratis ? 1 : null, efeito, valor: efeito ? valor : null });
+    });
 
     // formulário da ficha
     box.addEventListener('submit', ev => {

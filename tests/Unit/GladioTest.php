@@ -384,6 +384,22 @@ class GladioTest extends TestCase
         Gladio::jogar($e, 'a', $this->primeira($e, 'a', '2'), (string) $monge);
     }
 
+    public function test_feitico_sem_efeito_proprio_usa_o_que_quem_jogou_escolheu(): void
+    {
+        $cartas = self::CARTAS + ['6' => ['nome' => 'Sopro', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => null, 'valor' => 0, 'palavras' => '']];
+        $e = Gladio::iniciar($cartas, 10, ['a' => array_merge(['6', '6'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a);
+        $e['lados']['a']['energia'] = 5;
+        // sem escolha: só é conjurado e vai ao cemitério
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'));
+        $this->assertSame(['6'], array_column($e['lados']['a']['cemiterio'], 'c'));
+        $this->assertSame(10, $e['lados']['b']['vida']);
+        // com escolha: dano 3 no adversário, registrado
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', '6'), 'inimigo', false, 'dano', 3);
+        $this->assertSame(7, $e['lados']['b']['vida']);
+        $this->assertStringContainsString('efeito escolhido por quem jogou', end($e['log']));
+        $this->assertSame(3, $e['lados']['a']['energia']);
+    }
+
     public function test_visao_esconde_mao_e_baralho_do_outro(): void
     {
         $v = Gladio::visao($this->novo(), 'a');

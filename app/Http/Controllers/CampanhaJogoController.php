@@ -120,10 +120,6 @@ class CampanhaJogoController extends Controller
         if ($d['tipo'] === 'lenda' && (int) ($d['vida'] ?? 0) < 1) {
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
         }
-        if ($d['tipo'] === 'feitico' && empty($d['efeito'])) {
-            return response()->json(['ok' => false, 'erro' => 'Escolha o efeito do feitiço.'], 422);
-        }
-
         $carta = !empty($d['id'])
             ? GladioCarta::where('campanha_id', $campanha->id)->findOrFail((int) $d['id'])
             : new GladioCarta(['campanha_id' => $campanha->id]);
@@ -135,8 +131,9 @@ class CampanhaJogoController extends Controller
             'custo'     => (int) $d['custo'],
             'ataque'    => $lenda ? (int) ($d['ataque'] ?? 0) : 0,
             'vida'      => $lenda ? (int) ($d['vida'] ?? 1) : 0,
-            'efeito'    => $lenda ? null : $d['efeito'],
-            'valor'     => $lenda ? 0 : (int) ($d['valor'] ?? 0),
+            // feitiço não tem efeito automático: quem joga escolhe o efeito e o valor que a descrição pede
+            'efeito'    => null,
+            'valor'     => 0,
             'descricao' => trim((string) ($d['descricao'] ?? '')) ?: null,
         ]);
         if (Schema::hasColumn('gladio_cartas', 'palavras')) {
@@ -497,6 +494,8 @@ class CampanhaJogoController extends Controller
             'atk' => ['nullable', 'integer', 'min:-99', 'max:9999'],
             'vida' => ['nullable', 'integer', 'min:-99', 'max:9999'],
             'gratis' => ['nullable', 'boolean'],
+            'efeito' => ['nullable', Rule::in(Gladio::EFEITOS)],          // feitiço: efeito escolhido por quem joga
+            'valor' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
             'tx' => ['nullable', 'integer'], 'ty' => ['nullable', 'integer'],
         ]);
@@ -519,7 +518,8 @@ class CampanhaJogoController extends Controller
                     $inst = (int) $request->input('inst', 0);
                     $outro = $request->filled('outro') ? (int) $request->input('outro') : null;
                     $e = match ($acao) {
-                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), $request->boolean('gratis')),
+                        'jogar'      => Gladio::jogar($e, $lado, $inst, $request->input('alvo'), $request->boolean('gratis'),
+                            $request->input('efeito') ?: null, (int) $request->input('valor', 0)),
                         'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', [])),
                         'bloquear'   => Gladio::bloquear($e, $lado, $inst, $outro),
                         'defender'   => Gladio::defender($e, $lado),

@@ -115,9 +115,9 @@ class CampanhaJogosTest extends TestCase
         // fora da vez
         $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
 
-        // a Ana joga o Raio (50) no rosto da Bia (40 de vida) e vence
+        // a Ana joga o Raio escolhendo 50 de dano (o feitiço não tem efeito próprio) no rosto da Bia (40 de vida) e vence
         $mao = $this->actingAs($this->ana)->getJson($this->url("/partidas/{$p->id}/estado"))->json('estado.lados.a.mao');
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $mao[0]['i'], 'alvo' => 'inimigo'])
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $mao[0]['i'], 'alvo' => 'inimigo', 'efeito' => 'dano', 'valor' => 50])
             ->assertOk()->assertJsonPath('status', 'fim')->assertJsonPath('vencedor', 'j1');
         $this->assertSame([140, 60], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
         $this->assertSame($this->ana->id, (int) $p->fresh()->vencedor_id);

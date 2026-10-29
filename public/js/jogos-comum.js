@@ -70,8 +70,6 @@ window.JG = (function () {
     const palavras = c => (Array.isArray(c.palavras) ? c.palavras : String(c.palavras || '').split(',')).map(s => s.trim()).filter(Boolean);
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
-    // descrições longas usam letra menor para caber acima dos atributos
-    const tamTexto = t => { const k = String(t || '').length; return k > 140 ? ' jg-texto-muito-longo' : (k > 80 ? ' jg-texto-longo' : ''); };
     const GOTA = SVG('<path d="M16 2c5 8 11 13.5 11 19.5A11 11 0 0 1 5 21.5C5 15.5 11 10 16 2z"/>', '0 0 32 32');
 
     /**
@@ -99,7 +97,7 @@ window.JG = (function () {
             `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
             (pal.length ? `<div class="jg-carta-palavras">${pal.map(p =>
                 `<span class="jg-palavra" tabindex="0" title="${esc(PALAVRA[p].nome + ': ' + PALAVRA[p].desc)}">${esc(PALAVRA[p].nome)}</span>`).join(' · ')}</div>` : '') +
-            `<div class="jg-carta-texto${tamTexto(texto)}">${esc(texto)}</div>` +
+            `<div class="jg-carta-texto">${esc(texto)}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
                 `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
                 `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>` : '') +
@@ -135,6 +133,30 @@ window.JG = (function () {
             }
         }
         return h + '</div>';
+    }
+
+    /* Encaixe do texto: cada carta desenhada na página é medida e, enquanto a descrição não cabe, desce um nível
+       (letra menor e arte mais baixa, ver data-encaixe em jogos.css). Vale para lobby, partida e prévias, sem que
+       cada tela precise chamar nada. O ResizeObserver também cobre cartas que nascem escondidas (abas, janelas). */
+    const NIVEIS = 5;
+    function encaixar(carta) {
+        const t = carta.querySelector('.jg-carta-texto');
+        if (!t || !carta.clientHeight) return;
+        carta.classList.remove('jg-carta--estoura');
+        for (let n = 0; n < NIVEIS; n++) {
+            carta.dataset.encaixe = n;
+            if (t.scrollHeight <= t.clientHeight + 1) return;
+        }
+        carta.classList.add('jg-carta--estoura');
+    }
+    const medidor = window.ResizeObserver ? new ResizeObserver(lista => lista.forEach(en => encaixar(en.target))) : null;
+    const cartasEm = no => (no.nodeType !== 1 ? [] : (no.matches('.jg-carta') ? [no] : Array.from(no.querySelectorAll('.jg-carta'))));
+    if (medidor) {
+        new MutationObserver(mudancas => mudancas.forEach(m => {
+            m.addedNodes.forEach(no => cartasEm(no).forEach(c => medidor.observe(c)));
+            m.removedNodes.forEach(no => cartasEm(no).forEach(c => medidor.unobserve(c)));
+        })).observe(document.documentElement, { childList: true, subtree: true });
+        document.querySelectorAll('.jg-carta').forEach(c => medidor.observe(c));
     }
 
     // Tocar (ou clicar) numa palavra-chave mostra o efeito num balão — no celular não existe "passar o mouse".

@@ -310,7 +310,7 @@
         let imagemAtual = null;
         const lerCarta = () => ({
             nome: fc.nome.value.trim() || 'Nova carta', tipo: fc.tipo.value, custo: +fc.custo.value || 0,
-            ataque: +fc.ataque.value || 0, vida: +fc.vida.value || 0, efeito: fc.efeito.value, valor: +fc.valor.value || 0,
+            ataque: +fc.ataque.value || 0, vida: +fc.vida.value || 0,
             descricao: fc.descricao.value, imagem: semImagem ? null : (imagem || imagemAtual),
             palavras: $$('input[name=palavras]:checked', fc).map(x => x.value),
         });
@@ -419,8 +419,7 @@
             imagem = null; semImagem = false; imagemAtual = c ? c.imagem : null;
             fonte = null; zoom.value = 1;
             fc.registro.value = c ? c.id : '';
-            if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'valor', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
-            if (c && c.efeito) fc.efeito.value = c.efeito;
+            if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
             const pal = c ? String(c.palavras || '').split(',') : [];
             $$('input[name=palavras]', fc).forEach(x => { x.checked = pal.includes(x.value); });
             fc.hidden = false;
@@ -474,7 +473,7 @@
             e.preventDefault();
             const c = lerCarta();
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
-                            efeito: c.tipo === 'feitico' ? c.efeito : null, valor: c.valor, descricao: c.descricao,
+                            descricao: c.descricao,
                             palavras: c.tipo === 'lenda' ? c.palavras : [] };
             if (imagem) dados.imagem = imagem;
             if (semImagem) dados.sem_imagem = 1;

@@ -267,8 +267,11 @@ class Gladio
     /**
      * Joga uma carta da mão. $alvo: 'eu' | 'inimigo' | id de instância de uma Lenda na mesa.
      * No turno do adversário só dá para jogar Lendas, e só durante a defesa. $gratis: sem pagar energia (efeito de carta).
+     * Feitiço sem efeito próprio: $efeitoEscolhido/$valorEscolhido são o que a descrição pede, escolhidos por quem joga
+     * (fica registrado); sem escolha, ele só é conjurado e vai ao cemitério.
      */
-    public static function jogar(array $e, string $lado, int $inst, mixed $alvo = null, bool $gratis = false): array
+    public static function jogar(array $e, string $lado, int $inst, mixed $alvo = null, bool $gratis = false,
+                                 ?string $efeitoEscolhido = null, int $valorEscolhido = 0): array
     {
         $defendendo = !$e['fim'] && $e['fase'] === 'defesa' && $e['vez'] !== $lado;
         if ($defendendo) {
@@ -315,10 +318,18 @@ class Gladio
             return $e;
         }
 
-        // feitiço
-        $efeito = $carta['efeito'];
-        $valor = max(0, (int) $carta['valor']);
-        $precisa = self::ALVOS[$efeito] ?? null;
+        // feitiço: o efeito é o da carta (feitiços antigos) ou o que quem jogou escolheu conforme a descrição
+        $efeito = $carta['efeito'] ?? null;
+        $valor = max(0, (int) ($carta['valor'] ?? 0));
+        if (!$efeito && $efeitoEscolhido) {
+            if (!in_array($efeitoEscolhido, self::EFEITOS, true)) {
+                throw new \InvalidArgumentException('Efeito desconhecido.');
+            }
+            $efeito = $efeitoEscolhido;
+            $valor = max(0, min(9999, $valorEscolhido));
+            $semCusto .= ' (efeito escolhido por quem jogou)';
+        }
+        $precisa = $efeito ? (self::ALVOS[$efeito] ?? null) : null;
         $alvoLenda = null; // [lado, índice]
         $alvoHeroi = null; // lado
         if ($precisa) {
@@ -349,6 +360,11 @@ class Gladio
         array_splice($l['mao'], $k, 1);
         $l['energia'] -= $custo;
         unset($l);
+        if (!$efeito) { // sem efeito automático: o texto da carta é resolvido à mão
+            self::log($e, "Conjurou $nome$semCusto.");
+
+            return self::conferir($e, $lado);
+        }
 
         switch ($efeito) {
             case 'dano':
