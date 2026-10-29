@@ -707,4 +707,5 @@
 <script src="{{ asset('js/campanha-catalogo.js') }}?v={{ @filemtime(public_path('js/campanha-catalogo.js')) }}"></script>
 @endif
 <script src="{{ asset('js/campanha-tabletop.js') }}?v={{ @filemtime(public_path('js/campanha-tabletop.js')) }}"></script>
+<script src="{{ asset('js/campanha-recolher.js') }}?v={{ @filemtime(public_path('js/campanha-recolher.js')) }}"></script>
 @endsection

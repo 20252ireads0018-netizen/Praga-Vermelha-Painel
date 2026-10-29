@@ -979,3 +979,35 @@
     .camp-tt-cab { flex-wrap: wrap; }
     .camp-tt-info { flex-basis: calc(100% - 3rem); }
 }
+
+/* ---------- Recolher/expandir cards (campanha-recolher.js) ---------- */
+
+.camp-card-cab h2 { margin-right: auto; }
+.camp-card-recolher {
+    order: 99;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: -.25rem -.35rem -.25rem 0;
+    padding: 0;
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--camp-texto-suave);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+.camp-card-recolher:hover { color: inherit; background: var(--camp-fundo-hover); }
+.camp-card-recolher:focus-visible { outline: 2px solid var(--camp-borda-forte); outline-offset: 1px; }
+.camp-card-recolher span { display: inline-block; transition: transform .15s; }
+.camp-card-recolhido .camp-card-recolher span { transform: rotate(-90deg); }
+
+.camp-card-recolhido > :not(.camp-card-cab) { display: none !important; }
+.camp-card-recolhido > .camp-card-cab { padding-bottom: 0; border-bottom: 0; }
