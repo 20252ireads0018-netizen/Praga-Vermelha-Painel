@@ -71,6 +71,7 @@
                 if (p.status === 'andamento' || p.status === 'fim')
                     botoes += `<a class="camp-btn camp-btn-pequeno${p.meu && p.status === 'andamento' ? ' camp-btn-primario' : ''}" href="${esc(p.url)}">${p.meu && p.status === 'andamento' ? 'Jogar' : (p.status === 'fim' ? 'Ver' : 'Assistir')}</a>`;
                 if (p.cancelar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-cancelar="${p.id}" data-andamento="${p.status === 'andamento' ? 1 : 0}">Cancelar</button>`;
+                if (p.apagar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno jg-apagar" data-apagar="${p.id}" title="${D.souMestre ? 'Apagar do histórico de todos' : 'Tirar do seu histórico'}" aria-label="Apagar partida do histórico">🗑</button>`;
                 return `<div class="jg-partida jg-st-${p.status}"><div class="jg-partida-info"><strong>${nomes}</strong>` +
                     `<span class="camp-dica">${rotulo(p)}${aposta}</span></div><div class="jg-partida-botoes">${botoes}</div></div>`;
             }).join('') : '<p class="camp-vazio">Nenhuma partida por enquanto.</p>';
@@ -119,6 +120,10 @@
                 const aviso = b.dataset.andamento === '1' ? 'Cancelar a partida em andamento? As apostas voltam para cada jogador.' : 'Cancelar este desafio?';
                 if (!confirm(aviso)) return;
                 lobby = await post(urlPartida(b.dataset.cancelar, 'cancelar'), {}, D.csrf);
+                renderPartidas();
+            } else if (b.dataset.apagar) {
+                if (!confirm(D.souMestre ? 'Apagar esta partida do histórico de todos?' : 'Tirar esta partida do seu histórico?')) return;
+                lobby = await post(urlPartida(b.dataset.apagar), {}, D.csrf, 'DELETE');
                 renderPartidas();
             } else if (b.dataset.salvarDinheiro) {
                 const id = b.dataset.salvarDinheiro;
@@ -169,8 +174,9 @@
                 const c = cartas.find(x => String(x.id) === id);
                 return c ? `${d.cartas[id]}× ${esc(c.nome)}` : null;
             }).filter(Boolean).join(', ');
+            const cmd = d.comandante_id && cartas.find(x => x.id === d.comandante_id);
             return `<div class="jg-deck-item"><div class="jg-partida-info"><strong>${esc(d.nome)}</strong>` +
-                `<span class="camp-dica">${n} cartas · ${nomes || 'cartas apagadas pelo mestre'}</span></div>` +
+                `<span class="camp-dica">👑 ${cmd ? esc(cmd.nome) : 'comandante sorteado entre as Lendas'} · ${n} cartas · ${nomes || 'cartas apagadas pelo mestre'}</span></div>` +
                 `<div class="jg-partida-botoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-deck="${d.id}">Editar</button>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-deck="${d.id}">Excluir</button></div></div>`;
         }).join('') : '<p class="camp-vazio">Nenhum deck ainda.</p>';
@@ -179,20 +185,29 @@
 
     const formDeck = $('#jg-criador-deck');
     let montando = {}; // { id da carta: quantidade }
+    let comandante = null; // id (texto) da Lenda escolhida como comandante; null: sorteada na partida
     function renderMontagem() {
         const n = totalDeck(montando);
         const ok = n >= R.min && n <= R.max;
         $('#jg-deck-total').textContent = `${n} carta${n === 1 ? '' : 's'} (${R.min} a ${R.max})`;
         $('#jg-deck-total').classList.toggle('jg-deck-total--ok', ok);
+        if (comandante && !montando[comandante]) comandante = null;
+        let rotCmd = $('#jg-deck-comandante');
+        if (!rotCmd) { rotCmd = document.createElement('p'); rotCmd.id = 'jg-deck-comandante'; rotCmd.className = 'jg-deck-comandante'; $('#jg-deck-total').after(rotCmd); }
+        const cmd = comandante && cartas.find(c => String(c.id) === comandante);
+        rotCmd.innerHTML = cmd ? `👑 Comandante: <strong>${esc(cmd.nome)}</strong>`
+            : '👑 Comandante: <em>sorteado entre as Lendas do deck</em> · clique na coroa de uma Lenda do deck para escolher';
         // a pesquisa da montagem usa o mesmo critério da lista de cartas (nome sem acento)
         const busca = semAcento($('#jg-deck-pesquisa').value);
         const visiveis = cartas.filter(c => !busca || semAcento(c.nome).includes(busca)).sort((a, b) => a.custo - b.custo || a.nome.localeCompare(b.nome, 'pt-BR'));
         $('#jg-deck-lista').innerHTML = !cartas.length ? '<p class="camp-vazio">O mestre ainda não criou cartas.</p>'
             : !visiveis.length ? '<p class="camp-vazio">Nenhuma carta com esse nome.</p>' : visiveis.map(c => {
             const q = montando[c.id] || 0;
-            return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}">` +
+            const ehCmd = comandante === String(c.id);
+            return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
                 `<span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : 'Feitiço'}</small></span>` +
+                (c.tipo === 'lenda' ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
                 `<b class="jg-deck-qtd">${q}</b>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= R.copias ? ' disabled' : ''}>+</button>` +
@@ -200,11 +215,37 @@
         }).join('');
     }
     $('#jg-deck-pesquisa').addEventListener('input', () => renderMontagem());
+    const previa = document.createElement('div');
+    previa.className = 'jg-previa-flutuante';
+    previa.hidden = true;
+    document.body.appendChild(previa);
+    let previaId = null;
+    const listaDeck = $('#jg-deck-lista');
+    listaDeck.addEventListener('mousemove', e => {
+        const linha = e.target.closest('[data-previa]');
+        if (!linha) { previa.hidden = true; previaId = null; return; }
+        if (previaId !== linha.dataset.previa) {
+            const c = cartas.find(x => String(x.id) === linha.dataset.previa);
+            if (!c) return;
+            previaId = linha.dataset.previa;
+            previa.innerHTML = window.JG.carta(c);
+        }
+        previa.hidden = false;
+        // ao lado do cursor, sem sair da tela
+        const w = previa.offsetWidth, h = previa.offsetHeight;
+        let x = e.clientX + 18, y = e.clientY - h / 2;
+        if (x + w > innerWidth - 8) x = e.clientX - w - 18;
+        y = Math.max(8, Math.min(innerHeight - h - 8, y));
+        previa.style.left = x + 'px';
+        previa.style.top = y + 'px';
+    });
+    listaDeck.addEventListener('mouseleave', () => { previa.hidden = true; previaId = null; });
     function abrirDeck(d) {
         formDeck.reset();
         formDeck.registro.value = d ? d.id : '';
         formDeck.nome.value = d ? d.nome : '';
         montando = {};
+        comandante = d && d.comandante_id ? String(d.comandante_id) : null;
         if (d) Object.keys(d.cartas).forEach(id => { if (cartas.some(c => String(c.id) === id)) montando[id] = +d.cartas[id]; });
         formDeck.hidden = false;
         renderMontagem();
@@ -212,6 +253,8 @@
     }
     $('#jg-novo-deck').addEventListener('click', () => abrirDeck(null));
     formDeck.addEventListener('click', e => {
+        const coroa = e.target.closest('[data-comandante]');
+        if (coroa) { comandante = comandante === coroa.dataset.comandante ? null : coroa.dataset.comandante; renderMontagem(); return; }
         const b = e.target.closest('[data-qtd]');
         if (b) {
             const id = b.dataset.qtd;
@@ -225,7 +268,7 @@
     formDeck.addEventListener('submit', async e => {
         e.preventDefault();
         try {
-            const r = await post(D.url.decks, { id: formDeck.registro.value || null, nome: formDeck.nome.value.trim(), cartas: JSON.stringify(montando) }, D.csrf);
+            const r = await post(D.url.decks, { id: formDeck.registro.value || null, nome: formDeck.nome.value.trim(), cartas: JSON.stringify(montando), comandante_id: comandante }, D.csrf);
             const i = decks.findIndex(x => x.id === r.deck.id);
             if (i >= 0) decks[i] = r.deck; else decks.push(r.deck);
             formDeck.hidden = true;

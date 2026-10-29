@@ -15,6 +15,14 @@ class GladioDeck extends Model
 
     protected $fillable = ['campanha_id', 'user_id', 'nome', 'cartas'];
 
+    private static ?bool $temComandante = null;
+
+    /** A coluna comandante_id só existe depois do SQL da migração 2026_10_29_000014. */
+    public static function temComandante(): bool
+    {
+        return self::$temComandante ??= \Illuminate\Support\Facades\Schema::hasColumn('gladio_decks', 'comandante_id');
+    }
+
     protected $casts = ['cartas' => 'array'];
 
     /** Lista de ids (uma entrada por cópia), só com cartas que ainda existem no catálogo. */
@@ -34,6 +42,7 @@ class GladioDeck extends Model
 
     public function paraLista(): array
     {
-        return ['id' => $this->id, 'nome' => $this->nome, 'cartas' => (object) ($this->cartas ?: [])];
+        return ['id' => $this->id, 'nome' => $this->nome, 'cartas' => (object) ($this->cartas ?: []),
+                'comandante_id' => self::temComandante() && $this->comandante_id ? (int) $this->comandante_id : null];
     }
 }

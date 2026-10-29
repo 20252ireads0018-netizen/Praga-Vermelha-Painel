@@ -212,6 +212,7 @@ class CampanhaJogoController extends Controller
             'id'     => ['nullable', 'integer'],
             'nome'   => ['required', 'string', 'max:60'],
             'cartas' => ['required', 'string', 'max:5000'], // JSON { id da carta: quantidade }
+            'comandante_id' => ['nullable', 'integer'],
         ]);
         $catalogo = $this->catalogo($campanha);
         $cartas = [];
@@ -229,7 +230,13 @@ class CampanhaJogoController extends Controller
         $deck = !empty($d['id'])
             ? GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->findOrFail((int) $d['id'])
             : new GladioDeck(['campanha_id' => $campanha->id, 'user_id' => $uid]);
-        $deck->fill(['nome' => trim($d['nome']), 'cartas' => $cartas])->save();
+        $deck->fill(['nome' => trim($d['nome']), 'cartas' => $cartas]);
+        if (GladioDeck::temComandante()) {
+            // comandante: uma Lenda do próprio deck (sem escolha, uma Lenda do deck é sorteada quando a partida começa)
+            $cmd = (string) ($d['comandante_id'] ?? '');
+            $deck->comandante_id = isset($cartas[$cmd]) && ($catalogo[$cmd]['tipo'] ?? '') === 'lenda' ? (int) $cmd : null;
+        }
+        $deck->save();
 
         return response()->json(['ok' => true, 'deck' => $deck->paraLista()]);
     }
@@ -354,7 +361,8 @@ class CampanhaJogoController extends Controller
                 $convidado = null; // mesa com várias vagas fica aberta a qualquer um da campanha
             }
             // quem entra na mesa, na ordem da roda, e o deck de cada um (null: 20 sorteadas)
-            $config = ['vagas' => $vagas, 'jogadores' => [$uid], 'decks' => [(string) $uid => $deck]];
+            $config = ['vagas' => $vagas, 'jogadores' => [$uid], 'decks' => [(string) $uid => $deck],
+                       'comandantes' => [(string) $uid => $this->comandanteDe($campanha, $uid, $d['deck_id'] ?? null)]];
         } else {
             $ex = json_decode((string) ($d['exercito'] ?? ''), true) ?: PelaDama::exercitoPadrao();
             if ($msg = PelaDama::validarExercito($ex, $this->tiposDe($campanha, $uid))) {
@@ -409,6 +417,7 @@ class CampanhaJogoController extends Controller
                     }
                     $cfg['jogadores'][] = $uid;
                     $cfg['decks'][(string) $uid] = $this->deckDe($campanha, $uid, $request->input('deck_id'), $this->catalogo($campanha));
+                    $cfg['comandantes'][(string) $uid] = $this->comandanteDe($campanha, $uid, $request->input('deck_id'));
                     $p->config = $cfg;
                     $comecou = count($cfg['jogadores']) >= $cfg['vagas'];
                     if ($comecou) {
@@ -480,6 +489,8 @@ class CampanhaJogoController extends Controller
         $cfg['vagas'] = max(2, min(Gladio::MAX_JOGADORES, (int) ($cfg['vagas'] ?? 2)));
         $cfg['jogadores'] = array_map('intval', (array) ($cfg['jogadores'] ?? [(int) $p->jogador1_id]));
         $cfg['decks'] = (array) ($cfg['decks'] ?? [(string) $p->jogador1_id => $cfg['deck'] ?? null]);
+        $cfg['comandantes'] = (array) ($cfg['comandantes'] ?? []);
+        $cfg['ocultos'] = array_map('intval', (array) ($cfg['ocultos'] ?? []));
         unset($cfg['deck']);
 
         return $cfg;
@@ -506,16 +517,18 @@ class CampanhaJogoController extends Controller
         }
         $decks = [];
         $nomes = [];
+        $comandantes = [];
         foreach ($cfg['jogadores'] as $k => $quem) {
             $lado = Gladio::LADOS[$k];
             // cartas do deck que o mestre apagou nesse meio-tempo ficam de fora
             $deck = array_values(array_filter((array) ($cfg['decks'][(string) $quem] ?? []), fn ($id) => isset($cartas[(string) $id])));
             $decks[$lado] = $deck ?: null;
+            $comandantes[$lado] = $cfg['comandantes'][(string) $quem] ?? null;
             $nomes[$lado] = (string) (User::whereKey($quem)->value('name') ?? 'Jogador');
         }
         $p->config = $cfg;
         $p->jogador2_id = $cfg['jogadores'][1] ?? null;
-        $p->estado = Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes);
+        $p->estado = Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes, array_filter($comandantes));
         $p->status = 'andamento';
         $p->versao = (int) $p->versao + 1;
         $p->save();
@@ -537,7 +550,7 @@ class CampanhaJogoController extends Controller
                     if ($p->jogo === 'gladio' && (int) $p->jogador1_id !== $uid && in_array($uid, $this->configMesa($p)['jogadores'], true)) {
                         $cfg = $this->configMesa($p);
                         $cfg['jogadores'] = array_values(array_diff($cfg['jogadores'], [$uid]));
-                        unset($cfg['decks'][(string) $uid]);
+                        unset($cfg['decks'][(string) $uid], $cfg['comandantes'][(string) $uid]);
                         $p->config = $cfg;
                         $p->versao = (int) $p->versao + 1;
                         $p->save();
@@ -576,6 +589,29 @@ class CampanhaJogoController extends Controller
     /*  Partida                                                            */
     /* ================================================================== */
 
+    /**
+     * Tira uma partida terminada (ou cancelada) do histórico: o mestre apaga de vez; quem jogou só a esconde para si.
+     */
+    public function excluirPartida(Campanha $campanha, JogoPartida $partida): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $this->daCampanha($campanha, $partida);
+        if (!in_array($partida->status, ['fim', 'cancelada'], true)) {
+            return $this->erro('Só dá para apagar partidas que já terminaram ou foram canceladas.');
+        }
+        $uid = (int) auth()->id();
+        if ($campanha->ehMestre($uid)) {
+            $partida->delete();
+        } else {
+            $cfg = (array) ($partida->config ?? []);
+            $cfg['ocultos'] = array_values(array_unique(array_merge(array_map('intval', (array) ($cfg['ocultos'] ?? [])), [$uid])));
+            $partida->config = $cfg;
+            $partida->save();
+        }
+
+        return response()->json(['ok' => true] + $this->dadosLobby($campanha));
+    }
+
     public function estado(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
     {
         $this->exigirMembro($campanha);
@@ -605,9 +641,11 @@ class CampanhaJogoController extends Controller
             'gratis' => ['nullable', 'boolean'],
             'efeito' => ['nullable', Rule::in(Gladio::EFEITOS)],          // feitiço: efeito escolhido por quem joga
             'valor' => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'quanto' => ['nullable', 'integer', 'min:-7', 'max:7'],       // shots
+            'quanto' => ['nullable', 'integer', 'min:-9999', 'max:9999'], // shots / vida
             'cont' => ['nullable', 'integer', 'min:-99', 'max:99'],       // contador de uma carta
             'nota' => ['nullable', 'string', 'max:60'],                   // anotação de uma carta
+            'origem' => ['nullable', Rule::in(['mao', 'cemiterio', 'comando'])], // invocar sem custo
+            'energia' => ['nullable', 'integer', 'min:-99', 'max:99'], 'energia_max' => ['nullable', 'integer', 'min:-99', 'max:99'],
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
             'tx' => ['nullable', 'integer'], 'ty' => ['nullable', 'integer'],
         ]);
@@ -651,6 +689,12 @@ class CampanhaJogoController extends Controller
                         'ajustar'    => Gladio::ajustar($e, $lado, $inst, (int) $request->input('atk', 0), (int) $request->input('vida', 0)),
                         'copiar'     => Gladio::copiar($e, $lado, $inst, (int) $outro),
                         'sacrificar' => Gladio::sacrificar($e, $lado, $inst),
+                        'comandar'   => Gladio::comandar($e, $lado),
+                        'invocar'    => Gladio::invocar($e, $lado, $inst, (string) $request->input('origem', 'mao')),
+                        'buscar'     => Gladio::buscar($e, $lado, $inst),
+                        'comando'    => Gladio::paraComando($e, $lado, $inst),
+                        'energia'    => Gladio::energia($e, $lado, (int) $request->input('energia', 0), (int) $request->input('energia_max', 0)),
+                        'vida'       => Gladio::vida($e, $lado, (int) $request->input('quanto', 0)),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;
@@ -792,6 +836,17 @@ class CampanhaJogoController extends Controller
         return $lista;
     }
 
+    /** Comandante escolhido no deck (id da carta) ou null: sem deck ou sem escolha, o motor sorteia uma Lenda. */
+    private function comandanteDe(Campanha $campanha, int $uid, mixed $deckId): ?string
+    {
+        if (!$deckId || !GladioDeck::temComandante()) {
+            return null;
+        }
+        $id = GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->whereKey((int) $deckId)->value('comandante_id');
+
+        return $id ? (string) $id : null;
+    }
+
     private function listaDecks(Campanha $campanha, int $uid): array
     {
         if (!Schema::hasTable('gladio_decks')) {
@@ -835,7 +890,9 @@ class CampanhaJogoController extends Controller
             ->orderByRaw("CASE status WHEN 'andamento' THEN 0 WHEN 'aberta' THEN 1 WHEN 'fim' THEN 2 ELSE 3 END")
             ->orderByDesc('updated_at')
             ->limit(40)
-            ->get(['id', 'jogo', 'jogador1_id', 'jogador2_id', 'convidado_id', 'aposta', 'status', 'vencedor_id', 'config', 'updated_at']);
+            ->get(['id', 'jogo', 'jogador1_id', 'jogador2_id', 'convidado_id', 'aposta', 'status', 'vencedor_id', 'config', 'updated_at'])
+            // partidas que o jogador tirou do próprio histórico
+            ->reject(fn ($p) => in_array($uid, array_map('intval', (array) ($p->config['ocultos'] ?? [])), true));
 
         return [
             'carteiras' => JogoCarteira::where('campanha_id', $campanha->id)->pluck('dinheiro', 'user_id'),
@@ -863,6 +920,7 @@ class CampanhaJogoController extends Controller
                     'comecar'   => $gladio && $p->status === 'aberta' && $criador && count($jogadores) >= 2 && count($jogadores) < $vagas,
                     'sair'      => $gladio && $p->status === 'aberta' && $estou && !$criador,
                     'cancelar'  => ($p->status === 'aberta' && ($mestre || $criador)) || ($p->status === 'andamento' && $mestre),
+                    'apagar'    => in_array($p->status, ['fim', 'cancelada'], true) && ($mestre || $estou || $criador),
                     'url'       => route('campanhas.jogos.partida', [$campanha, $p->id]),
                 ];
             })->values(),

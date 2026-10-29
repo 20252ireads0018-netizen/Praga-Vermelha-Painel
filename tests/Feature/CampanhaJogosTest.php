@@ -57,6 +57,7 @@ class CampanhaJogosTest extends TestCase
         (require database_path('migrations/2026_10_28_000011_create_jogos_da_campanha.php'))->up();
         (require database_path('migrations/2026_10_28_000012_create_gladio_imagens.php'))->up();
         (require database_path('migrations/2026_10_28_000013_gladio_decks_e_palavras.php'))->up();
+        (require database_path('migrations/2026_10_29_000014_gladio_comandante.php'))->up();
 
         $u = fn ($n) => User::create(['name' => $n, 'email' => strtolower($n) . '@t.test', 'password' => 'x']);
         $this->mestre = $u('Mestre');
@@ -151,8 +152,8 @@ class CampanhaJogosTest extends TestCase
         $p = JogoPartida::firstOrFail();
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk(); // Bia: 20 sorteadas
         $e = $p->fresh()->estado;
-        $this->assertSame(11, count($e['lados']['a']['baralho']), 'deck de 16 menos 5 na mão');
-        $this->assertSame(15, count($e['lados']['b']['baralho']));
+        $this->assertSame(10, count($e['lados']['a']['baralho']), 'deck de 16 menos 5 na mão e o comandante');
+        $this->assertSame(14, count($e['lados']['b']['baralho']));
 
         // Ana arruma o baralho, compra e coloca uma Lenda; vê o próprio baralho, não o da Bia
         $this->actingAs($this->ana);
@@ -168,8 +169,9 @@ class CampanhaJogosTest extends TestCase
         $ficha = $p->fresh()->estado['lados']['a']['mesa'][0]['i'];
         $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'atacar', 'insts' => [$ficha]])->assertStatus(422); // acabou de entrar
 
-        // a Bia não mexe no turno da Ana
-        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertStatus(422);
+        // mesa livre: a Bia compra fora da vez, mas não ataca nem passa o turno da Ana
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])->assertStatus(422);
     }
 
     public function test_imagem_da_carta_enviada_como_arquivo(): void
@@ -304,5 +306,39 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame($this->ana->id, (int) $p->vencedor_id);
         // quem assiste não joga
         $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertStatus(422);
+    }
+
+    public function test_comandante_do_deck_e_apagar_do_historico(): void
+    {
+        $this->actingAs($this->mestre);
+        $lenda = GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Rei', 'tipo' => 'lenda', 'custo' => 2, 'ataque' => 3, 'vida' => 3]);
+        $outra = GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Soldado', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        $magia = GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Raio', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0]);
+
+        // feitiço não serve de comandante; a Lenda do deck, sim
+        $cartas = json_encode([$lenda->id => 4, $outra->id => 4, $magia->id => 4, (string) GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'X', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1])->id => 4]);
+        $r = $this->actingAs($this->ana)->postJson($this->url('/decks'), ['nome' => 'Real', 'cartas' => $cartas, 'comandante_id' => $magia->id])->assertOk();
+        $this->assertNull($r->json('deck.comandante_id'));
+        $r = $this->postJson($this->url('/decks'), ['id' => $r->json('deck.id'), 'nome' => 'Real', 'cartas' => $cartas, 'comandante_id' => $lenda->id])->assertOk();
+        $this->assertSame($lenda->id, $r->json('deck.comandante_id'));
+
+        $this->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'deck_id' => $r->json('deck.id')])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $e = $p->fresh()->estado;
+        $this->assertSame([(string) $lenda->id], array_column($e['lados']['a']['comando'], 'c'));
+        $this->assertSame('lenda', $e['cartas'][$e['lados']['b']['comando'][0]['c']]['tipo'], 'Bia sem deck: Lenda sorteada');
+
+        // mesa livre pelas rotas: a Bia ajusta a própria energia fora da vez
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'energia', 'energia' => 2, 'energia_max' => 2])->assertOk();
+        $this->assertSame(2, $p->fresh()->estado['lados']['b']['energiaMax']);
+
+        // em andamento não apaga; terminada, a Bia tira do histórico dela e o mestre apaga de vez
+        $this->deleteJson($this->url("/partidas/{$p->id}"))->assertStatus(422);
+        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
+        $this->deleteJson($this->url("/partidas/{$p->id}"))->assertOk()->assertJsonCount(0, 'partidas');
+        $this->actingAs($this->ana)->getJson($this->url('/lobby'))->assertJsonCount(1, 'partidas');
+        $this->actingAs($this->mestre)->deleteJson($this->url("/partidas/{$p->id}"))->assertOk()->assertJsonCount(0, 'partidas');
+        $this->assertNull(JogoPartida::find($p->id));
     }
 }

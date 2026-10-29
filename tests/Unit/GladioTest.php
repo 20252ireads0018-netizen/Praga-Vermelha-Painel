@@ -50,13 +50,13 @@ class GladioTest extends TestCase
         $this->assertSame(50, $e['lados']['a']['vida']);
         $this->assertCount(5, $e['lados']['a']['mao']);
         $this->assertCount(5, $e['lados']['b']['mao']);
-        $this->assertCount(10, $e['lados']['a']['baralho'], 'deck de 15 menos 5 na mão');
+        $this->assertCount(9, $e['lados']['a']['baralho'], 'deck de 15 menos 5 na mão e o comandante');
         $this->assertSame(['4', '5'], array_column(array_slice($e['lados']['a']['mao'], 0, 2), 'c'));
         $this->assertSame([1, 0], [$e['lados']['a']['energia'], $e['lados']['b']['energiaMax']]);
         $this->assertSame(Gladio::VIDA_AMISTOSO, $this->novo(0)['lados']['b']['vida']);
         // sem deck: 20 cartas sorteadas do catálogo
         $s = Gladio::iniciar(self::CARTAS, 0, [], fn ($a) => $a);
-        $this->assertCount(15, $s['lados']['b']['baralho']);
+        $this->assertCount(14, $s['lados']['b']['baralho']);
     }
 
     public function test_energia_sobe_a_cada_rodada_e_compra_no_turno(): void
@@ -165,7 +165,7 @@ class GladioTest extends TestCase
 
     public function test_ferramentas_de_baralho(): void
     {
-        $deck = ['1', '1', '1', '1', '1', '2', '3', '4', '5', '1'];
+        $deck = ['1', '1', '1', '1', '1', '2', '3', '4', '5', '1', '1']; // o último '1' vira o comandante
         $e = $this->novo(10, ['a' => $deck]);
         $ordem = array_column($e['lados']['a']['baralho'], 'i');
         $this->assertSame(['2', '3', '4', '5', '1'], array_column($e['lados']['a']['baralho'], 'c'));
@@ -185,9 +185,8 @@ class GladioTest extends TestCase
         $this->assertSame([$i], array_column($e['lados']['a']['cemiterio'], 'i'));
         $e = Gladio::recuperar($e, 'a', $i);
         $this->assertSame([], $e['lados']['a']['cemiterio']);
-        // ferramentas só no próprio turno
-        $this->expectException(\InvalidArgumentException::class);
-        Gladio::comprar($e, 'b');
+        // agora a qualquer momento: o outro também compra fora da vez
+        $this->assertCount(6, Gladio::comprar($e, 'b')['lados']['b']['mao']);
     }
 
     public function test_ficha_ajuste_copia_sacrificio_e_jogar_sem_pagar(): void
@@ -528,7 +527,80 @@ class GladioTest extends TestCase
         $this->assertIsArray($v['lados']['a']['mao']);
         $this->assertIsArray($v['lados']['a']['baralho'], 'cada um consulta o próprio baralho');
         $this->assertSame(array_fill(0, 5, ['oculta' => true]), $v['lados']['b']['mao'], 'a mão do outro vem virada');
-        $this->assertSame(15, $v['lados']['b']['baralho']);
+        $this->assertSame(14, $v['lados']['b']['baralho']);
         $this->assertIsArray($v['lados']['b']['cemiterio'], 'cemitério é público');
+    }
+
+    public function test_comandante_escolhido_fica_no_comando_e_paga_taxa(): void
+    {
+        $deck = array_merge(['4'], array_fill(0, 19, '1'));
+        $e = Gladio::iniciar(self::CARTAS, 10, ['a' => $deck, 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '4']);
+        $a = $e['lados']['a'];
+        $this->assertSame(['4'], array_column($a['comando'], 'c'), 'o comandante começa na zona de comando');
+        $this->assertNotContains('4', array_column(array_merge($a['mao'], $a['baralho']), 'c'), 'e sai do baralho');
+        $this->assertSame(19, count($a['mao']) + count($a['baralho']));
+        $this->assertSame('1', $e['lados']['b']['comando'][0]['c'], 'sem escolha: uma Lenda do deck');
+        $this->assertSame(1, Gladio::custoComandante($e, 'a'));
+
+        $e = Gladio::comandar($e, 'a');
+        $cmd = $e['lados']['a']['cmd'];
+        $this->assertSame([$cmd], array_column($e['lados']['a']['mesa'], 'i'));
+        $this->assertSame([0, 1], [$e['lados']['a']['energia'], $e['lados']['a']['taxa']]);
+        // caiu: volta para a zona de comando, e agora custa 1 + 2
+        $e = Gladio::ajustar($e, 'b', $cmd, 0, -99);
+        $this->assertSame([], $e['lados']['a']['mesa']);
+        $this->assertSame([], $e['lados']['a']['cemiterio']);
+        $this->assertSame([$cmd], array_column($e['lados']['a']['comando'], 'i'));
+        $this->assertSame(3, Gladio::custoComandante($e, 'a'));
+        try {
+            Gladio::comandar($e, 'a');
+            $this->fail('energia insuficiente para a taxa');
+        } catch (\InvalidArgumentException) {
+        }
+        // sem pagar, a qualquer momento (a taxa sobe igual); sacrificado, volta ao comando
+        $e = Gladio::invocar($e, 'a', $cmd, 'comando');
+        $this->assertSame(2, $e['lados']['a']['taxa']);
+        $e = Gladio::sacrificar($e, 'a', $cmd);
+        $this->assertSame([$cmd], array_column($e['lados']['a']['comando'], 'i'));
+        // se parar no cemitério (eliminado), dá para devolvê-lo ao comando
+        $e['lados']['a']['cemiterio'][] = array_pop($e['lados']['a']['comando']);
+        try {
+            Gladio::paraComando($e, 'a', $e['lados']['a']['mao'][0]['i']);
+            $this->fail('só o comandante vai para o comando');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::paraComando($e, 'a', $cmd);
+        $this->assertSame([], $e['lados']['a']['cemiterio']);
+    }
+
+    public function test_mesa_livre_energia_vida_buscar_e_invocar(): void
+    {
+        $e = $this->novo(10, ['b' => array_merge(['2', '5'], array_fill(0, 18, '1'))]);
+        // fora da vez, a Bia mexe na própria energia e na vida
+        $e = Gladio::energia($e, 'b', 3, 12);
+        $this->assertSame([3, 12], [$e['lados']['b']['energia'], $e['lados']['b']['energiaMax']]);
+        $e = Gladio::vida($e, 'b', -4);
+        $this->assertSame(6, $e['lados']['b']['vida']);
+        $this->assertSame(4, Gladio::pote($e), 'a vida perdida vai para o pote');
+        $e = Gladio::vida($e, 'b', 99);
+        $this->assertSame(10, $e['lados']['b']['vida'], 'a cura não passa do máximo');
+        // invoca sem custo da mão e do cemitério; busca no baralho
+        $corredor = $this->primeira($e, 'b', '5');
+        $e = Gladio::invocar($e, 'b', $corredor, 'mao');
+        $this->assertSame([$corredor], array_column($e['lados']['b']['mesa'], 'i'));
+        $fogo = $this->primeira($e, 'b', '2');
+        $e = Gladio::descartar($e, 'b', $fogo);
+        $e = Gladio::invocar($e, 'b', $fogo, 'cemiterio');
+        $this->assertSame([$fogo], array_column($e['lados']['b']['feiticos'], 'i'), 'feitiço vai para o campo, sem efeito');
+        $this->assertSame(10, $e['lados']['a']['vida']);
+        $alvo = end($e['lados']['b']['baralho'])['i'];
+        $e = Gladio::buscar($e, 'b', $alvo);
+        $this->assertSame($alvo, end($e['lados']['b']['mao'])['i']);
+        // energia máxima acima de 10 não cai na virada do turno
+        $e = Gladio::passar($e, 'a');
+        $this->assertSame(12, $e['lados']['b']['energiaMax']);
+        // vida zerada à mão: está fora
+        $e = Gladio::vida($e, 'a', -10);
+        $this->assertSame('b', $e['fim']['vencedor']);
     }
 }

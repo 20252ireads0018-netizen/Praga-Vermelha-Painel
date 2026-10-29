@@ -23,13 +23,21 @@ namespace App\Jogos;
  *   Iniciativa, Golpe duplo, Vigilância, Defensor, Ameaça, Indestrutível e Hexo-Imune. Como aqui o dano nas Lendas
  *   não some no fim do turno, Indestrutível segura a vida em 1.
  * - Ferramentas manuais (efeitos escritos nas cartas), todas no registro da partida:
- *   no próprio turno: comprar, embaralhar, reordenar o baralho, recuperar do cemitério, jogar sem pagar, criar ficha,
- *   copiar Lenda e sacrificar; a qualquer momento: descartar, revelar cartas da mão, ajustar ataque/vida de qualquer
+ *   no próprio turno: jogar sem pagar; a qualquer momento: comprar, embaralhar, reordenar o baralho, recuperar do
+ *   cemitério, criar ficha, copiar Lenda, sacrificar, descartar, revelar cartas da mão, ajustar ataque/vida de qualquer
  *   Lenda, contadores e anotações em qualquer carta da mesa, mandar o próprio feitiço ao cemitério e tomar shots.
+ *
+ * - Comandante: cada um escolhe uma Lenda do deck como comandante (deck sorteado: uma Lenda sorteada). Ela começa na
+ *   zona de comando, fora do baralho, e pode ser invocada de lá pagando o custo + 2 por vez que já saiu de lá. Quando
+ *   cai ou é sacrificada, volta para a zona de comando (se parar no cemitério, dá para devolvê-la ao comando).
+ * - Mesa livre: como as regras das cartas variam, cada um mexe à vontade, a qualquer momento, nas próprias coisas:
+ *   energia e energia máxima, vida (até o máximo), buscar carta do baralho, invocar sem custo da mão, do cemitério
+ *   ou da zona de comando, além das ferramentas acima, que também deixam de depender do turno.
  *
  * Estado: { lados: { a…f }, ordem [lados em roda], nomes, vez, turno, fase ('principal' | 'defesa'), ataque,
  *           cartas, seq, log, fim, total (soma da vida inicial) }
- * Lado: { vida, max, energia, energiaMax, mao[], baralho[], mesa[], feiticos[], cemiterio[], fadiga, shots, fora }
+ * Lado: { vida, max, energia, energiaMax, mao[], baralho[], mesa[], feiticos[], cemiterio[], fadiga, shots, fora,
+ *         comando[] (zona de comando), cmd (instância do comandante ou null), taxa (vezes que ele saiu do comando) }
  * Carta na mão: { i, c, rev? (revelada) }; no baralho/cemitério: { i, c }; feitiço no campo: { i, c, cont, nota }.
  * Lenda na mesa: { i, c (null na ficha), nome? (ficha), atk, vida, max, pode, virada, pal[], cont, nota }.
  * Ataque em andamento: { atacantes: [i…], defensor: lado, bloqueios: { bloqueador i: atacante i } }.
@@ -63,6 +71,8 @@ class Gladio
     public const MESA_MAX = 7;
     public const ENERGIA_MAX = 10;
     public const VIDA_AMISTOSO = 30;
+    public const TAXA_COMANDANTE = 2; // custo extra por vez que o comandante já saiu da zona de comando
+    public const ENERGIA_LIMITE = 99; // teto da energia ajustada à mão
 
     /** Quais efeitos precisam de alvo e de que tipo. */
     public const ALVOS = [
@@ -79,8 +89,10 @@ class Gladio
      * Monta a partida. $cartas: catálogo [id => carta]. $decks: [lado => [ids…] | null] na ordem da roda
      * (null: 20 sorteadas); a quantidade de jogadores é a de decks (mínimo 2). $nomes: [lado => nome].
      * $embaralhar recebe e devolve um array (nos testes dá para passar uma função sem sorte).
+     * $comandantes: [lado => id da carta]; sem escolha (ou se ela não for uma Lenda do deck), uma Lenda do deck sorteada.
      */
-    public static function iniciar(array $cartas, int $aposta, array $decks = [], ?callable $embaralhar = null, array $nomes = []): array
+    public static function iniciar(array $cartas, int $aposta, array $decks = [], ?callable $embaralhar = null, array $nomes = [],
+                                   array $comandantes = []): array
     {
         if (!$cartas) {
             throw new \InvalidArgumentException('O mestre ainda não criou nenhuma carta de Gladio.');
@@ -108,6 +120,19 @@ class Gladio
                     }
                 }
             }
+            // comandante: sai do baralho e vai para a zona de comando
+            $lendas = array_values(array_filter($ids, fn ($id) => ($cartas[$id]['tipo'] ?? '') === 'lenda'));
+            $cmd = isset($comandantes[$lado]) ? (string) $comandantes[$lado] : null;
+            if ($cmd === null || !in_array($cmd, $lendas, true)) {
+                $sorteio = $lendas ? $embaralhar($lendas) : [];
+                $cmd = $sorteio ? end($sorteio) : null;
+            }
+            $comando = [];
+            if ($cmd !== null) {
+                $onde = array_keys($ids, $cmd, true);
+                array_splice($ids, end($onde), 1);
+                $comando[] = ['i' => ++$e['seq'], 'c' => $cmd];
+            }
             $baralho = [];
             foreach ($embaralhar($ids) as $id) {
                 $baralho[] = ['i' => ++$e['seq'], 'c' => (string) $id];
@@ -116,6 +141,7 @@ class Gladio
                 'vida' => $vida, 'max' => $vida, 'energia' => 0, 'energiaMax' => 0,
                 'mao' => [], 'baralho' => $baralho, 'mesa' => [], 'feiticos' => [], 'cemiterio' => [],
                 'fadiga' => 0, 'shots' => 0, 'fora' => false,
+                'comando' => $comando, 'cmd' => $comando ? $comando[0]['i'] : null, 'taxa' => 0,
             ];
             for ($k = 0; $k < self::MAO_INICIAL; $k++) {
                 $e = self::comprarUma($e, $lado);
@@ -143,6 +169,9 @@ class Gladio
             $l['feiticos'] ??= [];
             $l['shots'] ??= 0;
             $l['fora'] ??= false;
+            $l['comando'] ??= [];
+            $l['cmd'] ??= null;
+            $l['taxa'] ??= 0;
             foreach ($l['mesa'] as $k => $m) {
                 $l['mesa'][$k]['pal'] ??= self::palavrasDe($e, $m['c'] ?? null);
                 $l['mesa'][$k]['virada'] ??= false;
@@ -295,17 +324,16 @@ class Gladio
         }
         $l = &$e['lados'][$lado];
         $l['fora'] = true;
-        foreach ($l['mesa'] as $m) {
-            if ($m['c'] !== null) {
-                $l['cemiterio'][] = ['i' => $m['i'], 'c' => $m['c']];
-            }
-        }
+        $mesa = $l['mesa'];
         foreach ($l['feiticos'] as $f) {
             $l['cemiterio'][] = ['i' => $f['i'], 'c' => $f['c']];
         }
         $l['mesa'] = [];
         $l['feiticos'] = [];
         unset($l);
+        foreach ($mesa as $m) {
+            $e = self::saiDaMesa($e, $lado, $m, false);
+        }
         self::log($e, self::quem($e, $lado) . ' está fora da partida (' . $motivo . ').');
 
         // ataque que envolvia quem saiu é desfeito
@@ -326,12 +354,32 @@ class Gladio
         return $e;
     }
 
+    /** Uma Lenda que saiu da mesa: o comandante volta para a zona de comando, fichas somem e as outras vão ao cemitério. */
+    private static function saiDaMesa(array $e, string $lado, array $m, bool $avisar = true): array
+    {
+        if ($m['c'] === null) {
+            return $e;
+        }
+        $carta = ['i' => $m['i'], 'c' => $m['c']];
+        if ($m['i'] === ($e['lados'][$lado]['cmd'] ?? null)) {
+            $e['lados'][$lado]['comando'][] = $carta;
+            if ($avisar) {
+                self::log($e, self::nome($e, $m['c']) . ' é o comandante de ' . self::quem($e, $lado) . ' e voltou para a zona de comando.');
+            }
+        } else {
+            $e['lados'][$lado]['cemiterio'][] = $carta;
+        }
+
+        return $e;
+    }
+
     /**
      * Lendas sem vida (ou marcadas por Toque mortal) vão para o cemitério (fichas somem) e quem ficou sem vida sai.
      * Indestrutível não cai: a vida fica em pelo menos 1. Se todos caírem juntos, vence quem agiu.
      */
     private static function conferir(array $e, string $quem): array
     {
+        $caidas = [];
         foreach ($e['ordem'] as $lado) {
             $vivas = [];
             foreach ($e['lados'][$lado]['mesa'] as $m) {
@@ -347,11 +395,12 @@ class Gladio
                     continue;
                 }
                 self::log($e, self::nomeLenda($e, $m) . ' caiu.');
-                if ($m['c'] !== null) {
-                    $e['lados'][$lado]['cemiterio'][] = ['i' => $m['i'], 'c' => $m['c']];
-                }
+                $caidas[] = [$lado, $m];
             }
             $e['lados'][$lado]['mesa'] = $vivas;
+        }
+        foreach ($caidas as [$lado, $m]) {
+            $e = self::saiDaMesa($e, $lado, $m);
         }
         $mortos = array_values(array_filter(self::vivos($e), fn ($l) => $e['lados'][$l]['vida'] <= 0));
         if ($mortos && count($mortos) === count(self::vivos($e))) {
@@ -808,7 +857,9 @@ class Gladio
         $e['fase'] = 'principal';
         $e['ataque'] = null;
         $l = &$e['lados'][$lado];
-        $l['energiaMax'] = min(self::ENERGIA_MAX, $l['energiaMax'] + 1);
+        if ($l['energiaMax'] < self::ENERGIA_MAX) { // energia máxima ajustada à mão acima de 10 não cai
+            $l['energiaMax']++;
+        }
         $l['energia'] = $l['energiaMax'];
         foreach ($l['mesa'] as $i => $m) {
             $l['mesa'][$i]['pode'] = true;
@@ -860,7 +911,7 @@ class Gladio
 
     public static function comprar(array $e, string $lado): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $e = self::comprarUma($e, $lado);
         self::log($e, self::quem($e, $lado) . ' comprou uma carta (ação manual).');
 
@@ -869,7 +920,7 @@ class Gladio
 
     public static function embaralhar(array $e, string $lado, ?callable $embaralhar = null): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $b = $e['lados'][$lado]['baralho'];
         if ($embaralhar) {
             $b = $embaralhar($b);
@@ -885,7 +936,7 @@ class Gladio
     /** Nova ordem do baralho (do topo para o fundo), com exatamente as mesmas cartas. */
     public static function reordenar(array $e, string $lado, array $ordem): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $atual = [];
         foreach ($e['lados'][$lado]['baralho'] as $c) {
             $atual[(int) $c['i']] = $c;
@@ -939,7 +990,7 @@ class Gladio
     /** Traz uma carta do próprio cemitério de volta para a mão. */
     public static function recuperar(array $e, string $lado, int $inst): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $k = self::idx($e['lados'][$lado]['cemiterio'], $inst);
         if ($k < 0) {
             throw new \InvalidArgumentException('Essa carta não está no seu cemitério.');
@@ -958,7 +1009,7 @@ class Gladio
     /** Cria uma ficha (Lenda sem carta) na própria mesa. */
     public static function ficha(array $e, string $lado, string $nome, int $atk, int $vida): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $nome = trim($nome) !== '' ? mb_substr(trim($nome), 0, 40) : 'Ficha';
         if ($vida < 1) {
             throw new \InvalidArgumentException('A ficha precisa de pelo menos 1 de vida.');
@@ -1036,7 +1087,7 @@ class Gladio
     /** Uma Lenda sua vira cópia de outra Lenda sua (carta, ataque, vida e palavras-chave de base). */
     public static function copiar(array $e, string $lado, int $inst, int $modelo): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $mesa = $e['lados'][$lado]['mesa'];
         $k = self::idx($mesa, $inst);
         $km = self::idx($mesa, $modelo);
@@ -1064,22 +1115,19 @@ class Gladio
         return $e;
     }
 
-    /** Manda uma Lenda sua para o cemitério (fichas somem). */
+    /** Manda uma Lenda sua para o cemitério (fichas somem; o comandante volta para a zona de comando). */
     public static function sacrificar(array $e, string $lado, int $inst): array
     {
-        self::exigirTurno($e, $lado);
+        self::exigirAtivo($e, $lado);
         $k = self::idx($e['lados'][$lado]['mesa'], $inst);
         if ($k < 0) {
             throw new \InvalidArgumentException('Essa Lenda não está na sua mesa.');
         }
         $m = $e['lados'][$lado]['mesa'][$k];
         array_splice($e['lados'][$lado]['mesa'], $k, 1);
-        if ($m['c'] !== null) {
-            $e['lados'][$lado]['cemiterio'][] = ['i' => $m['i'], 'c' => $m['c']];
-        }
         self::log($e, self::quem($e, $lado) . ' sacrificou ' . self::nomeLenda($e, $m) . '.');
 
-        return $e;
+        return self::saiDaMesa($e, $lado, $m);
     }
 
     /** Manda um feitiço seu que está no campo para o cemitério (a qualquer momento). */
@@ -1096,6 +1144,153 @@ class Gladio
         self::log($e, self::quem($e, $lado) . ' mandou ' . self::nome($e, $f['c']) . ' para o cemitério.');
 
         return $e;
+    }
+
+    /* ================================================================== */
+    /*  Comandante e mesa livre                                            */
+    /* ================================================================== */
+
+    /** Custo para invocar o comandante da zona de comando agora: o da carta + 2 por vez que ele já saiu de lá. */
+    public static function custoComandante(array $e, string $lado): ?int
+    {
+        $c = $e['lados'][$lado]['comando'][0]['c'] ?? null;
+
+        return $c === null ? null : (int) ($e['cartas'][$c]['custo'] ?? 0) + self::TAXA_COMANDANTE * (int) ($e['lados'][$lado]['taxa'] ?? 0);
+    }
+
+    /** Põe uma carta {i, c} em jogo: Lenda na mesa, feitiço no campo. */
+    private static function entrar(array $e, string $lado, array $carta): array
+    {
+        $def = $e['cartas'][$carta['c']] ?? null;
+        if (!$def) {
+            throw new \InvalidArgumentException('Carta desconhecida.');
+        }
+        if ($def['tipo'] !== 'lenda') {
+            $e['lados'][$lado]['feiticos'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'cont' => 0, 'nota' => ''];
+
+            return $e;
+        }
+        if (count($e['lados'][$lado]['mesa']) >= self::MESA_MAX) {
+            throw new \InvalidArgumentException('Sua mesa já tem ' . self::MESA_MAX . ' Lendas.');
+        }
+        $pal = self::palavrasDe($e, $carta['c']);
+        $e['lados'][$lado]['mesa'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'atk' => (int) $def['ataque'], 'vida' => (int) $def['vida'],
+            'max' => (int) $def['vida'], 'pode' => in_array('impeto', $pal, true), 'virada' => false, 'pal' => $pal, 'cont' => 0, 'nota' => ''];
+
+        return $e;
+    }
+
+    /** Invoca o comandante da zona de comando no próprio turno, pagando o custo com a taxa (+2 a cada vez). */
+    public static function comandar(array $e, string $lado): array
+    {
+        self::exigirTurno($e, $lado);
+        $custo = self::custoComandante($e, $lado);
+        if ($custo === null) {
+            throw new \InvalidArgumentException('Seu comandante não está na zona de comando.');
+        }
+        if ($custo > $e['lados'][$lado]['energia']) {
+            throw new \InvalidArgumentException("Energia insuficiente: o comandante custa $custo agora.");
+        }
+        $carta = $e['lados'][$lado]['comando'][0];
+        $e = self::entrar($e, $lado, $carta);
+        array_shift($e['lados'][$lado]['comando']);
+        $e['lados'][$lado]['energia'] -= $custo;
+        $e['lados'][$lado]['taxa']++;
+        self::log($e, self::quem($e, $lado) . ' invocou o comandante ' . self::nome($e, $carta['c']) . " da zona de comando (custo $custo).");
+
+        return $e;
+    }
+
+    /**
+     * Invoca sem pagar, a qualquer momento, uma carta da própria mão, do cemitério ou da zona de comando
+     * (do comando, a taxa do comandante sobe do mesmo jeito). Lendas entram na mesa; feitiços, no campo, sem efeito automático.
+     */
+    public static function invocar(array $e, string $lado, int $inst, string $origem): array
+    {
+        self::exigirAtivo($e, $lado);
+        $zonas = ['mao' => 'da mão', 'cemiterio' => 'do cemitério', 'comando' => 'da zona de comando'];
+        if (!isset($zonas[$origem])) {
+            throw new \InvalidArgumentException('De onde vem a carta?');
+        }
+        $k = self::idx($e['lados'][$lado][$origem], $inst);
+        if ($k < 0) {
+            throw new \InvalidArgumentException('Essa carta não está aí.');
+        }
+        $carta = $e['lados'][$lado][$origem][$k];
+        $e = self::entrar($e, $lado, ['i' => $carta['i'], 'c' => $carta['c']]);
+        array_splice($e['lados'][$lado][$origem], $k, 1);
+        if ($origem === 'comando') {
+            $e['lados'][$lado]['taxa']++;
+        }
+        self::log($e, self::quem($e, $lado) . ' invocou ' . self::nome($e, $carta['c']) . ' ' . $zonas[$origem] . ' sem pagar energia.');
+
+        return $e;
+    }
+
+    /** Busca uma carta escolhida no próprio baralho e põe na mão (a qualquer momento). */
+    public static function buscar(array $e, string $lado, int $inst): array
+    {
+        self::exigirAtivo($e, $lado);
+        $k = self::idx($e['lados'][$lado]['baralho'], $inst);
+        if ($k < 0) {
+            throw new \InvalidArgumentException('Essa carta não está no seu baralho.');
+        }
+        if (count($e['lados'][$lado]['mao']) >= self::MAO_MAX) {
+            throw new \InvalidArgumentException('Sua mão está cheia.');
+        }
+        $c = $e['lados'][$lado]['baralho'][$k];
+        array_splice($e['lados'][$lado]['baralho'], $k, 1);
+        $e['lados'][$lado]['mao'][] = $c;
+        self::log($e, self::quem($e, $lado) . ' buscou ' . self::nome($e, $c['c']) . ' no baralho e pôs na mão.');
+
+        return $e;
+    }
+
+    /** Devolve o comandante do próprio cemitério para a zona de comando. */
+    public static function paraComando(array $e, string $lado, int $inst): array
+    {
+        self::exigirAtivo($e, $lado);
+        $k = self::idx($e['lados'][$lado]['cemiterio'], $inst);
+        if ($k < 0 || $inst !== ($e['lados'][$lado]['cmd'] ?? null)) {
+            throw new \InvalidArgumentException('Só o comandante volta para a zona de comando.');
+        }
+        $c = $e['lados'][$lado]['cemiterio'][$k];
+        array_splice($e['lados'][$lado]['cemiterio'], $k, 1);
+        $e['lados'][$lado]['comando'][] = $c;
+        self::log($e, self::quem($e, $lado) . ' devolveu o comandante ' . self::nome($e, $c['c']) . ' para a zona de comando.');
+
+        return $e;
+    }
+
+    /** Ajusta a própria energia (a de agora e a máxima), a qualquer momento. */
+    public static function energia(array $e, string $lado, int $dAtual, int $dMax): array
+    {
+        self::exigirAtivo($e, $lado);
+        $l = &$e['lados'][$lado];
+        $l['energiaMax'] = max(0, min(self::ENERGIA_LIMITE, $l['energiaMax'] + $dMax));
+        $l['energia'] = max(0, min(self::ENERGIA_LIMITE, $l['energia'] + $dAtual));
+        $txt = "{$l['energia']}/{$l['energiaMax']}";
+        unset($l);
+        self::log($e, self::quem($e, $lado) . " ajustou a energia para $txt.");
+
+        return $e;
+    }
+
+    /** Ajusta a própria vida (cura até o máximo; o que se perde vai para o pote). Sem vida, está fora. */
+    public static function vida(array $e, string $lado, int $quanto): array
+    {
+        self::exigirAtivo($e, $lado);
+        $l = &$e['lados'][$lado];
+        $antes = $l['vida'];
+        $l['vida'] = min($l['max'], $l['vida'] + $quanto);
+        $agora = $l['vida'];
+        unset($l);
+        if ($agora === $antes) {
+            return $e;
+        }
+        self::log($e, self::quem($e, $lado) . ($agora > $antes ? ' recuperou ' . ($agora - $antes) : ' perdeu ' . ($antes - $agora)) . " de vida ($agora).");
+
+        return self::conferir($e, $lado);
     }
 
     /**

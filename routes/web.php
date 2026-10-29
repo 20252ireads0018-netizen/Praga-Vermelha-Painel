@@ -137,6 +137,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/jogos/partidas', [CampanhaJogoController::class, 'criarPartida'])
             ->middleware('throttle:30,1')->name('jogos.partidas.criar');
         Route::get('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'partida'])->name('jogos.partida');
+        Route::delete('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'excluirPartida'])->name('jogos.partidas.excluir'); // tirar do histórico
         Route::get('/{campanha}/jogos/partidas/{partida}/estado', [CampanhaJogoController::class, 'estado'])->name('jogos.estado'); // polling
         Route::post('/{campanha}/jogos/partidas/{partida}/aceitar', [CampanhaJogoController::class, 'aceitar'])->name('jogos.aceitar');
         Route::post('/{campanha}/jogos/partidas/{partida}/cancelar', [CampanhaJogoController::class, 'cancelar'])->name('jogos.cancelar');

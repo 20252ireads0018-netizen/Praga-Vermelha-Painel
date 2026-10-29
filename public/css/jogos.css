@@ -339,6 +339,18 @@
 .jg-deck-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jg-deck-nome small { opacity: .6; }
 .jg-deck-qtd { width: 1.4rem; text-align: center; }
+.jg-deck-comandante { margin: .1rem 0 .4rem; font-size: .85rem; color: var(--camp-texto-suave); }
+.jg-deck-comandante strong { color: #fde68a; }
+.jg-coroa { flex: 0 0 auto; width: 1.7rem; height: 1.7rem; padding: 0; border-radius: 50%; border: 1px solid transparent; background: none; font-size: .9rem; line-height: 1; cursor: pointer; filter: grayscale(1); opacity: .45; }
+.jg-coroa:hover:not(:disabled) { opacity: .9; border-color: rgba(201, 164, 92, .5); }
+.jg-coroa.ativo { filter: none; opacity: 1; border-color: var(--pv-gold, #c9a45c); background: rgba(201, 164, 92, .15); }
+.jg-coroa:disabled { opacity: .15; cursor: default; }
+.jg-coroa-vazia { flex: 0 0 1.7rem; }
+.jg-deck-linha--cmd { box-shadow: inset 2px 0 0 var(--pv-gold, #c9a45c); background: rgba(201, 164, 92, .12); }
+.jg-previa-flutuante { position: fixed; z-index: 1500; pointer-events: none; filter: drop-shadow(0 12px 22px rgba(0, 0, 0, .75)); }
+.jg-previa-flutuante .jg-carta { --cw: 190px; }
+.jg-apagar { opacity: .6; }
+.jg-apagar:hover { opacity: 1; }
 
 /* ---------- criador de peça (Pela Dama) ---------- */
 .jg-grade-mov { display: grid; grid-template-columns: repeat(15, 1fr); width: min(100%, 390px); aspect-ratio: 1; border: 1px solid var(--camp-borda-forte); }
@@ -567,6 +579,41 @@
 .gl-form-ficha { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .6rem; align-items: end; }
 .gl-form-ficha label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-ficha button { grid-column: 1 / -1; }
+
+/* comandante, ajustes livres e detalhes da carta */
+.gl-cmd-selo { position: absolute; bottom: 22%; left: -8px; z-index: 3; font-size: .9rem; filter: drop-shadow(0 1px 2px #000); pointer-events: none; }
+.gl-zona-cmd { display: inline-flex; align-items: center; gap: .25rem; max-width: 11rem; border-color: rgba(201, 164, 92, .6); background: linear-gradient(rgba(201, 164, 92, .22), rgba(0, 0, 0, .35)); }
+.gl-zona-cmd b { color: #fde68a; }
+.gl-cmd-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }
+.gl-eu-barra .gl-zona-cmd[data-comando] { cursor: grab; touch-action: none; }
+button.gl-energia { font: inherit; font-weight: 700; color: #fde68a; cursor: pointer; }
+button.gl-energia:hover { border-color: #fde68a; }
+button.gl-energia small { opacity: .7; font-size: .75em; }
+.gl-cem-botoes { display: flex; flex-wrap: wrap; gap: .25rem; justify-content: center; max-width: 120px; }
+.gl-linha-ver { flex: 1 1 auto; display: flex; align-items: center; gap: .5rem; min-width: 0; cursor: zoom-in; }
+.gl-ajustes-livres { display: flex; flex-direction: column; gap: .45rem; }
+.gl-ajuste-linha { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; padding: .35rem .5rem; border-radius: 8px; background: rgba(255, 255, 255, .03); }
+.gl-ajuste-linha > span { flex: 1 1 10rem; }
+.gl-ajuste-linha b { color: #fde68a; }
+.gl-ajustes-atalhos { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+.gl-modal-caixa:has(.gl-detalhe) { width: min(760px, 100%); }
+.gl-detalhe { display: flex; gap: 1.1rem; align-items: flex-start; flex-wrap: wrap; }
+.gl-detalhe > .jg-carta { --cw: min(260px, 70vw); flex: 0 0 auto; }
+.gl-detalhe-info { flex: 1 1 240px; display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
+.gl-detalhe-info p { margin: 0; }
+.gl-detalhe-tipo { font-weight: 700; color: #fde68a; }
+.gl-detalhe-cmd { color: var(--pv-gold, #c9a45c); font-weight: 700; }
+.gl-detalhe-texto { white-space: pre-wrap; line-height: 1.45; padding: .6rem .75rem; border-left: 2px solid var(--pv-gold, #c9a45c); background: rgba(0, 0, 0, .3); border-radius: 0 6px 6px 0; }
+.gl-detalhe-auto { font-size: .9rem; }
+.gl-detalhe-palavras { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .25rem .6rem; font-size: .88rem; }
+.gl-detalhe-palavras dt { font-weight: 700; color: #f3e2b8; }
+.gl-detalhe-palavras dd { margin: 0; opacity: .85; }
+.gl-detalhe-marcas { font-size: .88rem; padding: .3rem .5rem; border-radius: 6px; background: rgba(254, 240, 138, .1); }
+.gl-mesa .jg-carta[data-ver] { cursor: zoom-in; }
+.gl-mesa .gl-jogavel, .gl-mesa .gl-pode { cursor: pointer; }
+.gl-mesa .gl-slot--mao .gl-jogavel { cursor: grab; }
+.gl-mesa .gl-alvo { cursor: crosshair; }
+.gl-mesa .gl-defensor { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
     .gl-campo > .gl-slot, .gl-atacando, .gl-vez .gl-avatar { animation: none; }
