@@ -239,17 +239,17 @@
         // barra do meio: pote, vez e o que dá para fazer agora
         let acoes = '';
         if (M.esc) {
-            const cartasEsc = ['baralho', 'cemiterio'].includes(M.esc.tipo);
+            const cartasEsc = ['baralho', 'cemiterio', 'palavra', 'confirmar'].includes(M.esc.tipo);
             acoes = M.escolho
                 ? `<span class="gl-dica gl-dica--escolha" title="${esc(M.esc.texto)}">${esc(M.esc.texto)}${M.esc.tipo === 'mao' ? ' (clique numa carta da sua mão)' : (cartasEsc ? '' : ' (clique no alvo destacado)')}</span>` +
-                  (cartasEsc ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="escolha-cartas">Escolher a carta</button>` : '') +
+                  (cartasEsc ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="escolha-cartas">${M.esc.tipo === 'confirmar' ? 'Responder' : (M.esc.tipo === 'palavra' ? 'Escolher a palavra-chave' : 'Escolher a carta')}</button>` : '') +
                   (M.esc.obrig ? '' : `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="pular" title="Não aplicar este efeito">Pular</button>`)
                 : `<span class="gl-dica gl-dica--suave">Esperando ${nomeDe(M.esc.lado)}: ${esc(M.esc.texto)}</span>`;
         } else if (alvo) {
             acoes = `<span class="gl-dica">${alvo.tipo === 'copiar' ? 'Escolha a Lenda sua que vai servir de modelo' : (alvo.tipo === 'equipar' ? 'Escolha a Lenda sua que vai receber o equipamento' : 'Escolha o alvo do feitiço')}</span>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="cancelar-alvo">Cancelar</button>`;
         } else if (defendo) {
-            acoes = `<span class="gl-dica">${bloqueador != null ? 'Agora clique no atacante que ela vai bloquear' : 'Jogue Lendas da mão e escolha bloqueadores: clique numa Lenda sua e depois no atacante'}</span>` +
+            acoes = `<span class="gl-dica">${bloqueador != null ? 'Agora clique no atacante que ela vai bloquear' : 'Escolha bloqueadores: clique numa Lenda sua e depois no atacante'}</span>` +
                 `<button type="button" class="camp-btn camp-btn-primario" data-gl="defender">Confirmar defesa</button>`;
         } else if (esperoDefesa) {
             acoes = `<span class="gl-dica">Aguardando a defesa de ${nomeDe(M.ataque.defensor)}…</span>`;
@@ -275,7 +275,7 @@
         // eu: campo, barra e a mão em leque
         const l = L[eu];
         const minhaMao = Array.isArray(l.mao) ? l.mao : null;
-        const podeJogar = c => (minhaVez && c.custo <= l.energia) || (defendo && c.tipo === 'lenda' && c.custo <= l.energia);
+        const podeJogar = c => minhaVez && c.custo <= l.energia; // só no próprio turno (nem Lendas na defesa)
         const maoHtml = minhaMao
             ? `<div class="gl-mao" style="--n:${minhaMao.length}">${minhaMao.map((x, k) => {
                 const c = cartaDef(x.c);
@@ -345,7 +345,17 @@
 
         if (modal.tipo === 'escolha') {
             // carta pedida por um efeito, no próprio baralho ou cemitério
-            if (!M.escolho || !['baralho', 'cemiterio'].includes(M.esc.tipo)) { modal = null; return ''; }
+            if (!M.escolho || !['baralho', 'cemiterio', 'palavra', 'confirmar'].includes(M.esc.tipo)) { modal = null; return ''; }
+            if (M.esc.tipo === 'confirmar') { // "você pode…": sim ou não
+                return janela(M.esc.fonte, `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p>`,
+                    `<button type="button" class="camp-btn camp-btn-primario" data-escolher="sim">Sim, fazer</button><button type="button" class="camp-btn" data-gl="pular">Não</button>`);
+            }
+            if (M.esc.tipo === 'palavra') {
+                const PAL = window.JG.PALAVRA;
+                return janela(M.esc.fonte, `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-palavras-mesa">${M.esc.opcoes.map(p =>
+                    `<button type="button" class="camp-btn camp-btn-pequeno" data-escolher="${p}" title="${esc((PAL[p] || {}).desc || '')}">${esc((PAL[p] || {}).nome || p)}</button>`).join('')}</div>`,
+                    M.esc.obrig ? '' : `<button type="button" class="camp-btn" data-gl="pular">Pular</button>`);
+            }
             const zona = Array.isArray(L[eu][M.esc.tipo]) ? L[eu][M.esc.tipo] : [];
             const ops = zona.filter(x => M.esc.opcoes.includes(x.i));
             const corpo = `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-grade-cartas">${ops.map(x =>
@@ -465,8 +475,8 @@
                 par(`Energia agora <b>${l.energia}</b>`, b('data-en="-1"', '−1', 'Gastar 1 de energia') + b('data-en="1"', '+1', 'Ganhar 1 de energia')) +
                 par(`Energia máxima <b>${l.energiaMax}</b>`, b('data-en="0" data-en-max="-1"', '−1', 'Baixar a energia máxima') + b('data-en="0" data-en-max="1"', '+1', 'Subir a energia máxima') +
                     b('data-en="1" data-en-max="1"', '+1 e recarrega 1', 'Sobe a máxima e a de agora juntas')) +
-                par(`Vida <b>${l.vida} / ${l.max}</b>`, b('data-vida-q="-5"', '−5', 'Perder 5 (vai para o pote)') + b('data-vida-q="-1"', '−1', 'Perder 1 (vai para o pote)') +
-                    b('data-vida-q="1"', '+1', 'Recuperar 1 (até o máximo)') + b('data-vida-q="5"', '+5', 'Recuperar 5 (até o máximo)')) +
+                par(`Vida <b>${l.vida} / ${l.max}</b>`, b('data-vida-q="-10"', '−10', 'Perder 10 (vai para o pote)') + b('data-vida-q="-5"', '−5', 'Perder 5 (vai para o pote)') + b('data-vida-q="-1"', '−1', 'Perder 1 (vai para o pote)') +
+                    b('data-vida-q="1"', '+1', 'Ganhar 1 (sai do pote; pode passar do máximo)') + b('data-vida-q="5"', '+5', 'Ganhar 5') + b('data-vida-q="10"', '+10', 'Ganhar 10')) +
                 `</div><div class="gl-ajustes-atalhos">` +
                 `<button type="button" class="camp-btn" data-gl="comprar">Comprar do topo</button>` +
                 `<button type="button" class="camp-btn" data-gl="baralho">Buscar no baralho</button>` +
@@ -550,8 +560,8 @@
         const x = (Array.isArray(M.L[M.eu].mao) ? M.L[M.eu].mao : []).find(c => c.i === inst);
         const c = x && cartaDef(x.c);
         if (!c) return;
-        if (!((M.minhaVez && c.custo <= M.L[M.eu].energia) || (M.defendo && c.tipo === 'lenda' && c.custo <= M.L[M.eu].energia))) {
-            msg(M.defendo && c.tipo !== 'lenda' ? 'Na defesa só dá para jogar Lendas.' : (c.custo > M.L[M.eu].energia ? 'Energia insuficiente.' : 'Agora não é a sua vez.'), true);
+        if (!(M.minhaVez && c.custo <= M.L[M.eu].energia)) {
+            msg(M.defendo ? 'Na defesa só dá para escolher bloqueadores: cartas, só no seu turno.' : (c.custo > M.L[M.eu].energia ? 'Energia insuficiente.' : 'Agora não é a sua vez.'), true);
             return;
         }
         if (c.tipo === 'feitico' && conjuraSozinho(c)) { acao({ acao: 'jogar', inst }); return; } // alvos são pedidos depois
@@ -673,9 +683,9 @@
             return;
         }
 
-        // ----- defesa: jogar Lendas da mão e escolher bloqueadores -----
+        // ----- defesa: só escolher bloqueadores (cartas da mão, só no próprio turno) -----
         if (M.defendo) {
-            if (cartaMao) { jogarDaMao(+cartaMao.dataset.mao); return; }
+            if (cartaMao) { abrirDetalhe(cartaVer); return; }
             if (!l) return;
             const inst = +l.dataset.lenda;
             if (l.dataset.dono === eu) {
@@ -910,15 +920,17 @@
     /* ================================================================== */
     /*  Gladio: cronômetro da vez                                          */
     /* ================================================================== */
-    const APRESSAR_APOS = 60; // Gladio::APRESSAR_APOS: depois disso os outros podem apressar
+    const APRESSAR_APOS = 30; // Gladio::APRESSAR_APOS: depois disso os outros podem apressar
+    const TEMPO_VEZ = 90;     // Gladio::TEMPO_VEZ: acabou, a mesa segue sozinha
     let difRelogio = 0;       // relógio do servidor − relógio do navegador (s)
     let ultimoApressado = null;
+    let tempoPedido = null;   // "desde" da vez cujo fim de tempo já foi pedido ao servidor
     const agoraServidor = () => Date.now() / 1000 + difRelogio;
     const esperandoDe = e => (e.escolha && e.escolha.lado) || (e.fase === 'defesa' && e.ataque ? e.ataque.defensor : e.vez);
 
     function relogio(M) {
         if (!M.ativo || !M.e.desde) return '';
-        return `<span class="gl-relogio" data-relogio title="Tempo que a mesa está esperando por quem tem a vez (ou pela defesa/escolha)">⏱ <b>0:00</b></span>` +
+        return `<span class="gl-relogio" data-relogio title="Tempo que resta nesta vez (${TEMPO_VEZ} s). Acabou, o turno passa sozinho (ou a defesa/escolha segue como está)">⏱ <b>1:30</b></span>` +
             `<button type="button" class="camp-btn camp-btn-pequeno gl-apressar" data-gl="apressar" hidden title="Avisar quem está demorando">⏳ Apressar</button>`;
     }
     function tique() {
@@ -927,13 +939,19 @@
         if (!el) return;
         const e = D.estado;
         const seg = Math.max(0, Math.floor(agoraServidor() - e.desde));
-        el.querySelector('b').textContent = Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0');
+        const resta = Math.max(0, TEMPO_VEZ - seg);
+        el.querySelector('b').textContent = Math.floor(resta / 60) + ':' + String(resta % 60).padStart(2, '0');
         const quem = esperandoDe(e);
-        el.classList.toggle('gl-relogio--atencao', seg >= APRESSAR_APOS * 0.75 && seg < APRESSAR_APOS * 1.5);
-        el.classList.toggle('gl-relogio--urgente', seg >= APRESSAR_APOS * 1.5);
+        el.classList.toggle('gl-relogio--atencao', resta <= 30 && resta > 10);
+        el.classList.toggle('gl-relogio--urgente', resta <= 10);
         el.classList.toggle('gl-relogio--meu', quem === D.lado);
         const bt = box.querySelector('[data-gl="apressar"]');
         if (bt) bt.hidden = !(momento().jogo && quem !== D.lado && seg >= APRESSAR_APOS);
+        // tempo esgotado: quem estiver na mesa avisa o servidor (uma vez por vez), e a partida segue
+        if (resta === 0 && momento().jogo && tempoPedido !== e.desde && !enviando) {
+            tempoPedido = e.desde;
+            acao({ acao: 'tempo' });
+        }
     }
     setInterval(tique, 1000);
     function avisarApressado() {

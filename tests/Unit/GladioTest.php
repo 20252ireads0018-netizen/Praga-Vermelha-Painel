@@ -104,43 +104,46 @@ class GladioTest extends TestCase
         $this->assertFalse($e['lados']['a']['mesa'][0]['pode'], 'quem atacou fica cansado');
     }
 
-    public function test_defensor_joga_lenda_da_mao_e_bloqueia(): void
+    public function test_defensor_bloqueia_com_a_lenda_que_ja_tem(): void
     {
         $e = $this->lendaPronta($this->novo(), 'a', '1');
         $atk = $e['lados']['a']['mesa'][0]['i'];
+        [$e, $nova] = $this->por($e, 'b', 'Gladiador', 3, 2);
         $e = Gladio::atacar($e, 'a', [$atk]);
-        // o defensor ainda não tem energia; com 1 de energia sobrando, invoca um Gladiador na defesa
-        $e['lados']['b']['energia'] = 1;
-        $nova = $this->primeira($e, 'b', '1');
-        $e = Gladio::jogar($e, 'b', $nova);
-        $this->assertSame(0, $e['lados']['b']['energia']);
         $e = Gladio::bloquear($e, 'b', $nova, $atk);
         $e = Gladio::defender($e, 'b');
-        // 3 de ataque contra 2 de vida dos dois lados: os dois caem e vão para o cemitério
+        // 3 de ataque contra 2 de vida dos dois lados: os dois caem (a ficha some; a carta vai para o cemitério)
         $this->assertSame(10, $e['lados']['b']['vida']);
         $this->assertSame([], $e['lados']['a']['mesa']);
         $this->assertSame([], $e['lados']['b']['mesa']);
         $this->assertSame(['1'], array_column($e['lados']['a']['cemiterio'], 'c'));
-        $this->assertSame(['1'], array_column($e['lados']['b']['cemiterio'], 'c'));
     }
 
-    public function test_na_defesa_so_lendas_e_pagando_energia(): void
+    public function test_na_defesa_nao_se_joga_cartas_nem_lendas(): void
     {
         $e = $this->lendaPronta($this->novo(10, ['b' => array_merge(['2'], array_fill(0, 19, '1'))]), 'a', '1');
         $e = Gladio::atacar($e, 'a', [$e['lados']['a']['mesa'][0]['i']]);
         $e['lados']['b']['energia'] = 5;
-        $this->expectExceptionMessage('Na defesa só dá para jogar Lendas.');
-        Gladio::jogar($e, 'b', $this->primeira($e, 'b', '2'), 'inimigo');
+        try {
+            Gladio::jogar($e, 'b', $this->primeira($e, 'b', '1'));
+            $this->fail('Lenda no turno do adversário');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertSame('Não é a sua vez.', $x->getMessage());
+        }
+        try {
+            Gladio::invocar($e, 'b', $this->primeira($e, 'b', '1'), 'mao');
+            $this->fail('invocar sem custo também é só no próprio turno');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertStringContainsString('só entram em jogo no seu turno', $x->getMessage());
+        }
     }
 
     public function test_sobrepujar_com_bloqueio(): void
     {
         $e = $this->lendaPronta($this->novo(10, ['a' => array_merge(['4'], array_fill(0, 19, '1'))]), 'a', '4');
         $lucas = $e['lados']['a']['mesa'][0]['i'];
+        [$e, $bloq] = $this->por($e, 'b', 'Gladiador', 3, 2);
         $e = Gladio::atacar($e, 'a', [$lucas]);
-        $e['lados']['b']['energia'] = 1;
-        $bloq = $this->primeira($e, 'b', '1');
-        $e = Gladio::jogar($e, 'b', $bloq);
         $e = Gladio::bloquear($e, 'b', $bloq, $lucas);
         $e = Gladio::defender($e, 'b');
         // Lucas 4/5 contra Gladiador 3/2: 2 para derrubar o bloqueador e 2 passam para o jogador
@@ -583,8 +586,10 @@ class GladioTest extends TestCase
         $this->assertSame(6, $e['lados']['b']['vida']);
         $this->assertSame(4, Gladio::pote($e), 'a vida perdida vai para o pote');
         $e = Gladio::vida($e, 'b', 99);
-        $this->assertSame(10, $e['lados']['b']['vida'], 'a cura não passa do máximo');
-        // invoca sem custo da mão e do cemitério; busca no baralho
+        $this->assertSame(105, $e['lados']['b']['vida'], 'ganha 4 do pote e 95 de dinheiro novo: pode passar do apostado');
+        $this->assertSame(0, Gladio::pote($e));
+        // Lendas só entram no próprio turno: a vez passa para a Bia; aí ela invoca sem custo da mão e do cemitério e busca no baralho
+        $e = Gladio::passar($e, 'a');
         $corredor = $this->primeira($e, 'b', '5');
         $e = Gladio::invocar($e, 'b', $corredor, 'mao');
         $this->assertSame([$corredor], array_column($e['lados']['b']['mesa'], 'i'));
@@ -596,8 +601,7 @@ class GladioTest extends TestCase
         $alvo = end($e['lados']['b']['baralho'])['i'];
         $e = Gladio::buscar($e, 'b', $alvo);
         $this->assertSame($alvo, end($e['lados']['b']['mao'])['i']);
-        // energia máxima acima de 10 não cai na virada do turno
-        $e = Gladio::passar($e, 'a');
+        // energia máxima acima de 10 não caiu na virada do turno
         $this->assertSame(12, $e['lados']['b']['energiaMax']);
         // vida zerada à mão: está fora
         $e = Gladio::vida($e, 'a', -10);
@@ -643,7 +647,151 @@ class GladioTest extends TestCase
                      'descricao' => 'Todo início de turno, suas lendas ganham +0/+2'],
         'manto' => ['nome' => 'Manto', 'tipo' => 'equipo', 'custo' => 0, 'ataque' => 1, 'vida' => 2, 'palavras' => 'voar',
                     'descricao' => ''],
+        'diego' => ['nome' => 'Diego', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 3, 'vida' => 2, 'palavras' => '',
+                    'descricao' => 'Ao invocar Diego, transforme-o em uma cópia de uma lenda que você controlar.'],
+        'selos' => ['nome' => 'Selos de Lucius', 'tipo' => 'encanto', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                    'descricao' => 'Todo início de turno, você pode sacrificar uma lenda e ganhar 2 de energia'],
+        'abner' => ['nome' => 'Abner', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 0, 'vida' => 12, 'palavras' => 'defensor',
+                    'descricao' => 'Quando bloquear, mate a Lenda atacante'],
+        'cicero' => ['nome' => 'Cícero', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 4, 'vida' => 4, 'palavras' => '',
+                     'descricao' => 'Quando matar uma lenda, ganhe uma aura e adicione +2/+2 a cícero'],
+        'pedra' => ['nome' => 'Pedra', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 2, 'palavras' => '',
+                    'descricao' => 'Toda vez que uma lenda sua morrer, compre uma carta e adicione 1 de ataque a essa lenda'],
+        'baguinho' => ['nome' => 'Baguinho', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                       'descricao' => 'Sempre que um feitiço for lançado, o jogador que o lançou paga 5$, exceto você.'],
+        'carneiro' => ['nome' => 'Carneiro', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 5, 'vida' => 3, 'palavras' => '',
+                       'descricao' => 'Sempre que uma Lenda morrer, roube 10$.'],
+        'armeiro' => ['nome' => 'Hexo-armeiro', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                      'descricao' => 'Duas cartas alvo ganham uma palavra chave a sua escolha'],
+        'gosma' => ['nome' => 'Mãos de gosma', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                    'descricao' => 'A lenda alvo não pode atacar até que morra'],
+        'lamina' => ['nome' => 'Lâmina envenenada', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                     'descricao' => 'A Lenda alvo não causa mais dano até morrer, e sofre 3 de dano'],
+        'ruina' => ['nome' => 'Ruína', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                    'descricao' => 'Destrua todas as cartas em campo'],
+        'troca' => ['nome' => 'Troca', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                    'descricao' => 'Troque de mão com o jogador alvo'],
+        'armazem' => ['nome' => 'O Armazém', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 2, 'vida' => 1, 'palavras' => '',
+                      'descricao' => 'Todo início de turno, todo jogador mill X, onde X é o poder dessa Lenda'],
     ] + self::CARTAS;
+
+    public function test_diego_vira_copia_de_uma_lenda_sua(): void
+    {
+        $e = $this->comTextos(['diego']);
+        [$e, $modelo] = $this->por($e, 'a', 'Gigante', 7, 7, ['voar']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'diego'));
+        $this->assertSame([$modelo], $e['escolha']['opcoes'], 'só as outras Lendas suas servem de modelo');
+        $e = Gladio::escolher($e, 'a', $modelo);
+        $diego = end($e['lados']['a']['mesa']);
+        $this->assertSame(['Gigante', 7, 7, ['voar']], [$diego['nome'], $diego['atk'], $diego['max'], $diego['pal']]);
+    }
+
+    public function test_voce_pode_confirma_ou_recusa_a_frase_inteira(): void
+    {
+        $e = $this->comTextos(['selos']);
+        [$e, $lenda] = $this->por($e, 'a', 'Bicho', 1, 1);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'selos'));
+        $e = Gladio::passar(Gladio::passar($e, 'a'), 'b');
+        $this->assertSame('confirmar', $e['escolha']['tipo']);
+        $energia = $e['lados']['a']['energia'];
+        $e = Gladio::escolher($e, 'a', null); // recusou: não sacrifica nem ganha energia
+        $this->assertCount(1, $e['lados']['a']['mesa']);
+        $this->assertSame($energia, $e['lados']['a']['energia']);
+        $e = Gladio::passar(Gladio::passar($e, 'a'), 'b');
+        $energia = $e['lados']['a']['energia']; // recarregou de novo no turno seguinte
+        $e = Gladio::escolher($e, 'a', 'sim');
+        $e = Gladio::escolher($e, 'a', $lenda);
+        $this->assertSame([], $e['lados']['a']['mesa']);
+        $this->assertSame($energia + 2, $e['lados']['a']['energia']);
+    }
+
+    public function test_gatilhos_de_bloquear_matar_morrer_e_feitico_de_outro(): void
+    {
+        $e = $this->comTextos(['cicero', 'pedra'], ['abner', 'baguinho', 'carneiro']);
+        $e = $this->lendaPronta($e, 'a', 'cicero');
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'pedra'));
+        [$e, $bicho] = $this->por($e, 'a', 'Bicho', 1, 1);
+        $e = Gladio::passar($e, 'a');
+        $e = Gladio::jogar($e, 'b', $this->primeira($e, 'b', 'abner'));
+        $e = Gladio::jogar($e, 'b', $this->primeira($e, 'b', 'baguinho'));
+        $e = Gladio::jogar($e, 'b', $this->primeira($e, 'b', 'carneiro'));
+        $e = Gladio::passar($e, 'b');
+        // Cícero ataca; Abner bloqueia e mata a Lenda atacante (Cícero não mata ninguém)
+        $cicero = $e['lados']['a']['mesa'][0]['i'];
+        $abner = $e['lados']['b']['mesa'][0]['i'];
+        $e = Gladio::atacar($e, 'a', [$cicero]);
+        $e = Gladio::bloquear($e, 'b', $abner, $cicero);
+        $mao = count($e['lados']['a']['mao']);
+        $vidaB = $e['lados']['b']['vida'];
+        $e = Gladio::defender($e, 'b');
+        $this->assertNotContains('cicero', array_column($e['lados']['a']['mesa'], 'c'), 'Abner matou Cícero');
+        $this->assertSame($mao + 1, count($e['lados']['a']['mao']), 'Pedra: uma Lenda sua morreu, comprou');
+        $this->assertSame(2, $e['lados']['a']['mesa'][0]['atk'], 'Pedra ganhou +1 de ataque');
+        $this->assertSame($vidaB + 10, $e['lados']['b']['vida'], 'Carneiro roubou 10 de quem perdeu a Lenda');
+        $this->assertSame(100 - 10, $e['lados']['a']['vida']);
+        // feitiço de a: Baguinho (de b) cobra 5$ de quem conjurou
+        $e['lados']['a']['mao'][] = ['i' => 900, 'c' => 'raio'];
+        $e = Gladio::jogar($e, 'a', 900);
+        $e = Gladio::escolher($e, 'a', null);
+        $this->assertSame(85, $e['lados']['a']['vida']);
+    }
+
+    public function test_cicero_mata_em_combate_e_cresce(): void
+    {
+        $e = $this->comTextos(['cicero']);
+        $e = $this->lendaPronta($e, 'a', 'cicero');
+        [$e, $fraco] = $this->por($e, 'b', 'Fraco', 1, 1);
+        $cicero = $e['lados']['a']['mesa'][0]['i'];
+        $e = Gladio::atacar($e, 'a', [$cicero]);
+        $e = Gladio::bloquear($e, 'b', $fraco, $cicero);
+        $energia = $e['lados']['a']['energia'];
+        $e = Gladio::defender($e, 'b');
+        $this->assertSame([6, 6, $energia + 1], [$e['lados']['a']['mesa'][0]['atk'], $e['lados']['a']['mesa'][0]['max'], $e['lados']['a']['energia']]);
+    }
+
+    public function test_feiticos_de_palavra_chave_prender_zerar_trocar_e_ruina(): void
+    {
+        $e = $this->comTextos(['armeiro', 'gosma', 'lamina', 'troca', 'ruina']);
+        [$e, $x] = $this->por($e, 'a', 'X', 3, 5);
+        [$e, $y] = $this->por($e, 'b', 'Y', 3, 5);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'armeiro'));
+        $e = Gladio::escolher($e, 'a', $x);
+        $this->assertSame('palavra', $e['escolha']['tipo']);
+        $e = Gladio::escolher($e, 'a', 'voar');
+        $e = Gladio::escolher($e, 'a', $y);
+        $e = Gladio::escolher($e, 'a', 'toque');
+        $this->assertSame([['voar'], ['toque']], [$e['lados']['a']['mesa'][0]['pal'], $e['lados']['b']['mesa'][0]['pal']]);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'gosma'));
+        $e = Gladio::escolher($e, 'a', $y);
+        $this->assertTrue($e['lados']['b']['mesa'][0]['preso']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'lamina'));
+        $e = Gladio::escolher($e, 'a', $y);
+        $this->assertSame([0, 2], [$e['lados']['b']['mesa'][0]['atk'], $e['lados']['b']['mesa'][0]['vida']], 'zerou o ataque e sofreu 3 na mesma Lenda');
+        $maoA = array_column($e['lados']['a']['mao'], 'c');
+        $maoB = array_column($e['lados']['b']['mao'], 'c');
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'troca'));
+        $this->assertSame([$maoB, array_values(array_diff($maoA, ['troca']))], [array_column($e['lados']['a']['mao'], 'c'), array_column($e['lados']['b']['mao'], 'c')]);
+        $e['lados']['a']['mao'][] = ['i' => 901, 'c' => 'ruina'];
+        $e = Gladio::jogar($e, 'a', 901);
+        $this->assertSame([[], []], [$e['lados']['a']['mesa'], $e['lados']['b']['mesa']]);
+    }
+
+    public function test_x_e_o_poder_da_lenda_e_tempo_da_vez(): void
+    {
+        $e = $this->comTextos(['armazem']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'armazem'));
+        $baralhoB = count($e['lados']['b']['baralho']);
+        $e = Gladio::passar(Gladio::passar($e, 'a'), 'b');
+        $this->assertSame($baralhoB - 3, count($e['lados']['b']['baralho']), 'b comprou 1 no turno dela e mill X com X = 2 (o ataque do Armazém)');
+        // tempo esgotado: o turno de a passa sozinho
+        try {
+            Gladio::tempo($e, 'b', $e['desde'] + 10);
+            $this->fail('ainda no tempo');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::tempo($e, 'b', $e['desde'] + Gladio::TEMPO_VEZ);
+        $this->assertSame('b', $e['vez']);
+    }
 
     public function test_hexo_papelada_compra_descarta_e_paga(): void
     {

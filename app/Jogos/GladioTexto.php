@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 4;
+    public const VERSAO = 5;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -89,6 +89,12 @@ class GladioTexto
             if ($frase === '') {
                 continue;
             }
+            // "X, onde X é o poder dessa Lenda": a quantia é o ataque atual da carta
+            $xPoder = false;
+            if (preg_match('/,?\s*onde x e (?:o poder|o ataque) d(?:essa|esta|e) [a-z ]+$/', $frase, $mx)) {
+                $frase = trim(preg_replace('/\bx\b/', '1', substr($frase, 0, -strlen($mx[0]))));
+                $xPoder = true;
+            }
             [$gs, $resto] = self::gatilho($frase, $eu);
             if ($gs === null && preg_match(self::GATILHO_DESCONHECIDO, $frase)) {
                 $parcial = true;
@@ -99,15 +105,31 @@ class GladioTexto
                 $atual = $gs;
             }
             $gs ??= $atual ?? [$tipo === 'lenda' ? 'entrar' : 'conjurar'];
-            if ($gs === ['manual'] || preg_match(self::CONDICAO, $resto)) {
+            // "…, o jogador que o lançou paga 5$, exceto você": só quando outro jogador conjura
+            if ($gs === ['feitico'] && preg_match('/,?\s*exceto voce$/', $resto)) {
+                $gs = ['feitico_outro'];
+                $resto = trim(preg_replace('/,?\s*exceto voce$/', '', $resto));
+            }
+            // "você pode X (, se fizer isso, Y)": quem controla a carta confirma antes (dá para recusar)
+            $opcional = false;
+            if (preg_match('/^voce pode\s+(.+)$/', $resto, $mo)) {
+                $resto = preg_replace('/,?\s*se (?:fizer|o fizer) isso,?\s*/', ', ', $mo[1]);
+                $opcional = true;
+            }
+            $especial = self::especial($resto, $eu);
+            if ($gs !== ['manual'] && $especial !== null) {
+                $passos = $especial;
+            } elseif ($gs === ['manual'] || preg_match(self::CONDICAO, $resto)) {
                 $parcial = true;
                 $atual = ['manual'];
                 continue;
+            } else {
+                $passos = null;
             }
-            $passos = [];
+            $passos ??= [];
             $sujeito = null;
             $entendeu = true;
-            foreach (preg_split('/\s*(?:,|\be depois\b|\bdepois\b|\bentao\b|\be\b(?= [a-z0-9+-]))\s*/', $resto) as $c) {
+            foreach ($especial !== null ? [] : preg_split('/\s*(?:,|\be depois\b|\bdepois\b|\bentao\b|\be\b(?= [a-z0-9+-]))\s*/', $resto) as $c) {
                 $c = trim($c, ' ,');
                 if ($c === '' || self::ruido($c)) {
                     continue;
@@ -126,6 +148,17 @@ class GladioTexto
             if (!$entendeu) {
                 $parcial = true;
                 continue;
+            }
+            if ($xPoder) {
+                foreach ($passos as &$px) {
+                    if (isset($px['n']) && (int) $px['n'] === 1) {
+                        $px['n'] = 'poder';
+                    }
+                }
+                unset($px);
+            }
+            if ($opcional && $passos) {
+                array_unshift($passos, ['a' => 'confirmar', 'resto' => count($passos)]);
             }
             foreach ($gs as $g) {
                 $ult = array_key_last($hab);
@@ -211,10 +244,49 @@ class GladioTexto
             . '|embaralhe(?: seu (?:baralho|deck))?|ate o (?:fim|final) do turno|neste turno|sem pagar (?:seus|os) custos)$/', $c);
     }
 
+    /**
+     * Frases inteiras que o leitor conhece apesar de terem "pode"/"até que" (que normalmente deixam a frase à mão).
+     * Devolve os passos ou null.
+     */
+    private static function especial(string $r, array $eu): ?array
+    {
+        $lenda = '(?:a |uma )?(?:lenda|carta) (?:inimiga |aliada )?alvo';
+        if (preg_match("/^$lenda nao pode (?:mais )?atacar(?: ate (?:que )?(?:ela )?morr\\w*)?$/", $r)) {
+            return [['a' => 'prender', 'alvo' => 'lenda', 'filtro' => 'qualquer']];
+        }
+        if (preg_match("/^$lenda nao causa mais dano(?: ate (?:que )?(?:ela )?morr\\w*)?(?:,? e sofre " . self::NUM . ' (?:pontos? )?de dano)?$/', $r, $m)) {
+            $p = [['a' => 'zerar', 'alvo' => 'lenda', 'filtro' => 'qualquer']];
+            if (!empty($m[1])) {
+                $p[] = ['a' => 'dano', 'n' => self::num($m[1]), 'alvo' => 'ultima', 'filtro' => null];
+            }
+
+            return $p;
+        }
+
+        return null;
+    }
+
     /** [gatilhos ou null, resto da frase sem o gatilho]. */
     private static function gatilho(string $f, array $eu): array
     {
         $quem = '(?:' . self::euRe($eu) . '\s+)?';
+        // eventos de outras coisas: bloquear, matar, atacar o jogador direto, mortes, feitiços e compras
+        $eventos = [
+            'bloquear'    => '(?:quando|sempre que|toda vez que)\s+' . $quem . 'bloquear(?: alguma carta| uma lenda| um atacante)?',
+            'matar'       => '(?:quando|sempre que|toda vez que)\s+' . $quem . '(?:ela |ele )?mat(?:a|ar) uma lenda(?: e sai viv[oa])?',
+            'direto'      => '(?:quando|se|sempre que|toda vez que)\s+' . $quem . '(?:ela |ele )?atacar (?:um jogador )?diretamente(?: um jogador)?',
+            'morre_minha' => '(?:toda vez|sempre) que uma (?:outra )?lenda sua morrer',
+            'morre'       => '(?:toda vez que|sempre que|quando) uma lenda morrer',
+            'feitico_meu' => '(?:toda vez|sempre) que voce (?:ativar|conjurar|lancar) um feitico',
+            'feitico'     => '(?:toda vez|sempre) que um feitico for (?:conjurado|lancado|ativado)',
+            'comprar_meu' => '(?:toda vez|sempre) que voce comprar uma carta',
+            'morrer'      => 'quando ' . $quem . 'sair do campo',
+        ];
+        foreach ($eventos as $g => $re) {
+            if (preg_match("/^$re\s*(?:,|:|$)/", $f, $m)) {
+                return [[$g], trim(substr($f, strlen($m[0])), ' ,:-')];
+            }
+        }
         $ev = self::EVENTO;
         // começo: "quando invocado", "quando <nome> entrar, atacar ou morrer", "toda vez que essa lenda atacar",
         // "quando invocado ou quando atacar", "ao invocar <nome>"
@@ -229,6 +301,7 @@ class GladioTexto
                     default                                       => 'entrar',
                 };
             }
+            $gs = $gs ?: ['entrar']; // "ao invocar Diego,": o verbo não está na lista de eventos, mas é a entrada
 
             return [array_values(array_unique($gs)), trim(substr($f, strlen($m[0])), ' ,:-')];
         }
@@ -257,6 +330,8 @@ class GladioTexto
     private static function sujeito(string $antes): ?string
     {
         return match (true) {
+            // quem causou o evento do gatilho: o jogador que conjurou, o dono da Lenda que morreu, o jogador atacado
+            (bool) preg_match('/\bo jogador que o (?:lancou|conjurou|ativou)\b|\b(?:o|seu) dono(?: dela| dele)?\b|^ele\b|\baquele jogador\b/', $antes) => 'evento',
             (bool) preg_match('/\b(?:jogador|adversario|oponente|inimigo) alvo\b/', $antes)                                => 'jogador',
             (bool) preg_match('/\b(?:cada|todo|todos os|seus|os|o|seu|um) (?:adversario|oponente|inimigo)s?\b|\bexceto voce\b|\bos outros jogadores\b|\btodo outro jogador\b|\btodos os outros\b/', $antes) => 'inimigos',
             (bool) preg_match('/\b(?:cada|todo|todos os|todos) (?:jogador(?:es)?)\b|\btodos\b/', $antes)                  => 'todos',
@@ -280,6 +355,7 @@ class GladioTexto
     {
         $t = trim($t);
         return match (true) {
+            (bool) preg_match('/^(?:a )?lenda atacante$|^o atacante$|^a lenda que (?:o |a )?atacou$/', $t)                         => ['evento', null],
             (bool) preg_match('/(?:todas as |as )?lendas (?:inimigas|adversarias|d[oa]s? (?:adversario|oponente|inimigo)s?)/', $t) => ['lendas', 'inimigo'],
             (bool) preg_match('/(?:todas as |as )?(?:suas (?:outras )?lendas|lendas aliadas|lendas que voce controla)/', $t)     => ['lendas', 'meu'],
             (bool) preg_match('/todas as lendas|cada lenda/', $t)                                                                => ['lendas', 'qualquer'],
@@ -361,8 +437,49 @@ class GladioTexto
         if (preg_match('/^(.*?)\b(sacrifiqu?e|sacrifica|sacrificam|sacrificar)\s+' . $N . '\s+lendas?(?:\s+para invocar\s+' . self::euRe($eu) . ')?$/', $c, $m)) {
             return $jogador('sacrificar', $m, self::num($m[3]));
         }
-        if (preg_match('/^(.*?)\b(ganh(?:e|a|am|ar)|receb(?:e|a|am|er))\s+' . $N . '\s+(?:de\s+)?energias?$/', $c, $m)) {
-            return $jogador('energia', $m, self::num($m[3]));
+        // energia (no jogo, "aura" também é energia): "ganhe 2 de energia", "receba +1 aura", "ganhe 1 aura total" (máxima)
+        if (preg_match('/^(.*?)\b(ganh(?:e|a|am|ar)|receb(?:e|a|am|er))\s+\+?' . $N . '\s+(?:de\s+|em\s+)?(?:energias?|auras?)( total| maxima)?$/', $c, $m)) {
+            $p = $jogador('energia', $m, self::num($m[3]));
+
+            return $p === null ? null : $p + (!empty($m[4]) ? ['max' => true] : []);
+        }
+        // roubar Dinheiro: sai de um adversário e vem para quem controla a carta
+        if (preg_match('/^(roub(?:e|a|ar))\s+' . self::DINHEIRO . '$/', $c, $m)) {
+            return ['a' => 'roubar', 'n' => (int) ($m[2] ?: ($m[3] ?: $m[4])), 'alvo' => 'jogador', 'filtro' => 'inimigo'];
+        }
+        // Diego: "transforme-o em uma cópia de uma lenda que você controlar"
+        if (preg_match('/^transforme-?(?:o|a|se)?\s+em (?:uma )?copia de (?:uma|outra) lenda(?: que voce control\w+| sua)?$/', $c)) {
+            return ['a' => 'copia', 'alvo' => 'lenda', 'filtro' => 'meu'];
+        }
+        // "duas cartas alvo ganham uma palavra-chave a sua escolha" / "retire uma palavra-chave de uma lenda alvo"
+        if (preg_match('/^(.*?)\b(?:ganh(?:a|am|e)|receb(?:a|e|em))\s+(?:uma\s+)?palavra[- ]chave(?:\s+a (?:sua )?escolha)?$/', $c, $m)) {
+            $antes = str_replace(['cartas', 'carta'], ['lendas', 'lenda'], $m[1]);
+            $alvo = self::alvoDeBonus($antes, '', $eu);
+
+            return $alvo === null ? null : ['a' => 'palavra', 'pal' => '?', 'alvo' => $alvo[0], 'filtro' => $alvo[1], 'temp' => false, 'rep' => self::vezes($antes)];
+        }
+        if (preg_match('/^(?:retire|remova|tire)\s+(?:uma\s+)?palavra[- ]chave\s+de\s+(.+)$/', $c, $m)) {
+            $alvo = self::alvo($m[1], 'lenda', $eu);
+
+            return $alvo === null || $alvo[0] !== 'lenda' ? null : ['a' => 'tirapal', 'alvo' => 'lenda', 'filtro' => $alvo[1]];
+        }
+        if (preg_match('/^troque (?:de )?mao com (?:o )?(?:jogador|adversario|oponente) alvo$/', $c)) {
+            return ['a' => 'trocamao', 'alvo' => 'jogador', 'filtro' => 'inimigo'];
+        }
+        if (preg_match('/^exile (?:a |uma )?(?:carta|lenda) alvo$/', $c)) {
+            return ['a' => 'exilar', 'alvo' => 'lenda', 'filtro' => 'qualquer'];
+        }
+        // "(e) sofre 3 de dano" logo depois de escolher uma Lenda: o dano vai nela
+        if (preg_match('/^(?:e\s+)?(?:ela\s+|a lenda\s+)?sofre\s+' . $N . '\s+(?:pontos? )?de dano$/', $c, $m)) {
+            return ['a' => 'dano', 'n' => self::num($m[1]), 'alvo' => 'ultima', 'filtro' => null];
+        }
+        // "adicione 1 de ataque a essa lenda"
+        if (preg_match('/^adicione\s+' . $N . '\s+de ataque\s+(?:a|em)\s+(?:essa|esta)\s+lenda$/', $c, $m)) {
+            return ['a' => 'buff', 'atk' => self::num($m[1]), 'vida' => 0, 'alvo' => 'fonte', 'filtro' => null, 'temp' => false];
+        }
+        // Sol vermelho: "invoque duas fichas de sol vermelho com o mesmo efeito" = cópias da própria carta
+        if (preg_match('/^invoqu(?:e|a)\s+' . $N . '\s+(?:fichas?|copias?)\s+de\s+(.+?)\s+com o mesmo efeito$/', $c, $m) && in_array($m[2], $eu, true)) {
+            return ['a' => 'invocar', 'alvo' => 'eu', 'carta' => $m[2], 'n' => self::num($m[1])];
         }
         if (preg_match('/^(.*?)\b(perd(?:e|a|em|er)|pagu?(?:e|a|am|ar))\s+' . self::DINHEIRO . '$/', $c, $m)) {
             return $jogador('perder', $m, (int) ($m[3] ?: ($m[4] ?: $m[5])));
@@ -380,11 +497,14 @@ class GladioTexto
             return $alvo === null ? null : ['a' => 'dano', 'n' => self::num($m[1]), 'alvo' => $alvo[0], 'filtro' => $alvo[1], 'rep' => self::vezes($m[2])];
         }
         if (preg_match('/^(?:destru(?:a|ir)|elimine|mate)\s+(.*)$/', $c, $m)) {
+            if (preg_match('/^(?:todas as cartas|tudo|todas as lendas e feiticos)(?: em (?:campo|jogo)| na mesa)?$/', $m[1])) {
+                return ['a' => 'destruir', 'alvo' => 'tudo', 'filtro' => null]; // Ruína: Lendas e o que está no campo
+            }
             if (!preg_match('/\blendas?\b|^' . self::euRe($eu) . '$/', $m[1])) {
                 return null; // "destrua todas as cartas": o motor só destrói Lendas
             }
             $alvo = self::alvo($m[1], 'lenda', $eu);
-            if ($alvo === null || !in_array($alvo[0], ['lenda', 'lendas', 'fonte'], true)) {
+            if ($alvo === null || !in_array($alvo[0], ['lenda', 'lendas', 'fonte', 'evento'], true)) {
                 return null;
             }
 
@@ -397,7 +517,7 @@ class GladioTexto
         }
         if (preg_match('/^(?:devolv(?:a|e)|retorne|mande)\s+(.*?)\s+(?:para|a|pra)\s+(?:a\s+)?(?:sua\s+)?mao(?: d[eo] (?:seu )?dono)?$/', $c, $m)) {
             $alvo = self::alvo($m[1], 'lenda', $eu);
-            if ($alvo === null || !in_array($alvo[0], ['lenda', 'lendas', 'fonte'], true)) {
+            if ($alvo === null || !in_array($alvo[0], ['lenda', 'lendas', 'fonte', 'evento'], true)) {
                 return null;
             }
 
@@ -489,6 +609,9 @@ class GladioTexto
     private const GATILHOS = [
         'entrar' => 'Ao entrar', 'conjurar' => 'Ao conjurar', 'morrer' => 'Ao cair', 'inicio' => 'No início do turno do dono',
         'inicio_meu' => 'No início do seu turno', 'fim' => 'Todo fim de turno', 'fim_meu' => 'No fim do seu turno', 'atacar' => 'Ao atacar',
+        'bloquear' => 'Ao bloquear', 'matar' => 'Ao matar uma Lenda', 'direto' => 'Ao atacar um jogador sem bloqueio',
+        'morre_minha' => 'Quando uma Lenda sua morre', 'morre' => 'Quando uma Lenda morre', 'feitico_meu' => 'Quando você conjura',
+        'feitico' => 'Quando alguém conjura', 'feitico_outro' => 'Quando outro jogador conjura', 'comprar_meu' => 'Quando você compra',
     ];
 
     public static function resumo(array $hab): string
@@ -504,7 +627,7 @@ class GladioTexto
     private static function quemTexto(?string $alvo): string
     {
         return match ($alvo) {
-            'todos' => 'todo jogador', 'inimigos' => 'cada adversário', 'jogador' => 'o jogador escolhido', default => 'você',
+            'todos' => 'todo jogador', 'inimigos' => 'cada adversário', 'jogador' => 'o jogador escolhido', 'evento' => 'o jogador do evento', default => 'você',
         };
     }
 
@@ -514,13 +637,14 @@ class GladioTexto
 
         return match ($p['alvo']) {
             'lenda' => "uma Lenda$f à escolha", 'lendas' => $f === ' sua' ? 'todas as suas Lendas' : 'todas as Lendas' . ($f ? $f . 's' : ''),
-            'fonte' => 'esta Lenda', 'qualquer' => 'uma Lenda ou jogador à escolha', default => self::quemTexto($p['alvo']),
+            'fonte' => 'esta Lenda', 'qualquer' => 'uma Lenda ou jogador à escolha', 'ultima' => 'a mesma Lenda', 'tudo' => 'todas as cartas em campo',
+            'evento' => 'a Lenda do evento', default => self::quemTexto($p['alvo']),
         };
     }
 
     public static function textoPasso(array $p): string
     {
-        $n = (int) ($p['n'] ?? 1);
+        $n = ($p['n'] ?? 1) === 'poder' ? 'X (o ataque desta Lenda)' : (int) ($p['n'] ?? 1);
         $quem = self::quemTexto($p['alvo'] ?? 'eu');
         $temp = !empty($p['temp']) ? ' até o fim do turno' : '';
         $pal = $p['a'] === 'ficha' ? implode(', ', array_map(fn ($k) => Gladio::PALAVRAS[$k] ?? $k, $p['pal'] ?? [])) : '';
@@ -533,7 +657,15 @@ class GladioTexto
                   . (!empty($p['aleatorio']) ? ' ao acaso' : '') . ' da mão',
             'sacrificar' => "$quem sacrifica $n Lenda" . ($n > 1 ? 's' : ''),
             'moer'       => "$quem joga $n carta" . ($n > 1 ? 's' : '') . ' do topo do baralho no cemitério',
-            'energia'    => "$quem ganha $n de energia",
+            'energia'    => "$quem ganha $n de energia" . (!empty($p['max']) ? ' máxima' : ''),
+            'roubar'     => "rouba $n de um adversário",
+            'copia'      => 'vira uma cópia de uma Lenda sua',
+            'trocamao'   => 'troca de mão com o jogador escolhido',
+            'exilar'     => 'exila ' . self::lendaTexto($p),
+            'prender'    => self::lendaTexto($p) . ' não pode mais atacar',
+            'zerar'      => self::lendaTexto($p) . ' não causa mais dano',
+            'tirapal'    => 'tira uma palavra-chave de ' . self::lendaTexto($p),
+            'confirmar'  => 'você pode',
             'perder'     => "$quem perde $n de vida",
             'ganhar'     => "$quem recupera $n de vida",
             'dano'       => "$n de dano em " . self::lendaTexto($p),
@@ -546,7 +678,7 @@ class GladioTexto
             'equipar'    => 'equipa uma Lenda sua' . (($b = array_merge(($p['atk'] ?? 0) || ($p['vida'] ?? 0) ? [sprintf('%+d/%+d', $p['atk'], $p['vida'])] : [],
                 array_map(fn ($k) => Gladio::PALAVRAS[$k] ?? $k, $p['pal'] ?? []))) ? ' (' . implode(', ', $b) . ')' : ''),
             'buff'       => sprintf('%+d/%+d em ', $p['atk'], $p['vida']) . self::lendaTexto($p) . $temp,
-            'palavra'    => (Gladio::PALAVRAS[$p['pal']] ?? $p['pal']) . ' para ' . self::lendaTexto($p) . $temp,
+            'palavra'    => ($p['pal'] === '?' ? 'uma palavra-chave à escolha' : (Gladio::PALAVRAS[$p['pal']] ?? $p['pal'])) . ' para ' . self::lendaTexto($p) . $temp,
             default      => $p['a'],
         };
     }
