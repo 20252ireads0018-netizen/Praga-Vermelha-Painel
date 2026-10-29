@@ -10,9 +10,11 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'chave_maldicoes'];
+    protected $fillable = ['name', 'email', 'password', 'chave_maldicoes', 'objetivo', 'livro_comprado_em'];
 
     protected $hidden = ['password', 'remember_token'];
+
+    protected $casts = ['livro_comprado_em' => 'datetime'];
 
     // A senha é criptografada no AuthController (Hash::make), então não há
     // cast "hashed" aqui para não criptografar duas vezes.

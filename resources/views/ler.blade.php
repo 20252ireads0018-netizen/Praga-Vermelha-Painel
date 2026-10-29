@@ -11,12 +11,12 @@
         <div class="pv-reader__bar">
             <h1 class="pv-reader__title">{{ $livro['titulo'] }}</h1>
             <div class="pv-reader__actions">
-                <a href="{{ asset($livro['pdf']) }}" class="pv-btn pv-btn--outline" download>Baixar PDF</a>
+                <a href="{{ $livro['url'] }}?baixar=1" class="pv-btn pv-btn--outline">Baixar PDF</a>
             </div>
         </div>
 
         <div class="pv-reader__app" id="leitor"
-             data-pdf="{{ asset($livro['pdf']) }}"
+             data-pdf="{{ $livro['url'] }}"
              data-worker="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
              data-chave="{{ $livro['chave'] }}">
 

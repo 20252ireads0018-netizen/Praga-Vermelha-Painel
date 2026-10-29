@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Plano;
 use Illuminate\Http\Request;
 
 class LivroController extends Controller
 {
+    // Livro completo: chave aplicada nesta sessão, ou conta que comprou o livro (plano vitalício)
     private function liberado(): bool
     {
-        return session('livro_completo') === true;
+        return session('livro_completo') === true || Plano::comprouLivro(auth()->user());
     }
 
     // /livro: com chave abre o livro completo; sem chave vai para a tela de acesso
@@ -47,6 +49,15 @@ class LivroController extends Controller
         if ($esperada !== '' && hash_equals($esperada, $enviada)) {
             $request->session()->regenerate();
             session(['livro_completo' => true]);
+
+            // A chave vem com a compra do info-produto: na conta logada, vira o plano vitalício
+            $user = $request->user();
+            if ($user && Plano::temColunas() && !Plano::comprouLivro($user)) {
+                $user->forceFill(['livro_comprado_em' => now()])->save();
+                return redirect()->route('planos.index')
+                    ->with('ok', 'Livro do sistema ativado na sua conta: plano vitalício sem anúncios e todos os livros liberados.');
+            }
+
             return redirect()->route('livro.index');
         }
 

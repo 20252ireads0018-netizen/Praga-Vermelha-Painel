@@ -13,6 +13,7 @@ use App\Http\Controllers\CampanhaCatalogoController;
 use App\Http\Controllers\CampanhaRolagemController;
 use App\Http\Controllers\CampanhaIniciativaController;
 use App\Http\Controllers\CampanhaJogoController;
+use App\Http\Controllers\PlanoController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -33,6 +34,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
 
 // ---------- Área da conta (exige login) ----------
 Route::middleware('auth')->group(function () {
+    // Boas-vindas do iniciante: veio comprar os livros ou jogar o RPG?
+    Route::get('/boas-vindas', [PlanoController::class, 'boasVindas'])->name('boas-vindas');
+    Route::post('/boas-vindas', [PlanoController::class, 'objetivo'])->name('boas-vindas.salvar');
+
 
     // Fichas
     Route::get('/fichas', [PersonagemController::class, 'fichas'])->name('fichas.create');
@@ -210,3 +215,7 @@ Route::get('/livro/pdf/{versao}', [LivroController::class, 'pdf'])
 Route::post('/livro/sair', [LivroController::class, 'sair'])->name('livro.sair');
 
 Route::get('/historias/{slug}', [HistoriaController::class, 'ler'])->name('historias.ler');
+Route::get('/historias/{slug}/pdf', [HistoriaController::class, 'pdf'])->name('historias.pdf');
+
+// Planos (teste, grátis, vitalício com o livro do sistema) e links dos livros físicos
+Route::get('/planos', [PlanoController::class, 'index'])->name('planos.index');

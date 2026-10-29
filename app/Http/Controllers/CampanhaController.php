@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Plano;
 use App\Models\Campanha;
 use App\Models\CampanhaFicha;
 use App\Models\CampanhaJogador;
@@ -51,6 +52,9 @@ class CampanhaController extends Controller
             'nome'      => 'required|string|max:80',
             'descricao' => 'nullable|string|max:2000',
         ]);
+        if (!Plano::podeCriarCampanha($request->user())) {
+            return back()->withInput()->withErrors(['nome' => Plano::mensagemLimite('campanhas')]);
+        }
 
         $campanha = Campanha::create($dados + ['mestre_id' => auth()->id()]);
 

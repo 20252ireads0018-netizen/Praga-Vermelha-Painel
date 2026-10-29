@@ -16,6 +16,11 @@
     <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}?v={{ @filemtime(public_path('css/Ficha.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tabletop.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/planos.css') }}?v={{ @filemtime(public_path('css/planos.css')) ?: 1 }}">
+    {{-- Anúncios só no plano grátis (e para visitantes), com o AdSense configurado em config/planos.php --}}
+    @if (config('planos.adsense_cliente') && \App\Support\Plano::veAnuncios(auth()->user()))
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ config('planos.adsense_cliente') }}" crossorigin="anonymous"></script>
+    @endif
 
     <style>
         /* Dropdown da conta (Entrar / Criar conta / Sair) */
@@ -88,6 +93,10 @@
                                 <strong>Minhas fichas</strong>
                                 <small>Veja seus personagens criados</small>
                             </a>
+                            <a href="{{ route('planos.index') }}" class="pv-dropdown__link">
+                                <strong>Planos e livros</strong>
+                                <small>Livro do sistema, histórias e livros físicos</small>
+                            </a>
                             <a href="{{ route('maldicoes.index') }}" class="pv-dropdown__link">
                                 <strong>Maldições</strong>
                                 <small>Consulte as maldições e suas ameaças</small>
@@ -156,6 +165,11 @@
                                     <strong>Minhas campanhas</strong>
                                     <small>Campanhas e convites</small>
                                 </a>
+                                @php $planoMenu = \App\Support\Plano::de(auth()->user()); @endphp
+                                <a href="{{ route('planos.index') }}" class="pv-dropdown__link">
+                                    <strong>Meu plano</strong>
+                                    <small class="pv-plano-selo">{{ \App\Support\Plano::nome($planoMenu) }}@if ($planoMenu === 'teste') · {{ \App\Support\Plano::diasDeTeste(auth()->user()) }} dias restantes @endif</small>
+                                </a>
                                 <div class="pv-dropdown__sep"></div>
                                 <form action="{{ route('logout') }}" method="POST" class="pv-dropdown__form">
                                     @csrf
@@ -189,6 +203,8 @@
 
     <main class="pv-main">
         @yield('conteudo')
+
+        @include('partials.anuncio')
 
         <script src="{{ asset('js/script.js') }}"></script>
         @yield('script')

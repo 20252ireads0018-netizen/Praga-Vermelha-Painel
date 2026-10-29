@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Plano;
+use Illuminate\Http\Request;
+
 class HistoriaController extends Controller
 {
     /**
@@ -57,11 +60,43 @@ class HistoriaController extends Controller
         return $saida;
     }
 
+    // Os livros de histórias são info-produtos: abrem com a compra do livro do sistema (ou a chave dele na sessão)
+    private function liberado(): bool
+    {
+        return session('livro_completo') === true || Plano::comprouLivro(auth()->user());
+    }
+
     public function ler(string $slug)
     {
         $livros = $this->livros();
         abort_unless(isset($livros[$slug]), 404);
+        if (!$this->liberado()) {
+            return redirect()->route('planos.index')
+                ->with('limite', '"' . $livros[$slug]['titulo'] . '" faz parte dos livros em info-produto: compre o livro do sistema para liberar todos.');
+        }
 
-        return view('ler', ['livro' => $livros[$slug]]);
+        return view('ler', ['livro' => $livros[$slug] + ['url' => route('historias.pdf', $slug)]]);
+    }
+
+    // Entrega o PDF só para quem tem acesso. Fica em storage/app/historias/ (fora do public);
+    // enquanto o arquivo não for movido para lá, usa a cópia antiga de public/pdf/.
+    public function pdf(Request $request, string $slug)
+    {
+        $livros = $this->livros();
+        abort_unless(isset($livros[$slug]), 404);
+        abort_unless($this->liberado(), 403);
+
+        $nome    = basename($livros[$slug]['pdf']);
+        $arquivo = storage_path('app/historias/' . $nome);
+        if (!is_file($arquivo)) {
+            $arquivo = public_path($livros[$slug]['pdf']);
+        }
+        abort_unless(is_file($arquivo), 404);
+
+        if ($request->has('baixar')) {
+            return response()->download($arquivo, $nome);
+        }
+
+        return response()->file($arquivo, ['Content-Type' => 'application/pdf']);
     }
 }

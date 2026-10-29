@@ -20,6 +20,40 @@
         </div>
     </section>
 
+    {{-- Iniciante: veio comprar os livros ou jogar? (logado escolhe em /boas-vindas) --}}
+    @guest
+        <section class="pv-section">
+            <div class="pv-container">
+                <div class="pv-section__head">
+                    <h2 class="pv-section__title">Primeira vez aqui?</h2>
+                    <p class="pv-section__desc">Conte o que te traz à Praga Vermelha.</p>
+                </div>
+                <div class="pv-grid pv-grid--2">
+                    <article class="pv-card">
+                        <div class="pv-card__icon">🎲</div>
+                        <h3 class="pv-card__title">Quero jogar o RPG</h3>
+                        <p class="pv-card__text">Crie a conta e ganhe {{ config('planos.dias_teste', 45) }} dias de acesso completo ao painel, sem anúncios.</p>
+                        <a href="{{ route('register') }}" class="pv-card__link">Criar conta ▸</a>
+                    </article>
+                    <article class="pv-card">
+                        <div class="pv-card__icon">📖</div>
+                        <h3 class="pv-card__title">Quero comprar os livros</h3>
+                        <p class="pv-card__text">Livro do sistema e livros de histórias, em info-produto ou impressos.</p>
+                        <a href="{{ route('planos.index') }}" class="pv-card__link">Ver livros e planos ▸</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+    @endguest
+
+    @if (session('boas_vindas') === 'jogar')
+        <section class="pv-section">
+            <div class="pv-container">
+                <div class="pl-alerta pl-alerta--ok">Bom jogo! Comece criando sua primeira ficha e depois monte ou entre em uma campanha.</div>
+            </div>
+        </section>
+    @endif
+
     {{-- Atalhos --}}
     <section class="pv-section">
         <div class="pv-container">
@@ -49,6 +83,13 @@
                     <h3 class="pv-card__title">Livro do sistema</h3>
                     <p class="pv-card__text">Consulte as regras e o cenário durante a criação ou a mesa.</p>
                     <a href="{{ route('livro.index') }}" class="pv-card__link">Abrir livro ▸</a>
+                </article>
+
+                <article class="pv-card">
+                    <div class="pv-card__icon">✦</div>
+                    <h3 class="pv-card__title">Planos e livros</h3>
+                    <p class="pv-card__text">Veja seu plano, compre o livro do sistema e encontre os livros físicos.</p>
+                    <a href="{{ route('planos.index') }}" class="pv-card__link">Ver planos ▸</a>
                 </article>
 
                 <article class="pv-card">

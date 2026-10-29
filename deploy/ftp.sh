@@ -9,6 +9,7 @@
 #   deploy/ftp.sh put <arquivo>...            # envia arquivos (faz php -l antes em .php; cria pastas remotas)
 #   deploy/ftp.sh put --changed               # envia tudo que o git mostra como modificado/novo (sem vendor etc.)
 #   deploy/ftp.sh mkdir <pasta>               # cria uma pasta remota
+#   deploy/ftp.sh mv <origem> <destino>       # move/renomeia um arquivo remoto
 #
 # Variáveis opcionais: PV_FTP_HOST, PV_NETRC, PV_FTP_BASE (prefixo remoto se a conta FTP NÃO aponta para a pasta do projeto,
 # ex.: PV_FTP_BASE=praga-vermelha-rpg/praga-vermelha-rpg). Pode ser fixado em deploy/ftp.conf (linhas VAR=valor).
@@ -54,6 +55,13 @@ cmd_get() {
     mkdir -p "$(dirname "$loc")"
     "${CURL[@]}" -o "$loc" "$(url "$rem")"
     echo "baixado  $rem -> $loc ($(wc -c <"$loc") bytes)"
+}
+
+# Move/renomeia no servidor (a pasta de destino precisa existir)
+cmd_mv() {
+    local pre="${BASE:+${BASE%/}/}"
+    "${CURL[@]}" -Q "RNFR ${pre}${1#/}" -Q "RNTO ${pre}${2#/}" "ftp://$HOST/" >/dev/null
+    echo "movido  $1 -> $2"
 }
 
 cmd_mkdir() { "${CURL[@]}" -Q "MKD ${BASE:+${BASE%/}/}${1#/}" "ftp://$HOST/" >/dev/null 2>&1 || true; echo "pasta ok  $1"; }
@@ -116,5 +124,6 @@ case "${1:-}" in
     get)   shift; cmd_get "$@" ;;
     put)   shift; cmd_put "$@" ;;
     mkdir) shift; cmd_mkdir "$1" ;;
+    mv)    shift; cmd_mv "$1" "$2" ;;
     *) sed -n '2,15p' "$0"; exit 1 ;;
 esac

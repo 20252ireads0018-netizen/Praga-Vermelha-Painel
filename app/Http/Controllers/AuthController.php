@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Plano;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -78,9 +79,8 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()
-            ->route('personagens.index')
-            ->with('status', 'Conta criada! Bem-vindo(a), ' . $user->name . '.');
+        // iniciante: primeiro pergunta se veio comprar os livros ou jogar
+        return Plano::temColunas() ? redirect()->route('boas-vindas') : redirect()->route('personagens.index');
     }
 
     public function logout(Request $request): RedirectResponse

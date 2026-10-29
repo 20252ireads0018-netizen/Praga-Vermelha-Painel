@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Plano;
 use App\Models\Personagem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -102,9 +103,15 @@ class FichaArquivoController extends Controller
 
         $importadas = [];
         $erros = [];
+        $restantes = Plano::fichasRestantes($request->user()); // null = sem limite
 
         foreach ($arquivos as $arquivo) {
             $rotulo = $arquivo->getClientOriginalName();
+
+            if ($restantes !== null && count($importadas) >= $restantes) {
+                $erros[] = "{$rotulo}: " . Plano::mensagemLimite('fichas');
+                continue;
+            }
 
             if (!$arquivo->isValid()) {
                 $erros[] = "{$rotulo}: falha no envio do arquivo.";

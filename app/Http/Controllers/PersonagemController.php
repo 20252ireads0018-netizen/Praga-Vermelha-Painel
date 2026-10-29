@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Plano;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Schema;
@@ -11,16 +12,29 @@ class PersonagemController extends Controller
 {
     public function home()
     {
+        // iniciante que ainda não disse se veio comprar os livros ou jogar
+        $user = auth()->user();
+        if ($user && Plano::temColunas() && empty($user->objetivo) && !session('objetivo_escolhido')) {
+            return redirect()->route('boas-vindas');
+        }
+
         return view('dashboard.home');
     }
 
     public function fichas()
     {
+        if (Plano::fichasRestantes(auth()->user()) === 0) {
+            return redirect()->route('planos.index')->with('limite', Plano::mensagemLimite('fichas'));
+        }
+
         return view('personagem.form');
     }
 
     public function fichafeita(Request $request)
     {
+        if (Plano::fichasRestantes($request->user()) === 0) {
+            return redirect()->route('planos.index')->with('limite', Plano::mensagemLimite('fichas'));
+        }
         $dados = $this->validarFicha($request);
         $personagem = Personagem::create($dados);
 
