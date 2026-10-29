@@ -523,6 +523,13 @@
 .gl-turno { font-size: .74rem; opacity: .7; padding: .1rem .5rem; border-radius: 999px; background: rgba(0, 0, 0, .35); }
 .gl-dica { color: #fca5a5; font-weight: 600; font-size: .86rem; }
 .gl-dica--suave { color: rgba(243, 233, 214, .7); font-weight: 400; }
+.gl-dica--escolha { color: #fde68a; }
+/* fases do turno: Compra · Principal · Combate · Final */
+.gl-fases { display: flex; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: .7rem; }
+.gl-fases li { padding: .12rem .45rem; background: rgba(0, 0, 0, .35); color: rgba(243, 233, 214, .45); cursor: help; }
+.gl-fases li:first-child { border-radius: 999px 0 0 999px; }
+.gl-fases li:last-child { border-radius: 0 999px 999px 0; }
+.gl-fases li.gl-fase-atual { background: var(--camp-acento, #b22a2f); color: #fff; font-weight: 700; }
 .gl-desistir { margin-left: auto; opacity: .7; color: #fca5a5; border-color: rgba(252, 165, 165, .35); }
 
 /* ---------- o meu lado ---------- */
@@ -658,6 +665,7 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 @media (max-width: 900px) {
     .jg-colunas, .gl { grid-template-columns: minmax(0, 1fr); }
     .gl-log { max-height: 220px; position: static; }
+    .gl-centro-acoes { flex-wrap: wrap; }
 }
 @media (max-width: 600px) {
     .jg-criador-campos { grid-template-columns: minmax(0, 1fr); }

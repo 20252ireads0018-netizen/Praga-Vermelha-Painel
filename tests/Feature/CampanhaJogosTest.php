@@ -222,6 +222,27 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame($this->ana->id, (int) $p->fresh()->vencedor_id);
     }
 
+    public function test_texto_da_carta_pede_escolha_pelas_rotas(): void
+    {
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Brinde', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0,
+                             'descricao' => 'O jogador alvo vira um shot e compra uma carta']);
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $p->refresh();
+        $this->assertStringContainsString('toma 1 shot', $p->estado['cartas'][array_key_first($p->estado['cartas'])]['auto']);
+
+        $brinde = $p->estado['lados']['a']['mao'][0]['i']; // deck sorteado: só há o Brinde
+        $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $brinde])
+            ->assertOk()->assertJsonPath('estado.escolha.tipo', 'jogador');
+        // só quem conjurou escolhe; a Bia vê a espera
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'escolher', 'alvo' => 'j:b'])->assertStatus(422);
+        $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'escolher', 'alvo' => 'j:b'])
+            ->assertOk()->assertJsonPath('estado.lados.b.shots', 1)->assertJsonPath('estado.escolha', null);
+        $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'passar'])
+            ->assertOk()->assertJsonPath('estado.vez', 'b')->assertJsonPath('estado.fase', 'principal');
+    }
+
     public function test_mestre_cancela_partida_em_andamento_e_devolve_apostas(): void
     {
         GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);

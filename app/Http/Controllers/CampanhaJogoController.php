@@ -695,6 +695,9 @@ class CampanhaJogoController extends Controller
                         'comando'    => Gladio::paraComando($e, $lado, $inst),
                         'energia'    => Gladio::energia($e, $lado, (int) $request->input('energia', 0), (int) $request->input('energia_max', 0)),
                         'vida'       => Gladio::vida($e, $lado, (int) $request->input('quanto', 0)),
+                        // resposta a uma escolha pedida por um efeito: alvo = instância ou 'j:<lado>'; vazio pula
+                        'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
+                        'ativar'     => Gladio::ativar($e, $lado, $inst),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;

@@ -34,12 +34,25 @@ namespace App\Jogos;
  *   energia e energia máxima, vida (até o máximo), buscar carta do baralho, invocar sem custo da mão, do cemitério
  *   ou da zona de comando, além das ferramentas acima, que também deixam de depender do turno.
  *
- * Estado: { lados: { a…f }, ordem [lados em roda], nomes, vez, turno, fase ('principal' | 'defesa'), ataque,
- *           cartas, seq, log, fim, total (soma da vida inicial) }
+ * - Fases do turno, como no Magic: Compra (as Lendas de quem joga desviram, a energia recarrega, os gatilhos de início
+ *   de turno disparam e ele compra 1), Principal (jogar cartas e atacar; o ataque abre a fase de Combate, que volta para
+ *   a Principal) e Final (gatilhos de fim de turno, descarte até MAO_FIM cartas e limpeza: o dano nas Lendas some e os
+ *   efeitos "até o fim do turno" acabam). Compra e Final andam sozinhas; só param quando alguém precisa escolher algo.
+ * - Textos das cartas (GladioTexto): os efeitos entendidos entram numa fila e são aplicados sozinhos (ao entrar, ao
+ *   conjurar, ao cair, ao atacar, no início/fim de turno). Quando um efeito pede alvo ou carta, a partida espera a
+ *   escolha (estado 'escolha') de quem decide; dá para pular. Feitiço resolvido sozinho vai para o cemitério (fica no
+ *   campo se tiver gatilho de início/fim de turno); o que não for entendido continua com as ferramentas manuais.
+ *
+ * Estado: { lados: { a…f }, ordem [lados em roda], nomes, vez, turno, fase ('compra' | 'principal' | 'defesa' | 'final'),
+ *           ataque, cartas (cada uma com hab/parcial/auto do texto), hv, fila [efeitos], escolha, seq, log, fim, total }
+ * Efeito na fila: { lado (quem controla), fonte (nome), i (instância da carta), passos [...], jog (jogador escolhido) }.
+ * Escolha: { lado (quem escolhe), tipo: jogador | lenda | qualquer | mao | baralho | cemiterio, opcoes [inst | 'j:<lado>'],
+ *            texto, fonte, obrig, passo }.
  * Lado: { vida, max, energia, energiaMax, mao[], baralho[], mesa[], feiticos[], cemiterio[], fadiga, shots, fora,
  *         comando[] (zona de comando), cmd (instância do comandante ou null), taxa (vezes que ele saiu do comando) }
  * Carta na mão: { i, c, rev? (revelada) }; no baralho/cemitério: { i, c }; feitiço no campo: { i, c, cont, nota }.
- * Lenda na mesa: { i, c (null na ficha), nome? (ficha), atk, vida, max, pode, virada, pal[], cont, nota }.
+ * Lenda na mesa: { i, c (null na ficha), nome? (ficha), atk, vida, max, pode, virada, pal[], cont, nota,
+ *                 tmp? { atk, vida, pal[] } (o que acaba no fim do turno) }.
  * Ataque em andamento: { atacantes: [i…], defensor: lado, bloqueios: { bloqueador i: atacante i } }.
  */
 class Gladio
@@ -67,7 +80,8 @@ class Gladio
     public const SHOTS_MAX = 7;
     public const BARALHO = 20;      // deck sorteado (sem deck montado)
     public const MAO_INICIAL = 5;
-    public const MAO_MAX = 10;
+    public const MAO_MAX = 10;      // comprando com a mão cheia, a carta vai para o cemitério
+    public const MAO_FIM = 7;       // no fim do turno, quem joga descarta até ficar com isso
     public const MESA_MAX = 7;
     public const ENERGIA_MAX = 10;
     public const VIDA_AMISTOSO = 30;
@@ -106,7 +120,8 @@ class Gladio
         $ordem = array_slice(self::LADOS, 0, $n);
         $vida = $aposta > 0 ? $aposta : self::VIDA_AMISTOSO;
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
-              'cartas' => $cartas, 'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n];
+              'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
+              'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -160,6 +175,12 @@ class Gladio
     {
         $e['fase'] ??= 'principal';
         $e['ataque'] ??= null;
+        $e['fila'] ??= [];
+        $e['escolha'] ??= null;
+        if (($e['hv'] ?? 0) !== GladioTexto::VERSAO) { // cartas lidas por uma versão antiga do leitor (ou nunca lidas)
+            $e['cartas'] = self::lerTextos($e['cartas']);
+            $e['hv'] = GladioTexto::VERSAO;
+        }
         $e['ordem'] ??= array_values(array_intersect(self::LADOS, array_keys($e['lados'])));
         $e['nomes'] ??= [];
         foreach ($e['ordem'] as $lado) {
@@ -186,6 +207,26 @@ class Gladio
         }
 
         return $e;
+    }
+
+    /** Lê o texto de cada carta: hab (efeitos automáticos), parcial (sobrou texto para resolver à mão) e auto (resumo). */
+    private static function lerTextos(array $cartas): array
+    {
+        $nomes = array_values(array_unique(array_map(fn ($c) => GladioTexto::normalizar((string) ($c['nome'] ?? '')), $cartas)));
+        foreach ($cartas as $id => $c) {
+            if (!empty($c['efeito'])) { // feitiço antigo com efeito fixo: o motor já resolve
+                $cartas[$id]['hab'] = [];
+                $cartas[$id]['parcial'] = false;
+                $cartas[$id]['auto'] = '';
+                continue;
+            }
+            $r = GladioTexto::ler($c['descricao'] ?? '', (string) ($c['tipo'] ?? 'lenda'), (string) ($c['nome'] ?? ''), $nomes);
+            $cartas[$id]['hab'] = $r['hab'];
+            $cartas[$id]['parcial'] = $r['parcial'];
+            $cartas[$id]['auto'] = GladioTexto::resumo($r['hab']);
+        }
+
+        return $cartas;
     }
 
     /** Em 2 jogadores, o outro lado. */
@@ -336,6 +377,12 @@ class Gladio
         }
         self::log($e, self::quem($e, $lado) . ' está fora da partida (' . $motivo . ').');
 
+        // efeitos de quem saiu (e a escolha que ele devia fazer) não acontecem mais
+        $e['fila'] = array_values(array_filter($e['fila'] ?? [], fn ($ef) => $ef['lado'] !== $lado));
+        if (($e['escolha']['lado'] ?? null) === $lado) {
+            $e['escolha'] = null;
+        }
+
         // ataque que envolvia quem saiu é desfeito
         if ($e['ataque'] && ($e['ataque']['defensor'] === $lado || $e['vez'] === $lado)) {
             $e['ataque'] = null;
@@ -346,6 +393,8 @@ class Gladio
             $e['fim'] = ['vencedor' => $vivos[0], 'motivo' => $motivo === 'desistência' ? 'desistencia' : ($motivo === '7 shots' ? 'shots' : 'vida')];
             $e['fase'] = 'principal';
             $e['ataque'] = null;
+            $e['fila'] = [];
+            $e['escolha'] = null;
             self::log($e, self::quem($e, $vivos[0]) . ' venceu a partida.');
         } elseif ($e['vez'] === $lado) {
             $e = self::comecarTurno($e, self::proximo($e, $lado));
@@ -354,11 +403,17 @@ class Gladio
         return $e;
     }
 
-    /** Uma Lenda que saiu da mesa: o comandante volta para a zona de comando, fichas somem e as outras vão ao cemitério. */
+    /**
+     * Uma Lenda que saiu da mesa: o comandante volta para a zona de comando, fichas somem e as outras vão ao cemitério.
+     * $avisar: ela caiu ou foi sacrificada (dispara o "quando morrer"); false quando o dono sai da partida.
+     */
     private static function saiDaMesa(array $e, string $lado, array $m, bool $avisar = true): array
     {
         if ($m['c'] === null) {
             return $e;
+        }
+        if ($avisar) {
+            $e = self::enfileirar($e, $lado, $m['c'], (int) $m['i'], 'morrer');
         }
         $carta = ['i' => $m['i'], 'c' => $m['c']];
         if ($m['i'] === ($e['lados'][$lado]['cmd'] ?? null)) {
@@ -437,14 +492,27 @@ class Gladio
         if ($e['vez'] !== $lado) {
             throw new \InvalidArgumentException('Não é a sua vez.');
         }
-        if ($e['fase'] !== 'principal') {
+        self::exigirSemEscolha($e);
+        if ($e['fase'] === 'defesa') {
             throw new \InvalidArgumentException('Espere o adversário escolher a defesa.');
+        }
+        if ($e['fase'] !== 'principal') {
+            throw new \InvalidArgumentException('Agora não é a fase principal.');
+        }
+    }
+
+    /** Com uma escolha pendente (alvo de um efeito, descarte do fim do turno), o jogo espera por ela. */
+    private static function exigirSemEscolha(array $e): void
+    {
+        if (!empty($e['escolha'])) {
+            throw new \InvalidArgumentException('Espere: ' . self::quem($e, $e['escolha']['lado']) . ' precisa escolher (' . $e['escolha']['texto'] . ').');
         }
     }
 
     private static function exigirDefesa(array $e, string $lado): void
     {
         self::exigirAtivo($e, $lado);
+        self::exigirSemEscolha($e);
         if ($e['fase'] !== 'defesa' || ($e['ataque']['defensor'] ?? null) !== $lado) {
             throw new \InvalidArgumentException('Não há ataque para você defender agora.');
         }
@@ -521,12 +589,32 @@ class Gladio
             $l['mesa'][] = ['i' => $l['mao'][$k]['i'], 'c' => $id, 'atk' => (int) $carta['ataque'], 'vida' => (int) $carta['vida'],
                             'max' => (int) $carta['vida'], 'pode' => !$defendendo && in_array('impeto', $pal, true), 'virada' => false,
                             'pal' => $pal, 'cont' => 0, 'nota' => ''];
+            $inst = (int) $l['mao'][$k]['i'];
             array_splice($l['mao'], $k, 1);
             $l['energia'] -= $custo;
             unset($l);
             self::log($e, ($defendendo ? "Na defesa, $quem invocou $nome" : "$quem invocou $nome") . "$semCusto.");
 
-            return $e;
+            return self::seguir(self::enfileirar($e, $lado, $id, $inst, 'entrar'));
+        }
+
+        // feitiço com texto entendido pelo motor: os efeitos vão para a fila e ele vai para o cemitério
+        // (fica no campo se ainda tiver gatilho de início/fim de turno)
+        $hab = $e['cartas'][$id]['hab'] ?? [];
+        if (empty($carta['efeito']) && !$efeitoEscolhido && $hab) {
+            $inst = (int) $l['mao'][$k]['i'];
+            $fica = (bool) array_filter($hab, fn ($h) => $h['g'] !== 'conjurar');
+            if ($fica) {
+                $l['feiticos'][] = ['i' => $inst, 'c' => $id, 'cont' => 0, 'nota' => ''];
+            } else {
+                $l['cemiterio'][] = ['i' => $inst, 'c' => $id];
+            }
+            array_splice($l['mao'], $k, 1);
+            $l['energia'] -= $custo;
+            unset($l);
+            self::log($e, "$quem conjurou $nome$semCusto.");
+
+            return self::seguir(self::enfileirar($e, $lado, $id, $inst, 'conjurar'));
         }
 
         // feitiço: o efeito é o da carta (feitiços antigos) ou o que quem jogou escolheu conforme a descrição
@@ -574,7 +662,7 @@ class Gladio
         if (!$efeito) { // sem efeito automático: o texto da carta é resolvido à mão
             self::log($e, "$quem conjurou $nome$semCusto.");
 
-            return self::conferir($e, $lado);
+            return self::seguir($e);
         }
 
         switch ($efeito) {
@@ -621,7 +709,7 @@ class Gladio
                 break;
         }
 
-        return self::conferir($e, $lado);
+        return self::seguir($e);
     }
 
     /* ================================================================== */
@@ -673,8 +761,14 @@ class Gladio
         $e['fase'] = 'defesa';
         $e['ataque'] = ['atacantes' => $insts, 'defensor' => $alvo, 'bloqueios' => (object) []];
         self::log($e, self::quem($e, $lado) . ' atacou ' . self::quem($e, $alvo) . ' com ' . implode(', ', $nomes) . '.');
+        foreach ($insts as $i) { // "quando atacar"
+            $m = $e['lados'][$lado]['mesa'][self::idx($e['lados'][$lado]['mesa'], $i)];
+            if ($m['c'] !== null) {
+                $e = self::enfileirar($e, $lado, $m['c'], $i, 'atacar');
+            }
+        }
 
-        return $e;
+        return self::seguir($e);
     }
 
     /** Defensor escolhe (ou tira, com $atacante null) quem a Lenda dele bloqueia. */
@@ -846,15 +940,18 @@ class Gladio
         $e['fase'] = 'principal';
         $e['ataque'] = null;
 
-        return self::conferir($e, $at);
+        return self::seguir($e);
     }
 
-    /** Começa o turno de $lado: +1 de energia máxima (até 10), recarrega, as Lendas dele ficam prontas e ele compra 1. */
+    /**
+     * Começa o turno de $lado na fase de Compra: +1 de energia máxima (até 10), recarrega, as Lendas dele desviram e os
+     * gatilhos de início de turno entram na fila. A compra em si acontece em seguir(), depois desses gatilhos.
+     */
     private static function comecarTurno(array $e, string $lado): array
     {
         $e['vez'] = $lado;
         $e['turno']++;
-        $e['fase'] = 'principal';
+        $e['fase'] = 'compra';
         $e['ataque'] = null;
         $l = &$e['lados'][$lado];
         if ($l['energiaMax'] < self::ENERGIA_MAX) { // energia máxima ajustada à mão acima de 10 não cai
@@ -866,17 +963,20 @@ class Gladio
             $l['mesa'][$i]['virada'] = false;
         }
         unset($l);
-        $e = self::comprarUma($e, $lado);
 
-        return self::conferir($e, $lado);
+        return self::gatilhosDeTurno($e, $lado, 'inicio');
     }
 
-    /** Termina o turno: passa a vez para o próximo jogador de pé, na roda. */
+    /**
+     * Termina a fase principal: vai para a Final (gatilhos de fim de turno, descarte até MAO_FIM e limpeza) e, sem
+     * nada para escolher, passa a vez para o próximo jogador de pé, na roda.
+     */
     public static function passar(array $e, string $lado): array
     {
         self::exigirTurno($e, $lado);
+        $e['fase'] = 'final';
 
-        return self::comecarTurno($e, self::proximo($e, $lado));
+        return self::seguir(self::gatilhosDeTurno($e, $lado, 'fim'));
     }
 
     /** Desiste: sai da partida (se sobrar um só, ele vence). */
@@ -884,13 +984,19 @@ class Gladio
     {
         self::exigirAtivo($e, $lado);
 
-        return self::eliminar($e, $lado, 'desistência');
+        return self::seguir(self::eliminar($e, $lado, 'desistência'));
     }
 
     /** Toma (ou devolve, com $quanto negativo) shots, a qualquer momento. No 7º shot o jogador está fora. */
     public static function shot(array $e, string $lado, int $quanto = 1): array
     {
         self::exigirAtivo($e, $lado);
+
+        return self::seguir(self::beber($e, $lado, $quanto));
+    }
+
+    private static function beber(array $e, string $lado, int $quanto): array
+    {
         $l = &$e['lados'][$lado];
         $antes = $l['shots'];
         $l['shots'] = max(0, min(self::SHOTS_MAX, $l['shots'] + $quanto));
@@ -915,7 +1021,7 @@ class Gladio
         $e = self::comprarUma($e, $lado);
         self::log($e, self::quem($e, $lado) . ' comprou uma carta (ação manual).');
 
-        return self::conferir($e, $lado);
+        return self::seguir($e);
     }
 
     public static function embaralhar(array $e, string $lado, ?callable $embaralhar = null): array
@@ -1045,7 +1151,7 @@ class Gladio
         unset($m);
         self::log($e, self::quem($e, $lado) . sprintf(' ajustou %+d/%+d: %s.', $datk, $dvida, $txt));
 
-        return self::conferir($e, $lado);
+        return self::seguir($e);
     }
 
     /**
@@ -1127,7 +1233,7 @@ class Gladio
         array_splice($e['lados'][$lado]['mesa'], $k, 1);
         self::log($e, self::quem($e, $lado) . ' sacrificou ' . self::nomeLenda($e, $m) . '.');
 
-        return self::saiDaMesa($e, $lado, $m);
+        return self::seguir(self::saiDaMesa($e, $lado, $m));
     }
 
     /** Manda um feitiço seu que está no campo para o cemitério (a qualquer momento). */
@@ -1177,7 +1283,7 @@ class Gladio
         $e['lados'][$lado]['mesa'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'atk' => (int) $def['ataque'], 'vida' => (int) $def['vida'],
             'max' => (int) $def['vida'], 'pode' => in_array('impeto', $pal, true), 'virada' => false, 'pal' => $pal, 'cont' => 0, 'nota' => ''];
 
-        return $e;
+        return self::enfileirar($e, $lado, $carta['c'], (int) $carta['i'], 'entrar');
     }
 
     /** Invoca o comandante da zona de comando no próprio turno, pagando o custo com a taxa (+2 a cada vez). */
@@ -1198,7 +1304,7 @@ class Gladio
         $e['lados'][$lado]['taxa']++;
         self::log($e, self::quem($e, $lado) . ' invocou o comandante ' . self::nome($e, $carta['c']) . " da zona de comando (custo $custo).");
 
-        return $e;
+        return self::seguir($e);
     }
 
     /**
@@ -1224,7 +1330,7 @@ class Gladio
         }
         self::log($e, self::quem($e, $lado) . ' invocou ' . self::nome($e, $carta['c']) . ' ' . $zonas[$origem] . ' sem pagar energia.');
 
-        return $e;
+        return self::seguir($e);
     }
 
     /** Busca uma carta escolhida no próprio baralho e põe na mão (a qualquer momento). */
@@ -1290,7 +1396,555 @@ class Gladio
         }
         self::log($e, self::quem($e, $lado) . ($agora > $antes ? ' recuperou ' . ($agora - $antes) : ' perdeu ' . ($antes - $agora)) . " de vida ($agora).");
 
-        return self::conferir($e, $lado);
+        return self::seguir($e);
+    }
+
+    /* ================================================================== */
+    /*  Fases e efeitos automáticos dos textos                             */
+    /* ================================================================== */
+
+    /** Põe na fila os efeitos da carta $c (controlada por $lado) com o gatilho $g. */
+    private static function enfileirar(array $e, string $lado, ?string $c, ?int $inst, string $g): array
+    {
+        if ($c === null) {
+            return $e;
+        }
+        foreach ($e['cartas'][$c]['hab'] ?? [] as $h) {
+            if ($h['g'] === $g && $h['passos']) {
+                $e['fila'][] = ['lado' => $lado, 'fonte' => self::nome($e, $c), 'i' => $inst, 'passos' => $h['passos'], 'jog' => null];
+            }
+        }
+
+        return $e;
+    }
+
+    /** Gatilhos de início ou fim do turno de $vez: os "todo turno" de todas as cartas em jogo e os "seu turno" dele. */
+    private static function gatilhosDeTurno(array $e, string $vez, string $quando): array
+    {
+        $k = array_search($vez, $e['ordem'], true);
+        $roda = array_merge(array_slice($e['ordem'], $k), array_slice($e['ordem'], 0, $k)); // quem joga primeiro
+        foreach ($roda as $lado) {
+            if (!empty($e['lados'][$lado]['fora'])) {
+                continue;
+            }
+            foreach (array_merge($e['lados'][$lado]['mesa'], $e['lados'][$lado]['feiticos']) as $x) {
+                $e = self::enfileirar($e, $lado, $x['c'] ?? null, (int) $x['i'], $quando);
+                if ($lado === $vez) {
+                    $e = self::enfileirar($e, $lado, $x['c'] ?? null, (int) $x['i'], $quando . '_meu');
+                }
+            }
+        }
+
+        return $e;
+    }
+
+    /**
+     * Faz o jogo andar depois de cada ação: confere quem caiu, resolve a fila de efeitos (parando numa escolha) e passa
+     * sozinho pelas fases de Compra (compra 1 e vai para a Principal) e Final (descarte até MAO_FIM, limpeza e próximo turno).
+     */
+    private static function seguir(array $e): array
+    {
+        for ($volta = 0; !$e['fim']; $volta++) {
+            if ($volta > 300) { // efeitos que se disparam sem fim
+                $e['fila'] = [];
+                self::log($e, 'Efeitos demais em sequência: o resto foi cancelado.');
+                break;
+            }
+            $e = self::conferir($e, $e['vez']);
+            if ($e['fim'] || $e['escolha']) {
+                break;
+            }
+            if ($e['fila']) {
+                $e = self::umPasso($e);
+                continue;
+            }
+            $vez = $e['vez'];
+            if ($e['fase'] === 'compra') {
+                $e['fase'] = 'principal';
+                $antes = count($e['lados'][$vez]['mao']);
+                $e = self::comprarUma($e, $vez);
+                if (count($e['lados'][$vez]['mao']) > $antes) {
+                    self::log($e, 'Turno ' . $e['turno'] . ' de ' . self::quem($e, $vez) . ': comprou uma carta.');
+                }
+                continue;
+            }
+            if ($e['fase'] === 'final') {
+                $sobra = count($e['lados'][$vez]['mao']) - self::MAO_FIM;
+                if ($sobra > 0) {
+                    $e['fila'][] = ['lado' => $vez, 'fonte' => 'Fim do turno', 'i' => null, 'jog' => null,
+                                    'passos' => [['a' => 'descartar', 'n' => $sobra, 'alvo' => 'eu', 'obrig' => true]]];
+                    continue;
+                }
+                $e = self::comecarTurno(self::limpeza($e), self::proximo($e, $vez));
+                continue;
+            }
+            break;
+        }
+
+        return $e;
+    }
+
+    /** Limpeza do fim do turno: o dano nas Lendas some e o que valia "até o fim do turno" acaba. */
+    private static function limpeza(array $e): array
+    {
+        foreach ($e['ordem'] as $lado) {
+            foreach ($e['lados'][$lado]['mesa'] as $k => $m) {
+                if (!empty($m['tmp'])) {
+                    $base = self::palavrasDe($e, $m['c']);
+                    $m['atk'] = max(0, $m['atk'] - (int) ($m['tmp']['atk'] ?? 0));
+                    $m['max'] = max(1, $m['max'] - (int) ($m['tmp']['vida'] ?? 0));
+                    $m['pal'] = array_values(array_filter($m['pal'] ?? [], fn ($p) => in_array($p, $base, true) || !in_array($p, $m['tmp']['pal'] ?? [], true)));
+                    unset($m['tmp']);
+                }
+                $m['vida'] = $m['max'];
+                $e['lados'][$lado]['mesa'][$k] = $m;
+            }
+        }
+
+        return $e;
+    }
+
+    /** Resolve o próximo passo do primeiro efeito da fila. */
+    private static function umPasso(array $e): array
+    {
+        $ef = $e['fila'][0];
+        if (!$ef['passos'] || !empty($e['lados'][$ef['lado']]['fora'])) {
+            array_shift($e['fila']);
+
+            return $e;
+        }
+        $p = array_shift($ef['passos']);
+        $e['fila'][0] = $ef;
+
+        return self::executar($e, $p);
+    }
+
+    /** Para a partida até $quem escolher. Sem opção válida, o passo é pulado. */
+    private static function pedir(array $e, array $p, string $quem, string $tipo, array $opcoes, string $texto): array
+    {
+        $fonte = $e['fila'][0]['fonte'] ?? 'Efeito';
+        if (!$opcoes) {
+            self::log($e, "$fonte: sem alvo válido ($texto).");
+
+            return $e;
+        }
+        $e['escolha'] = ['lado' => $quem, 'tipo' => $tipo, 'opcoes' => array_values($opcoes), 'texto' => $texto,
+                         'fonte' => $fonte, 'obrig' => !empty($p['obrig']), 'passo' => $p];
+
+        return $e;
+    }
+
+    /** Lados afetados por um passo de jogador; null quando ainda falta escolher o jogador. */
+    private static function ladosDo(array $e, string $alvo, string $dono): ?array
+    {
+        if (str_starts_with($alvo, 'lado:')) {
+            $l = substr($alvo, 5);
+
+            return empty($e['lados'][$l]['fora']) ? [$l] : [];
+        }
+
+        return match ($alvo) {
+            'todos'    => self::vivos($e),
+            'inimigos' => self::inimigos($e, $dono),
+            'jogador'  => ($j = $e['fila'][0]['jog'] ?? null) !== null && empty($e['lados'][$j]['fora']) ? [$j] : null,
+            default    => [$dono],
+        };
+    }
+
+    /** Lendas que $dono pode escolher (filtro meu | inimigo | qualquer); Hexo-Imune protege das escolhas dos adversários. */
+    private static function lendasEscolhiveis(array $e, string $dono, ?string $filtro): array
+    {
+        $ops = [];
+        foreach (self::vivos($e) as $lado) {
+            if (($filtro === 'meu' && $lado !== $dono) || ($filtro === 'inimigo' && $lado === $dono)) {
+                continue;
+            }
+            foreach ($e['lados'][$lado]['mesa'] as $m) {
+                if ($lado !== $dono && self::tem($m, 'resistencia')) {
+                    continue;
+                }
+                $ops[] = (int) $m['i'];
+            }
+        }
+
+        return $ops;
+    }
+
+    private static function cartasDe(array $e, array $lista, ?string $tipo): array
+    {
+        return array_values(array_map(fn ($c) => (int) $c['i'], array_filter($lista,
+            fn ($c) => $tipo === null || ($e['cartas'][$c['c']]['tipo'] ?? '') === $tipo)));
+    }
+
+    /** Aplica um passo de efeito (pode pedir uma escolha antes). */
+    private static function executar(array $e, array $p): array
+    {
+        $ef = $e['fila'][0];
+        $dono = $ef['lado'];
+        $fonte = $ef['fonte'];
+        $a = $p['a'];
+        $n = max(0, (int) ($p['n'] ?? 1));
+        $alvo = (string) ($p['alvo'] ?? 'eu');
+        $esc = $p['escolhido'] ?? null;
+
+        // ----- ações em Lendas (ou dano em jogadores): primeiro, quem é o alvo -----
+        if (in_array($a, ['dano', 'destruir', 'devolver', 'buff', 'palavra'], true)) {
+            $lendas = [];  // [lado, inst]
+            $jogadores = [];
+            if ($alvo === 'lenda') {
+                return self::pedir($e, $p, $dono, 'lenda', self::lendasEscolhiveis($e, $dono, $p['filtro'] ?? null),
+                    "$fonte: escolha " . GladioTexto::textoPasso($p));
+            }
+            if ($alvo === 'qualquer') {
+                $ops = self::lendasEscolhiveis($e, $dono, $p['filtro'] ?? null);
+                foreach (($p['filtro'] ?? null) === 'inimigo' ? self::inimigos($e, $dono) : self::vivos($e) as $l) {
+                    $ops[] = 'j:' . $l;
+                }
+
+                return self::pedir($e, $p, $dono, 'qualquer', $ops, "$fonte: escolha o alvo (" . GladioTexto::textoPasso($p) . ')');
+            }
+            if ($alvo === 'jogador' && self::ladosDo($e, $alvo, $dono) === null) {
+                $ops = array_map(fn ($l) => 'j:' . $l, ($p['filtro'] ?? null) === 'inimigo' ? self::inimigos($e, $dono) : self::vivos($e));
+
+                return self::pedir($e, $p, $dono, 'jogador', $ops, "$fonte: escolha o jogador");
+            }
+            if (str_starts_with($alvo, 'inst:')) {
+                if ($onde = self::acharLenda($e, (int) substr($alvo, 5))) {
+                    $lendas[] = $onde;
+                }
+            } elseif ($alvo === 'fonte') {
+                if ($ef['i'] !== null && ($onde = self::acharLenda($e, (int) $ef['i']))) {
+                    $lendas[] = $onde;
+                }
+            } elseif ($alvo === 'lendas') {
+                foreach (self::lendasEscolhiveis($e, $dono, $p['filtro'] ?? null) as $i) {
+                    $lendas[] = self::acharLenda($e, $i);
+                }
+                // efeitos "em todas" não miram: Hexo-Imune não protege
+                foreach (self::vivos($e) as $l) {
+                    if ((($p['filtro'] ?? null) === 'meu' && $l !== $dono) || (($p['filtro'] ?? null) === 'inimigo' && $l === $dono)) {
+                        continue;
+                    }
+                    foreach ($e['lados'][$l]['mesa'] as $k => $m) {
+                        if ($l !== $dono && self::tem($m, 'resistencia')) {
+                            $lendas[] = [$l, $k];
+                        }
+                    }
+                }
+            } else {
+                $jogadores = self::ladosDo($e, $alvo, $dono) ?? [];
+            }
+
+            foreach ($lendas as [$l, $k]) {
+                $m = &$e['lados'][$l]['mesa'][$k];
+                $nome = self::nomeLenda($e, $m) . ($l === $dono ? '' : ' de ' . self::quem($e, $l));
+                switch ($a) {
+                    case 'dano':
+                        $m['vida'] -= $n;
+                        self::log($e, "$fonte: $n de dano em $nome.");
+                        break;
+                    case 'destruir':
+                        $m['morto'] = true;
+                        self::log($e, "$fonte destruiu $nome.");
+                        break;
+                    case 'buff':
+                        $m['atk'] = max(0, $m['atk'] + (int) $p['atk']);
+                        $m['vida'] += (int) $p['vida'];
+                        $m['max'] += (int) $p['vida'];
+                        if (!empty($p['temp'])) {
+                            $m['tmp']['atk'] = ($m['tmp']['atk'] ?? 0) + (int) $p['atk'];
+                            $m['tmp']['vida'] = ($m['tmp']['vida'] ?? 0) + (int) $p['vida'];
+                        }
+                        self::log($e, sprintf('%s: %+d/%+d em %s%s.', $fonte, $p['atk'], $p['vida'], $nome, empty($p['temp']) ? '' : ' até o fim do turno'));
+                        break;
+                    case 'palavra':
+                        if (!in_array($p['pal'], $m['pal'] ?? [], true)) {
+                            $m['pal'][] = $p['pal'];
+                            if (!empty($p['temp'])) {
+                                $m['tmp']['pal'][] = $p['pal'];
+                            }
+                        }
+                        self::log($e, "$fonte: $nome ganhou " . (self::PALAVRAS[$p['pal']] ?? $p['pal']) . (empty($p['temp']) ? '' : ' até o fim do turno') . '.');
+                        break;
+                }
+                unset($m);
+            }
+            if ($a === 'devolver') { // de trás para frente: os índices das outras não mudam
+                usort($lendas, fn ($x, $y) => $y[1] <=> $x[1]);
+                foreach ($lendas as [$l, $k]) {
+                    $m = $e['lados'][$l]['mesa'][$k];
+                    array_splice($e['lados'][$l]['mesa'], $k, 1);
+                    if ($m['c'] !== null) {
+                        $zona = count($e['lados'][$l]['mao']) < self::MAO_MAX ? 'mao' : 'cemiterio';
+                        $e['lados'][$l][$zona][] = ['i' => $m['i'], 'c' => $m['c']];
+                    }
+                    self::log($e, "$fonte devolveu " . self::nomeLenda($e, $m) . ' para a mão de ' . self::quem($e, $l) . '.');
+                }
+            }
+            if ($a === 'dano') {
+                foreach ($jogadores as $l) {
+                    $e['lados'][$l]['vida'] -= $n;
+                    self::log($e, "$fonte: $n de dano em " . self::quem($e, $l) . '.');
+                }
+            }
+
+            return $e;
+        }
+
+        // ----- ações de jogador -----
+        $lados = self::ladosDo($e, $alvo, $dono);
+        if ($lados === null) {
+            return self::pedir($e, $p, $dono, 'jogador', array_map(fn ($l) => 'j:' . $l, self::vivos($e)), "$fonte: escolha o jogador");
+        }
+        // escolhas de carta, uma por vez: cada jogador afetado escolhe as dele
+        if (in_array($a, ['descartar', 'sacrificar', 'buscar', 'recuperar'], true) && $esc === null && (count($lados) > 1 || $n > 1)) {
+            $um = [];
+            foreach ($lados as $l) {
+                for ($k = 0; $k < max(1, $n); $k++) {
+                    $um[] = ['n' => 1, 'alvo' => 'lado:' . $l] + $p;
+                }
+            }
+            array_unshift($e['fila'][0]['passos'], ...$um);
+
+            return $e;
+        }
+
+        foreach ($lados as $l) {
+            $quem = self::quem($e, $l);
+            $L = &$e['lados'][$l];
+            switch ($a) {
+                case 'shot':
+                    unset($L);
+                    self::log($e, "$fonte: $quem toma $n shot" . ($n > 1 ? 's' : '') . '.');
+                    $e = self::beber($e, $l, $n);
+                    break;
+                case 'comprar':
+                    unset($L);
+                    for ($k = 0; $k < $n; $k++) {
+                        $e = self::comprarUma($e, $l);
+                    }
+                    self::log($e, "$fonte: $quem comprou $n carta" . ($n > 1 ? 's' : '') . '.');
+                    break;
+                case 'perder':
+                    $L['vida'] -= $n;
+                    unset($L);
+                    self::log($e, "$fonte: $quem perdeu $n de vida.");
+                    break;
+                case 'ganhar':
+                    unset($L);
+                    self::curar($e, $l, $n);
+                    self::log($e, "$fonte: $quem recuperou $n de vida.");
+                    break;
+                case 'energia':
+                    $L['energia'] = min(self::ENERGIA_LIMITE, $L['energia'] + $n);
+                    unset($L);
+                    self::log($e, "$fonte: $quem ganhou $n de energia.");
+                    break;
+                case 'ficha':
+                    unset($L);
+                    $pal = array_values(array_intersect($p['pal'] ?? [], array_keys(self::PALAVRAS)));
+                    for ($k = 0; $k < max(1, $n) && count($e['lados'][$l]['mesa']) < self::MESA_MAX; $k++) {
+                        $e['lados'][$l]['mesa'][] = ['i' => ++$e['seq'], 'c' => null, 'nome' => $p['nome'] ?? 'Ficha', 'atk' => (int) $p['atk'],
+                            'vida' => max(1, (int) $p['vida']), 'max' => max(1, (int) $p['vida']), 'pode' => in_array('impeto', $pal, true),
+                            'virada' => false, 'pal' => $pal, 'cont' => 0, 'nota' => ''];
+                    }
+                    self::log($e, "$fonte: $quem criou " . GladioTexto::textoPasso(['alvo' => 'eu'] + $p) . '.');
+                    break;
+                case 'moer':
+                    unset($L);
+                    $foram = array_splice($e['lados'][$l]['baralho'], 0, $n);
+                    array_push($e['lados'][$l]['cemiterio'], ...$foram);
+                    self::log($e, "$fonte: $quem jogou " . count($foram) . ' carta(s) do topo do baralho no cemitério.');
+                    break;
+                case 'invocar': // outra carta do catálogo, pelo nome (cópia nova, fora do baralho)
+                    unset($L);
+                    $id = null;
+                    foreach ($e['cartas'] as $cid => $def) {
+                        if (($def['tipo'] ?? '') === 'lenda' && GladioTexto::normalizar((string) $def['nome']) === ($p['carta'] ?? '')) {
+                            $id = (string) $cid;
+                            break;
+                        }
+                    }
+                    for ($k = 0; $id !== null && $k < max(1, $n); $k++) {
+                        if (count($e['lados'][$l]['mesa']) >= self::MESA_MAX) {
+                            self::log($e, "$fonte: a mesa de $quem está cheia.");
+                            break;
+                        }
+                        $e = self::entrar($e, $l, ['i' => ++$e['seq'], 'c' => $id]);
+                        self::log($e, "$fonte: $quem invocou " . self::nome($e, $id) . '.');
+                    }
+                    break;
+                case 'descartar':
+                    if ($esc === null) {
+                        unset($L);
+
+                        return self::pedir($e, $p, $l, 'mao', self::cartasDe($e, $e['lados'][$l]['mao'], null), "$fonte: descarte uma carta");
+                    }
+                    $k = self::idx($L['mao'], (int) $esc);
+                    if ($k >= 0) {
+                        $c = $L['mao'][$k];
+                        array_splice($L['mao'], $k, 1);
+                        $L['cemiterio'][] = ['i' => $c['i'], 'c' => $c['c']];
+                        unset($L);
+                        self::log($e, "$fonte: $quem descartou " . self::nome($e, $c['c']) . '.');
+                    }
+                    break;
+                case 'sacrificar':
+                    if ($esc === null) {
+                        unset($L);
+
+                        // a própria carta que pede o sacrifício não entra na conta
+                        $ops = array_values(array_filter(array_map(fn ($m) => (int) $m['i'], $e['lados'][$l]['mesa']), fn ($i) => $i !== (int) $ef['i']));
+
+                        return self::pedir($e, $p, $l, 'lenda', $ops, "$fonte: sacrifique uma Lenda sua");
+                    }
+                    $k = self::idx($L['mesa'], (int) $esc);
+                    if ($k >= 0) {
+                        $m = $L['mesa'][$k];
+                        array_splice($L['mesa'], $k, 1);
+                        unset($L);
+                        self::log($e, "$fonte: $quem sacrificou " . self::nomeLenda($e, $m) . '.');
+                        $e = self::saiDaMesa($e, $l, $m);
+                    }
+                    break;
+                case 'buscar':
+                    if ($esc === null) {
+                        unset($L);
+                        if (count($e['lados'][$l]['mao']) >= self::MAO_MAX) {
+                            self::log($e, "$fonte: a mão de $quem está cheia.");
+                            break;
+                        }
+                        $ops = self::cartasDe($e, $e['lados'][$l]['baralho'], $p['filtro'] ?? null);
+                        // a dica do texto ("uma propriedade fisiomante") filtra pelo nome das cartas: ficam as que
+                        // combinam com mais palavras dela (sem plural); se nenhuma combinar, vale qualquer uma
+                        $palavras = array_filter(array_map(fn ($w) => rtrim($w, 's'),
+                            preg_split('/\s+/', GladioTexto::normalizar((string) ($p['dica'] ?? '')))), fn ($w) => mb_strlen($w) > 3);
+                        $nota = [];
+                        foreach ($ops as $i) {
+                            $nomeC = GladioTexto::normalizar((string) ($e['cartas'][$e['lados'][$l]['baralho'][self::idx($e['lados'][$l]['baralho'], $i)]['c']]['nome'] ?? ''));
+                            $nota[$i] = count(array_filter($palavras, fn ($w) => str_contains($nomeC, $w)));
+                        }
+                        if ($nota && max($nota) > 0) {
+                            $ops = array_keys(array_filter($nota, fn ($v) => $v === max($nota)));
+                        }
+
+                        return self::pedir($e, $p, $l, 'baralho', $ops, "$fonte: escolha " . ($p['dica'] ?? 'uma carta') . ' no seu baralho');
+                    }
+                    $k = self::idx($L['baralho'], (int) $esc);
+                    if ($k >= 0) {
+                        $c = $L['baralho'][$k];
+                        array_splice($L['baralho'], $k, 1);
+                        $L['mao'][] = $c;
+                        unset($L);
+                        self::log($e, "$fonte: $quem buscou uma carta no baralho.");
+                    }
+                    break;
+                case 'recuperar':
+                    if ($esc === null) {
+                        unset($L);
+                        $tipo = ($p['destino'] ?? 'mao') === 'mesa' ? ($p['filtro'] ?? 'lenda') : ($p['filtro'] ?? null);
+
+                        return self::pedir($e, $p, $l, 'cemiterio', self::cartasDe($e, $e['lados'][$l]['cemiterio'], $tipo),
+                            "$fonte: escolha uma carta do seu cemitério");
+                    }
+                    $k = self::idx($L['cemiterio'], (int) $esc);
+                    if ($k < 0) {
+                        unset($L);
+                        break;
+                    }
+                    $c = $L['cemiterio'][$k];
+                    unset($L);
+                    if (($p['destino'] ?? 'mao') === 'mesa') {
+                        try {
+                            $e = self::entrar($e, $l, $c);
+                        } catch (\InvalidArgumentException $x) {
+                            self::log($e, "$fonte: " . $x->getMessage());
+                            break;
+                        }
+                        array_splice($e['lados'][$l]['cemiterio'], $k, 1);
+                        self::log($e, "$fonte: $quem trouxe " . self::nome($e, $c['c']) . ' do cemitério para a mesa.');
+                    } elseif (count($e['lados'][$l]['mao']) < self::MAO_MAX) {
+                        array_splice($e['lados'][$l]['cemiterio'], $k, 1);
+                        $e['lados'][$l]['mao'][] = $c;
+                        self::log($e, "$fonte: $quem recuperou " . self::nome($e, $c['c']) . ' do cemitério para a mão.');
+                    }
+                    break;
+                default:
+                    unset($L);
+            }
+            unset($L);
+            if ($e['fim']) {
+                break;
+            }
+        }
+
+        return $e;
+    }
+
+    /**
+     * Responde à escolha pendente. $valor: instância da carta/Lenda, 'j:<lado>' para um jogador ou null para pular
+     * (o descarte do fim do turno não dá para pular).
+     */
+    public static function escolher(array $e, string $lado, mixed $valor): array
+    {
+        self::exigirAtivo($e, $lado);
+        $es = $e['escolha'];
+        if (!$es || $es['lado'] !== $lado) {
+            throw new \InvalidArgumentException('Não há nada para você escolher agora.');
+        }
+        $p = $es['passo'];
+        if ($valor === null || $valor === '') {
+            if ($es['obrig']) {
+                throw new \InvalidArgumentException('Essa escolha não dá para pular.');
+            }
+            $e['escolha'] = null;
+            self::log($e, self::quem($e, $lado) . " pulou: {$es['texto']}.");
+
+            return self::seguir($e);
+        }
+        $valor = is_numeric($valor) ? (int) $valor : (string) $valor;
+        if (!in_array($valor, $es['opcoes'], true)) {
+            throw new \InvalidArgumentException('Essa escolha não vale aqui.');
+        }
+        $e['escolha'] = null;
+        if (is_string($valor)) { // jogador escolhido: vale também para as próximas ações do mesmo efeito na 3ª pessoa
+            $j = substr($valor, 2);
+            if ($p['alvo'] === 'jogador' || ($e['fila'][0]['jog'] ?? null) === null) {
+                $e['fila'][0]['jog'] = $j;
+            }
+            $p['alvo'] = 'lado:' . $j;
+        } elseif (in_array($es['tipo'], ['lenda', 'qualquer'], true) && $p['a'] !== 'sacrificar') {
+            $p['alvo'] = 'inst:' . $valor;
+        } else {
+            $p['escolhido'] = $valor;
+        }
+
+        return self::seguir(self::executar($e, $p));
+    }
+
+    /** Usa de novo, à mão, o texto automático de uma carta sua em jogo (Lenda na mesa ou feitiço no campo). */
+    public static function ativar(array $e, string $lado, int $inst): array
+    {
+        self::exigirAtivo($e, $lado);
+        self::exigirSemEscolha($e);
+        $x = null;
+        foreach (['mesa', 'feiticos'] as $zona) {
+            $k = self::idx($e['lados'][$lado][$zona], $inst);
+            if ($k >= 0) {
+                $x = $e['lados'][$lado][$zona][$k];
+            }
+        }
+        $passos = [];
+        foreach ($x && $x['c'] !== null ? ($e['cartas'][$x['c']]['hab'] ?? []) : [] as $h) {
+            array_push($passos, ...$h['passos']);
+        }
+        if (!$passos) {
+            throw new \InvalidArgumentException('Essa carta não tem efeito automático.');
+        }
+        $e['fila'][] = ['lado' => $lado, 'fonte' => self::nome($e, $x['c']), 'i' => $inst, 'passos' => $passos, 'jog' => null];
+        self::log($e, self::quem($e, $lado) . ' usou o texto de ' . self::nome($e, $x['c']) . '.');
+
+        return self::seguir($e);
     }
 
     /**

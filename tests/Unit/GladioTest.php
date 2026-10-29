@@ -603,4 +603,155 @@ class GladioTest extends TestCase
         $e = Gladio::vida($e, 'a', -10);
         $this->assertSame('b', $e['fim']['vencedor']);
     }
+
+    /* ---------- fases e textos das cartas ---------- */
+
+    private const TEXTOS = [
+        'barill' => ['nome' => 'Barill', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 4, 'palavras' => '',
+                     'descricao' => 'Quando invocado, sacrifique uma lenda, compre duas cartas'],
+        'cabrito' => ['nome' => 'Cabrito', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                      'descricao' => 'Quando morrer, recupere 30$'],
+        'daiki' => ['nome' => 'Daiki', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                    'descricao' => 'Todo início de turno, todo jogador perde 10$'],
+        'brinde' => ['nome' => 'Brinde', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                     'descricao' => 'O jogador alvo vira um shot e compra uma carta'],
+        'chorao' => ['nome' => 'Chorão', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 0, 'vida' => 2, 'palavras' => 'voar,resistencia',
+                     'descricao' => 'Aplique hexo-imune a uma Lenda alvo'],
+        'abel' => ['nome' => 'Abel', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 3, 'vida' => 1, 'palavras' => 'iniciativa',
+                   'descricao' => 'Saque uma propriedade fisiomante de seu baralho'],
+        'prop' => ['nome' => 'Propriedade fisiomante: Sangue', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                   'descricao' => 'Algo que o leitor não entende'],
+        'raio' => ['nome' => 'Raio', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                   'descricao' => 'Cause 3 de dano a uma Lenda inimiga.'],
+        'tiinho' => ['nome' => 'Tiinho', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                     'descricao' => 'Todo início de turno, invoque um Cabrito'],
+        'kaique' => ['nome' => 'Kaique', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                     'descricao' => "Quando Kaique entrar ou morrer, invoque uma ficha de carniçal 2/2 com Toque mortífero\r\nSe equipado com Amplificação, os carniçais são 5/5"],
+        'dividido' => ['nome' => 'O Dividido', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                       'descricao' => 'jogue ao cemitério as 10 primeiras cartas do seu deck. Todo início de turno, ative algum feitiço no seu cemitério sem pagar os custos.'],
+        'aguinha' => ['nome' => 'Aguinha', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+                      'descricao' => 'Quando invocado ou quando atacar, mate uma lenda alvo. Se essa lenda morrer, devolva as lendas mortas dessa forma.'],
+    ] + self::CARTAS;
+
+    private function comTextos(array $a, array $b = [], int $aposta = 100): array
+    {
+        $a = array_merge($a, array_fill(0, 20 - count($a), '1'));
+        $b = array_merge($b, array_fill(0, 20 - count($b), '1'));
+
+        return Gladio::iniciar(self::TEXTOS, $aposta, ['a' => $a, 'b' => $b], fn ($x) => $x, [], ['a' => '1', 'b' => '1']);
+    }
+
+    public function test_fases_compra_automatica_limite_de_mao_e_limpeza(): void
+    {
+        $e = $this->comTextos([], ['4']);
+        $this->assertSame('principal', $e['fase']);
+        // Lenda ferida: o dano some na limpeza do fim do turno
+        $e = $this->lendaPronta($e, 'a', '1');
+        $e['lados']['a']['mesa'][0]['vida'] = 1;
+        $e = Gladio::passar($e, 'a');
+        $this->assertSame(2, $e['lados']['a']['mesa'][0]['vida'], 'o dano nas Lendas some no fim do turno');
+        $this->assertSame(['b', 'principal'], [$e['vez'], $e['fase']], 'a compra é automática');
+        $this->assertCount(6, $e['lados']['b']['mao']);
+        // com 9 cartas no fim do turno, descarta 2 (não dá para pular) antes de passar a vez
+        $e['lados']['b']['mao'] = array_merge($e['lados']['b']['mao'], array_slice($e['lados']['b']['baralho'], 0, 3));
+        $e['lados']['b']['baralho'] = array_slice($e['lados']['b']['baralho'], 3);
+        $e = Gladio::passar($e, 'b');
+        $this->assertSame(['b', 'final', 'mao'], [$e['vez'], $e['fase'], $e['escolha']['tipo']]);
+        try {
+            Gladio::escolher($e, 'b', null);
+            $this->fail('o descarte do fim do turno é obrigatório');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::escolher($e, 'b', $e['escolha']['opcoes'][0]);
+        $this->assertSame('mao', $e['escolha']['tipo'], 'falta mais um');
+        $e = Gladio::escolher($e, 'b', $e['escolha']['opcoes'][0]);
+        $this->assertSame(['a', 'principal', null], [$e['vez'], $e['fase'], $e['escolha']]);
+        $this->assertCount(Gladio::MAO_FIM, $e['lados']['b']['mao']);
+        $this->assertCount(2, $e['lados']['b']['cemiterio']);
+    }
+
+    public function test_quando_invocado_sacrifica_e_compra_e_quando_morrer_recupera(): void
+    {
+        $e = $this->comTextos(['cabrito', 'barill']);
+        $e['lados']['a']['vida'] = 50;
+        $e['lados']['a']['energia'] = 5;
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'cabrito'));
+        $cabrito = end($e['lados']['a']['mesa'])['i'];
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'barill'));
+        $this->assertSame(['a', 'lenda'], [$e['escolha']['lado'], $e['escolha']['tipo']]);
+        try {
+            Gladio::passar($e, 'a');
+            $this->fail('com uma escolha pendente, o jogo espera');
+        } catch (\InvalidArgumentException) {
+        }
+        $mao = count($e['lados']['a']['mao']);
+        $e = Gladio::escolher($e, 'a', $cabrito);
+        $this->assertSame(['barill'], array_column($e['lados']['a']['mesa'], 'c'));
+        $this->assertSame(80, $e['lados']['a']['vida'], 'Cabrito caiu e recuperou 30');
+        $this->assertSame($mao + 2, count($e['lados']['a']['mao']), 'Barill comprou duas');
+        $this->assertNull($e['escolha']);
+    }
+
+    public function test_feitico_com_jogador_alvo_e_inicio_de_turno(): void
+    {
+        $e = $this->comTextos(['brinde', 'daiki']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'brinde'));
+        $this->assertSame(['j:a', 'j:b'], $e['escolha']['opcoes']);
+        $maoB = count($e['lados']['b']['mao']);
+        $e = Gladio::escolher($e, 'a', 'j:b');
+        $this->assertSame(1, $e['lados']['b']['shots']);
+        $this->assertSame($maoB + 1, count($e['lados']['b']['mao']), 'o mesmo jogador alvo compra');
+        $this->assertSame('brinde', end($e['lados']['a']['cemiterio'])['c'], 'feitiço resolvido vai para o cemitério');
+        // Daiki: todo início de turno, todo jogador perde 10
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'daiki'));
+        $e = Gladio::passar($e, 'a');
+        $this->assertSame([90, 90], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+        $e = Gladio::passar($e, 'b');
+        $this->assertSame([80, 80], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+    }
+
+    public function test_hexo_imune_concedido_protege_dos_alvos_do_adversario(): void
+    {
+        $e = $this->comTextos(['raio'], ['chorao', 'abel', '1', '1', '1', '1', 'prop']);
+        $e = Gladio::passar($e, 'a');
+        $e = Gladio::jogar($e, 'b', $this->primeira($e, 'b', 'abel'));
+        // Abel: "saque uma propriedade fisiomante": só a carta que combina com o texto
+        $this->assertSame('baralho', $e['escolha']['tipo']);
+        $this->assertCount(1, $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'b', $e['escolha']['opcoes'][0]);
+        $this->assertSame('prop', end($e['lados']['b']['mao'])['c']);
+        $abel = end($e['lados']['b']['mesa'])['i'];
+        $e = Gladio::jogar($e, 'b', $this->primeira($e, 'b', 'chorao'));
+        $e = Gladio::escolher($e, 'b', $abel);
+        $this->assertContains('resistencia', $e['lados']['b']['mesa'][0]['pal']);
+        $e = Gladio::passar($e, 'b');
+        // o Raio de a só pode mirar Lendas inimigas sem Hexo-Imune: nenhuma sobra
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'raio'));
+        $this->assertNull($e['escolha']);
+        $this->assertSame(1, $e['lados']['b']['mesa'][0]['vida']);
+    }
+
+    public function test_leitor_deixa_condicoes_a_mao_e_entende_varios_gatilhos(): void
+    {
+        $e = $this->comTextos([]);
+        $this->assertSame(['entrar', 'atacar'], array_column($e['cartas']['aguinha']['hab'], 'g'));
+        $this->assertTrue($e['cartas']['aguinha']['parcial'], 'a frase com "se" fica à mão');
+        $this->assertSame(['entrar', 'morrer'], array_column($e['cartas']['kaique']['hab'], 'g'));
+        $this->assertSame([], $e['cartas']['prop']['hab']);
+    }
+
+    public function test_invoca_carta_pelo_nome_fichas_com_palavra_e_mill(): void
+    {
+        $e = $this->comTextos(['tiinho', 'kaique', 'dividido']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'kaique'));
+        $ficha = end($e['lados']['a']['mesa']);
+        $this->assertSame(['Carnical', 2, ['toque']], [$ficha['nome'], $ficha['atk'], $ficha['pal']]);
+        $baralho = count($e['lados']['a']['baralho']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'dividido'));
+        $this->assertSame($baralho - 10, count($e['lados']['a']['baralho']));
+        $this->assertCount(10, $e['lados']['a']['cemiterio']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'tiinho'));
+        $e = Gladio::passar($e, 'a');
+        $this->assertContains('cabrito', array_column($e['lados']['a']['mesa'], 'c'), 'Tiinho invocou um Cabrito no início do turno');
+    }
 }
