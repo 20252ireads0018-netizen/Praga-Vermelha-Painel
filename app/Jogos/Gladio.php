@@ -1770,7 +1770,8 @@ class Gladio
                             self::log($e, "$fonte: a mesa de $quem está cheia.");
                             break;
                         }
-                        $e = self::entrar($e, $l, ['i' => ++$e['seq'], 'c' => $id]);
+                        $nova = ['i' => ++$e['seq'], 'c' => $id]; // antes de passar $e adiante: senão a cópia leva o seq antigo
+                        $e = self::entrar($e, $l, $nova);
                         self::log($e, "$fonte: $quem invocou " . self::nome($e, $id) . '.');
                     }
                     break;

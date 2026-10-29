@@ -753,5 +753,11 @@ class GladioTest extends TestCase
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'tiinho'));
         $e = Gladio::passar($e, 'a');
         $this->assertContains('cabrito', array_column($e['lados']['a']['mesa'], 'c'), 'Tiinho invocou um Cabrito no início do turno');
+        $e = Gladio::passar($e, 'b');
+        $insts = [];
+        foreach (['mao', 'baralho', 'mesa', 'cemiterio'] as $z) {
+            array_push($insts, ...array_column($e['lados']['a'][$z], 'i'), ...array_column($e['lados']['b'][$z], 'i'));
+        }
+        $this->assertSame(count($insts), count(array_unique($insts)), 'cada carta invocada ganha uma instância nova');
     }
 }

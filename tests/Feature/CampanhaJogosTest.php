@@ -243,6 +243,25 @@ class CampanhaJogosTest extends TestCase
             ->assertOk()->assertJsonPath('estado.vez', 'b')->assertJsonPath('estado.fase', 'principal');
     }
 
+    public function test_carta_nova_do_mestre_entra_com_efeito_automatico_na_proxima_partida(): void
+    {
+        // o mestre lança uma carta nova pelo criador de cartas
+        $this->actingAs($this->mestre)->postJson($this->url('/cartas'), ['nome' => 'Recruta', 'tipo' => 'lenda', 'custo' => 0,
+            'ataque' => 1, 'vida' => 1, 'descricao' => 'Quando invocado, compre duas cartas'])->assertOk();
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $p->refresh();
+        $carta = array_values($p->estado['cartas'])[0];
+        $this->assertSame('Ao entrar: você compra 2 cartas.', $carta['auto']);
+
+        // jogada, compra duas sozinha
+        $e = $p->estado;
+        $mao = count($e['lados']['a']['mao']);
+        $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'jogar', 'inst' => $e['lados']['a']['mao'][0]['i']])
+            ->assertOk()->assertJsonCount($mao + 1, 'estado.lados.a.mao');
+    }
+
     public function test_mestre_cancela_partida_em_andamento_e_devolve_apostas(): void
     {
         GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
