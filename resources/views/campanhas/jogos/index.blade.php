@@ -148,6 +148,7 @@
                     </div>
                     <p class="camp-dica jg-filtros-resumo" id="jg-filtros-resumo" hidden></p>
                     <div class="jg-cartas" id="jg-cartas"></div>
+                    <nav class="jg-paginacao" id="jg-paginacao-cartas" aria-label="Páginas de cartas" hidden></nav>
                 </section>
 
                 @if ($souMestre)

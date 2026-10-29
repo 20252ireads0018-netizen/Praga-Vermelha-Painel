@@ -113,6 +113,7 @@ class CampanhaJogoController extends Controller
             'valor'     => ['nullable', 'integer', 'min:0', 'max:9999'],
             'descricao' => ['nullable', 'string', 'max:500'],
             'imagem'    => ['nullable', 'string', 'max:400000'],
+            'imagem_arquivo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:600'], // KB
             'sem_imagem'=> ['nullable', 'boolean'],
             'palavras'  => ['nullable', 'array'],
             'palavras.*'=> [Rule::in(array_keys(Gladio::PALAVRAS))],
@@ -143,7 +144,12 @@ class CampanhaJogoController extends Controller
             }
             $carta->palavras = $palavras ?: null;
         }
-        if (!empty($d['imagem'])) {
+        if ($request->hasFile('imagem_arquivo')) {
+            // A imagem vem como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio com erro 406.
+            // Guardada como data URL, igual às outras cartas.
+            $arq = $request->file('imagem_arquivo');
+            $carta->imagem = 'data:' . $arq->getMimeType() . ';base64,' . base64_encode((string) file_get_contents($arq->getRealPath()));
+        } elseif (!empty($d['imagem'])) {
             if (!preg_match('#^data:image/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$#', $d['imagem'])) {
                 return response()->json(['ok' => false, 'erro' => 'Imagem inválida.'], 422);
             }

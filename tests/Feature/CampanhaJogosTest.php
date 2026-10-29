@@ -172,6 +172,19 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertStatus(422);
     }
 
+    public function test_imagem_da_carta_enviada_como_arquivo(): void
+    {
+        $r = $this->actingAs($this->mestre)->post($this->url('/cartas'), [
+            'nome' => 'Amir', 'tipo' => 'lenda', 'custo' => 3, 'ataque' => 2, 'vida' => 2,
+            'imagem_arquivo' => UploadedFile::fake()->image('arte.jpg', 480, 308),
+        ], ['Accept' => 'application/json'])->assertOk();
+        $this->assertStringStartsWith('data:image/jpeg;base64,', $r->json('carta.imagem'));
+        $this->assertSame($r->json('carta.imagem'), GladioCarta::findOrFail($r->json('carta.id'))->imagem);
+        // arquivo que não é imagem é recusado
+        $this->post($this->url('/cartas'), ['nome' => 'X', 'tipo' => 'lenda', 'custo' => 1, 'vida' => 1,
+            'imagem_arquivo' => UploadedFile::fake()->create('x.pdf', 5, 'application/pdf')], ['Accept' => 'application/json'])->assertStatus(422);
+    }
+
     public function test_mestre_cancela_partida_em_andamento_e_devolve_apostas(): void
     {
         GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);

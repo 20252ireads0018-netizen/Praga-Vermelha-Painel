@@ -274,16 +274,51 @@
         const PAL = window.JG.PALAVRA;
         sel('palavra', 'Qualquer palavra-chave', Object.keys(PAL).filter(k => cartas.some(c => palavrasDa(c).includes(k))), k => PAL[k].nome);
     }
+    // paginação: só uma página de cartas por vez (pesquisa e filtros voltam para a primeira)
+    const POR_PAGINA = 12;
+    let pagina = 1;
+    function renderPaginacao(total) {
+        const nav = $('#jg-paginacao-cartas');
+        const paginas = Math.ceil(total / POR_PAGINA);
+        nav.hidden = paginas <= 1;
+        if (paginas <= 1) { nav.innerHTML = ''; return; }
+        // números: primeira, última e as vizinhas da atual; o resto vira "…"
+        const nums = [];
+        for (let p = 1; p <= paginas; p++) {
+            if (p === 1 || p === paginas || Math.abs(p - pagina) <= 1) nums.push(p);
+            else if (nums[nums.length - 1] !== '…') nums.push('…');
+        }
+        nav.innerHTML =
+            `<button type="button" class="camp-btn camp-btn-pequeno" data-pagina="${pagina - 1}"${pagina > 1 ? '' : ' disabled'}>‹ Anterior</button>` +
+            nums.map(p => (p === '…' ? '<span class="jg-pag-reticencias">…</span>'
+                : `<button type="button" class="camp-btn camp-btn-pequeno jg-pag-num${p === pagina ? ' ativo' : ''}" data-pagina="${p}"${p === pagina ? ' aria-current="page"' : ''}>${p}</button>`)).join('') +
+            `<button type="button" class="camp-btn camp-btn-pequeno" data-pagina="${pagina + 1}"${pagina < paginas ? '' : ' disabled'}>Próxima ›</button>`;
+    }
+    $('#jg-paginacao-cartas').addEventListener('click', e => {
+        const b = e.target.closest('[data-pagina]');
+        if (!b || b.disabled) return;
+        pagina = +b.dataset.pagina;
+        renderCartas();
+        $('#jg-filtros-cartas').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
     function renderCartas() {
         $('#jg-cont-cartas').textContent = cartas.length;
         opcoesFiltros();
-        const lista = filtrarCartas(cartas.slice());
+        const todas = filtrarCartas(cartas.slice());
+        const paginas = Math.max(1, Math.ceil(todas.length / POR_PAGINA));
+        pagina = Math.min(Math.max(1, pagina), paginas); // carta apagada na última página: volta uma
+        const lista = todas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
         const filtrando = !!(filtro('nome').value.trim() || filtro('tipo').value || filtro('custo').value || filtro('palavra').value);
         barraFiltros.querySelector('[data-filtro-limpar]').hidden = !filtrando;
         const resumo = $('#jg-filtros-resumo');
-        resumo.hidden = !filtrando;
-        resumo.textContent = `Mostrando ${lista.length} de ${cartas.length} cartas.`;
+        resumo.hidden = !filtrando && paginas <= 1;
+        resumo.textContent = todas.length
+            ? `Mostrando ${(pagina - 1) * POR_PAGINA + 1}–${(pagina - 1) * POR_PAGINA + lista.length} de ${todas.length}` +
+              (filtrando ? ` (de ${cartas.length} cartas no total).` : ' cartas.')
+            : `Mostrando 0 de ${cartas.length} cartas.`;
         barraFiltros.hidden = !cartas.length;
+        renderPaginacao(todas.length);
         $('#jg-cartas').innerHTML = lista.length ? lista.map(c =>
             `<div class="jg-carta-item">${window.JG.carta(c)}` +
             (D.souMestre ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-carta="${c.id}">Editar</button>` +
@@ -291,10 +326,11 @@
             `</div>`).join('')
             : `<p class="camp-vazio">${cartas.length ? 'Nenhuma carta com esses filtros.' : (D.souMestre ? 'Crie a primeira carta do Gladio.' : 'O mestre ainda não criou cartas.')}</p>`;
     }
-    barraFiltros.addEventListener('input', renderCartas);
+    barraFiltros.addEventListener('input', () => { pagina = 1; renderCartas(); });
     barraFiltros.addEventListener('click', e => {
         if (!e.target.closest('[data-filtro-limpar]')) return;
         ['nome', 'tipo', 'custo', 'palavra'].forEach(c => { filtro(c).value = ''; });
+        pagina = 1;
         renderCartas();
         filtro('nome').focus();
     });
@@ -475,7 +511,8 @@
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
                             descricao: c.descricao,
                             palavras: c.tipo === 'lenda' ? c.palavras : [] };
-            if (imagem) dados.imagem = imagem;
+            // a imagem vai como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio (erro 406)
+            if (imagem) dados.imagem_arquivo = new File([await (await fetch(imagem)).blob()], 'arte.jpg', { type: 'image/jpeg' });
             if (semImagem) dados.sem_imagem = 1;
             try {
                 const r = await post(D.url.cartas, dados, D.csrf);
