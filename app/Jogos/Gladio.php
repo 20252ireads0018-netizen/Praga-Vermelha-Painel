@@ -17,7 +17,7 @@ namespace App\Jogos;
  *   cemitério (fichas somem). Quem atacou fica "virada" e só volta a bloquear no próximo turno de quem a controla.
  * - Palavras-chave (as regras de cada uma estão em PALAVRAS e nas dicas da tela): Sobrepujar, Ímpeto, Voar, Alcance,
  *   Toque mortal, Vínculo com a vida, Iniciativa, Golpe duplo, Vigilância, Defensor, Ameaça, Indestrutível e
- *   Resistência a magia. Como aqui o dano nas Lendas não some no fim do turno, Indestrutível segura a vida em 1.
+ *   Hexo-Imune. Como aqui o dano nas Lendas não some no fim do turno, Indestrutível segura a vida em 1.
  * - Ferramentas manuais (para os efeitos escritos nas cartas): comprar, embaralhar, reordenar o baralho, descartar,
  *   recuperar do cemitério, jogar sem pagar, criar ficha, ajustar ataque/vida, copiar Lenda e sacrificar.
  *   Só valem para as próprias cartas, no próprio turno, e ficam todas no registro da partida.
@@ -46,7 +46,7 @@ class Gladio
         'defensor'      => 'Defensor',
         'ameaca'        => 'Ameaça',
         'indestrutivel' => 'Indestrutível',
-        'resistencia'   => 'Resistência a magia',
+        'resistencia'   => 'Hexo-Imune',
     ];
     public const BARALHO = 20;      // deck sorteado (sem deck montado)
     public const MAO_INICIAL = 5;
@@ -330,7 +330,7 @@ class Gladio
                 $dono = $precisa === 'inimigo' ? $op : $lado;
                 $ki = self::idx($e['lados'][$dono]['mesa'], (int) $alvo);
                 if ($ki >= 0 && $dono === $op && self::tem($e['lados'][$dono]['mesa'][$ki], 'resistencia')) {
-                    throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$dono]['mesa'][$ki]) . ' tem Resistência a magia: não pode ser alvo dos seus feitiços.');
+                    throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$dono]['mesa'][$ki]) . ' tem Hexo-Imune: não pode ser alvo dos seus feitiços.');
                 }
                 if ($ki >= 0) {
                     $alvoLenda = [$dono, $ki];

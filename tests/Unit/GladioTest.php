@@ -376,11 +376,11 @@ class GladioTest extends TestCase
         $this->assertNull($this->vida($e, 'a', $lobo));
     }
 
-    public function test_resistencia_a_magia_protege_dos_feiticos_do_adversario(): void
+    public function test_hexo_imune_protege_dos_feiticos_do_adversario(): void
     {
         $e = $this->novo(10, ['a' => array_merge(['2'], array_fill(0, 19, '1'))]);
         [$e, $monge] = $this->por($e, 'b', 'Monge', 1, 3, ['resistencia']);
-        $this->expectExceptionMessage('Resistência a magia');
+        $this->expectExceptionMessage('Hexo-Imune');
         Gladio::jogar($e, 'a', $this->primeira($e, 'a', '2'), (string) $monge);
     }
 

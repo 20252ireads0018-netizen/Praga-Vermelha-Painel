@@ -258,8 +258,11 @@
 .jg-palavras[hidden] { display: none; }
 .jg-palavras legend { padding: 0 .3rem; opacity: .85; }
 .jg-palavras legend small { opacity: .7; }
-.jg-palavras-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .3rem .8rem; }
-.jg-palavras-grade label { display: inline-flex; flex-direction: row; align-items: center; gap: .35rem; cursor: help; }
+.jg-palavras-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .35rem 1rem; }
+/* mais específico que ".jg-criador-campos label/input" (coluna e largura 100%): caixinha à esquerda, nome ao lado */
+.jg-criador-campos .jg-palavras-grade label { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: .45rem;
+                                              text-align: left; line-height: 1.25; cursor: help; }
+.jg-criador-campos .jg-palavras-grade input[type=checkbox] { width: auto; flex: 0 0 auto; margin: 0; accent-color: #b62525; }
 
 /* palavra-chave na carta: passar o mouse (ou focar) mostra o efeito */
 .jg-palavra { cursor: help; border-bottom: 1px dotted rgba(216, 178, 106, .7); }

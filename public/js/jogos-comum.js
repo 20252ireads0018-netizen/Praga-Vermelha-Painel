@@ -65,7 +65,7 @@ window.JG = (function () {
         defensor:      { nome: 'Defensor', desc: 'Não pode atacar.' },
         ameaca:        { nome: 'Ameaça', desc: 'Só pode ser bloqueada por duas ou mais Lendas.' },
         indestrutivel: { nome: 'Indestrutível', desc: 'Não cai por dano nem por Toque mortal: a vida não baixa de 1. Ainda pode ser sacrificada.' },
-        resistencia:   { nome: 'Resistência a magia', desc: 'Não pode ser alvo de feitiços do adversário.' },
+        resistencia:   { nome: 'Hexo-Imune', desc: 'Não pode ser alvo de feitiços do adversário.' },
     };
     const palavras = c => (Array.isArray(c.palavras) ? c.palavras : String(c.palavras || '').split(',')).map(s => s.trim()).filter(Boolean);
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
