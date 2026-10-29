@@ -165,9 +165,12 @@ class CampanhaJogosTest extends TestCase
         $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();
         $mao = $p->fresh()->estado['lados']['a']['mao'];
         $this->assertSame($ordem[0], end($mao)['i'], 'comprou o novo topo');
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'ficha', 'nome' => 'Olhinho', 'atk' => 1, 'vida' => 1])->assertOk();
-        $ficha = $p->fresh()->estado['lados']['a']['mesa'][0]['i'];
-        $this->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'atacar', 'insts' => [$ficha]])->assertStatus(422); // acabou de entrar
+        // fichas, ataque/vida, palavras-chave e contadores só mudam pelas cartas, não à mão
+        foreach ([['acao' => 'ficha', 'nome' => 'Olhinho', 'atk' => 1, 'vida' => 1], ['acao' => 'ajustar', 'inst' => 1, 'atk' => 1, 'vida' => 1],
+                  ['acao' => 'palavra', 'inst' => 1, 'palavra' => 'voar']] as $manual) {
+            $this->postJson($this->url("/partidas/{$p->id}/acao"), $manual)->assertStatus(422)->assertJsonFragment(['erro' => 'Fichas, ataque, vida e palavras-chave só mudam pelo efeito das cartas.']);
+        }
+        $this->assertSame([], $p->fresh()->estado['lados']['a']['mesa']);
 
         // mesa livre: a Bia compra fora da vez, mas não ataca nem passa o turno da Ana
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'comprar'])->assertOk();

@@ -675,7 +675,8 @@ class CampanhaJogoController extends Controller
                         'atacar'     => Gladio::atacar($e, $lado, (array) $request->input('insts', []), $request->input('alvo') ?: null),
                         'shot'       => Gladio::shot($e, $lado, (int) $request->input('quanto', 1)),
                         'revelar'    => Gladio::revelar($e, $lado, $inst),
-                        'marcar'     => Gladio::marcar($e, $lado, $inst, (int) $request->input('cont', 0),
+                        // contadores, fichas, ataque/vida e palavras-chave só mudam pelas cartas: à mão, só a anotação
+                        'marcar'     => Gladio::marcar($e, $lado, $inst, 0,
                             $request->has('nota') ? (string) $request->input('nota', '') : null),
                         'encerrar'   => Gladio::encerrarFeitico($e, $lado, $inst),
                         'bloquear'   => Gladio::bloquear($e, $lado, $inst, $outro),
@@ -687,8 +688,8 @@ class CampanhaJogoController extends Controller
                         'reordenar'  => Gladio::reordenar($e, $lado, (array) $request->input('ordem', [])),
                         'descartar'  => Gladio::descartar($e, $lado, $inst),
                         'recuperar'  => Gladio::recuperar($e, $lado, $inst),
-                        'ficha'      => Gladio::ficha($e, $lado, (string) $request->input('nome', ''), (int) $request->input('atk', 1), (int) $request->input('vida', 1)),
-                        'ajustar'    => Gladio::ajustar($e, $lado, $inst, (int) $request->input('atk', 0), (int) $request->input('vida', 0)),
+                        'ficha', 'ajustar', 'palavra'
+                                     => throw new \InvalidArgumentException('Fichas, ataque, vida e palavras-chave só mudam pelo efeito das cartas.'),
                         'copiar'     => Gladio::copiar($e, $lado, $inst, (int) $outro),
                         'sacrificar' => Gladio::sacrificar($e, $lado, $inst),
                         'comandar'   => Gladio::comandar($e, $lado),
@@ -702,7 +703,6 @@ class CampanhaJogoController extends Controller
                         'ativar'     => Gladio::ativar($e, $lado, $inst),
                         'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
                         'tempo'      => Gladio::tempo($e, $lado), // acabou o tempo da vez: a mesa segue sozinha
-                        'palavra'    => Gladio::palavra($e, $lado, $inst, (string) $request->input('palavra', '')),
                         'equipar'    => Gladio::equipar($e, $lado, $inst, (int) $outro),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
