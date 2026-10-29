@@ -9,8 +9,13 @@ use Illuminate\Support\Str;
  * sem serviço externo: normalização, stopwords, stemming leve, sinônimos do domínio, TF-IDF,
  * n-gramas, estrutura de regras e metadados (raridade, órgão hospedado, apelido).
  *
- * CALIBRAGEM RÍGIDA (v3). Princípios: o texto precisa dizer a mesma coisa (conteúdo), com as mesmas
+ * CALIBRAGEM RÍGIDA E JUSTA (v4). Princípios: o texto precisa dizer a mesma coisa (conteúdo), com as mesmas
  * regras (estrutura/números); copiar cabeçalho, vocabulário genérico do jogo ou números soltos não rende nota.
+ * Quem descreve fielmente chega ao topo: significado, termos-chave e estrutura saturam (92%, 90% e 90% já
+ * valem 100), quebra de linha fecha frase (texto colado em blocos, sem ponto final, não é "lista de palavras")
+ * e o cabeçalho da ficha (nome, categoria, "Conceitos primitivos", "Descrição") não conta como ruído.
+ * Conferência: deploy/tmp/bancada-catalogo.php (cópia fiel 98-100, metade sem regras ~70, embaralhado ~35,
+ * outra maldição ~5) e tests/Feature/ComparadorCatalogoTest.php.
  *
  *  - Stopwords de domínio (DOMINIO): termos genéricos do sistema que aparecem em quase toda maldição
  *    (maldição, ameaça/nível, efeito, teste, turno, cena, mestre, dano, alvo, ação, valor...) não entram em
@@ -21,9 +26,9 @@ use Illuminate\Support\Str;
  *
  * PESOS (soma 100). Texto real puro rende no máximo 92 (metadados não estão no texto):
  *   significado  42  média de cosseno (com crédito de sinônimo) e F1 entre cobertura do texto real e precisão
- *                    do texto do jogador (pesos por IDF), elevada a 1,2: 100*sim^1,2, sem passar de 100.
+ *                    do texto do jogador (pesos por IDF): 100*(sim/0,92)^1,3, sem passar de 100.
  *                    A precisão entra suavizada (raiz) porque parafrasear com outras palavras é legítimo; a cobertura
- *                    esperada vale pelo menos 70% do peso do real (nem um texto curto e certeiro cobre tudo) e o
+ *                    esperada é o peso inteiro do real (texto que conta só parte da maldição perde) e o
  *                    resultado é reduzido se houver menos de 12 termos de conteúdo distintos (título/cabeçalho soltos)
  *   termos_chave 20  os 25 termos de maior TF-IDF do real, ponderados pelo IDF (exato 1, sinônimo 0,5)
  *   ordem        10  bigramas (peso 35%) e trigramas (65%) de raízes de conteúdo, por frase, do jogador
@@ -48,6 +53,8 @@ use Illuminate\Support\Str;
  *   desvio         >35% do peso (IDF) dos termos de conteúdo não existe no real (nem nos sinônimos), exceto metadados
  *   lista_palavras poucas palavras de ligação, sem frases ou frases gigantes (keyword stuffing); piso 0,35
  *   invencao       níveis de ameaça ou números/dados que não existem no real: -12% cada, até 0,6
+ *   omissao        números das regras do real (dano, chance, dados) que o jogador deixou de fora: até -25%
+ *   incoerencia    sentido alto (>= 40) com ordem abaixo de 25: vocabulário certo jogado fora de ordem, até 0,4
  */
 class ComparadorCatalogo
 {
@@ -60,11 +67,16 @@ class ComparadorCatalogo
     public const PENALIDADE_RARIDADE = 3;
     public const CREDITO_SINONIMO = 0.6;       // no significado
     public const CREDITO_SINONIMO_CHAVE = 0.5; // nos termos-chave
-    public const CURVA_SIGNIFICADO = 1.2;
+    public const CURVA_SIGNIFICADO = 1.3;
+    public const SATURA_SIGNIFICADO = 0.92;    // semelhança a partir da qual o significado já vale 100
+    public const SATURA_TERMOS = 0.9;          // fração dos termos-chave que já vale 100
+    public const SATURA_ESTRUTURA = 0.9;
+    public const ORDEM_MINIMA = 25;
+    public const PESO_OMISSAO = 0.25;          // sem nenhum dos números das regras do real: -25%            // abaixo disso (palavras soltas/embaralhadas) o texto é penalizado
     public const TETO_SOBRE_SIGNIFICADO = 15;
     public const TETO_PESO = 1.6;              // peso máximo de um termo no significado
     public const FOLGA_COBERTURA = 1.5;        // cobertura exigida: até 1,5x o peso do texto do jogador
-    public const PISO_COBERTURA = 0.7;         // cobertura mínima esperada do peso do real, mesmo num texto curto
+    public const PISO_COBERTURA = 1.0;         // cobertura mínima esperada do peso do real, mesmo num texto curto
     public const PESO_DESCONHECIDO = 0.5;      // termo fora de todo o catálogo
     public const EXP_PRECISAO = 0.5;           // precisão suavizada (raiz): parafrasear com outras palavras é legítimo
     public const TERMOS_MINIMOS = 12;          // termos de conteúdo distintos para o significado valer por inteiro
@@ -72,6 +84,9 @@ class ComparadorCatalogo
 
     /** Termos genéricos do sistema (formas de superfície; viram canônicos via sinônimos/stemming). */
     private const DOMINIO = 'maldição maldições ameaça nível efeito efeitos teste testes turno rodada cena mestre dano alvo ação ações valor valores amaldiçoado portador personagem jogador habilidade técnica sofrer receber perder ganhar vantagem desvantagem bônus penalidade aura início fim seguinte novo novamente caso forma tipo vez ponto pontos sempre poder possível aplicar fazer ficar tornar existir ocorrer acontecer causar usar';
+
+    /** Palavras de cabeçalho que os jogadores copiam da ficha da maldição. */
+    private const CABECALHO = 'conceitos primitivos conceito primitivo descrição raridade nível de raridade categoria órgão hospedado apelido pessoal coletiva ambiental';
 
     /** Aliases de órgãos (já normalizados, sem acento). Órgãos fora daqui usam o grupo de sinônimos. */
     private const ORGAOS = [
@@ -204,7 +219,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
         $lista     ??= (array) config('maldicoes_lista', []);
 
         $zeros   = array_fill_keys(array_keys(self::PESOS), 0);
-        $neutras = ['redundancia' => 1.0, 'prolixidade' => 1.0, 'desvio' => 1.0, 'lista_palavras' => 1.0, 'invencao' => 1.0];
+        $neutras = ['redundancia' => 1.0, 'prolixidade' => 1.0, 'desvio' => 1.0, 'lista_palavras' => 1.0, 'invencao' => 1.0, 'omissao' => 1.0, 'incoerencia' => 1.0];
 
         $item = $maldicoes[$slug] ?? null;
         if (!$item) {
@@ -280,6 +295,10 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
             'desvio'         => self::penalidadeDesvio($paresJ, $paresR, $idf),
             'lista_palavras' => self::penalidadeLista($textoJogador, $real),
             'invencao'       => max(0.6, 1 - 0.12 * $est['inventados']),
+            // sentido alto com quase nenhuma sequência do real = vocabulário certo jogado fora de ordem
+            // números das regras (dano, chance, dados) que o jogador deixou de fora
+            'omissao'        => 1 - self::PESO_OMISSAO * $est['omitidos'],
+            'incoerencia'    => $significado >= 40 ? 0.4 + 0.6 * min(1.0, $ordem / self::ORDEM_MINIMA) : 1.0,
         ];
         foreach ($pen as $p) {
             $total *= $p;
@@ -374,7 +393,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
     /**
      * Semelhança de sentido: média entre o cosseno TF-IDF (com crédito de sinônimo 0,6) e o F1 entre
      * cobertura do real e precisão do jogador (pesos por IDF; termo inventado pesa o máximo).
-     * Curva dura: 100 * sim^1,4.
+     * Curva: 100 * (sim / 0,92)^1,3 (quase cópia já vale 100).
      *
      * @param array $paresJ pares [s, c] de conteúdo do jogador
      * @param array $paresR pares [s, c] de conteúdo do real
@@ -425,7 +444,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
         $densidade = min(1.0, count($gj) / self::TERMOS_MINIMOS);
         $sim  = min(1.0, 0.5 * $cos + 0.5 * $f1) * $densidade;
 
-        return (int) round(100 * $sim ** self::CURVA_SIGNIFICADO);
+        return (int) round(100 * min(1.0, $sim / self::SATURA_SIGNIFICADO) ** self::CURVA_SIGNIFICADO);
     }
 
     /** Top 25 termos alfabéticos do real por TF-IDF, ponderados pelo IDF: exato 1, sinônimo 0,5. */
@@ -448,7 +467,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
             $ok += $peso * self::credito((string) $c, $gj, $gr, self::CREDITO_SINONIMO_CHAVE);
         }
 
-        return (int) min(100, round(100 * $ok / $tot));
+        return (int) min(100, round(100 * $ok / $tot / self::SATURA_TERMOS));
     }
 
     /** Bigramas (35%) e trigramas (65%) de raízes de conteúdo, por frase, do jogador que existem no real (70% já vale 100). */
@@ -479,14 +498,14 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
      * Níveis e números que NÃO existem no real contam como inventados (devolvidos para a penalidade).
      *
      * @param string[] $niveisItem níveis de ameaça cadastrados na maldição (os rótulos "Ameaça N" não entram no texto real)
-     * @return array{pontos:int, inventados:int}
+     * @return array{pontos:int, inventados:int, omitidos:float} omitidos: fração dos números do real que o jogador não citou
      */
     public static function analisarEstrutura(string $textoJogador, string $real, array $niveisItem = []): array
     {
         $fj = self::frases($textoJogador);
         $fr = self::frases($real);
         if (!$fj) {
-            return ['pontos' => 0, 'inventados' => 0];
+            return ['pontos' => 0, 'inventados' => 0, 'omitidos' => 0.0];
         }
         $n   = count($fj);
         $pon = count(array_filter($fj, fn ($f) => $f['terminada']));
@@ -529,7 +548,8 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
         $pontos = 0.30 * $niv + 0.30 * $fid($nj, $nr) + 0.15 * $secoes + 0.25 * $completa;
         $pontos *= 1 - 0.5 * $fracInv;
 
-        return ['pontos' => (int) round(100 * $pontos), 'inventados' => $invL + $invN];
+        return ['pontos' => (int) round(100 * min(1.0, $pontos / self::SATURA_ESTRUTURA)), 'inventados' => $invL + $invN,
+                'omitidos' => $nr ? 1 - $fid($nj, $nr) : 0.0];
     }
 
     /**
@@ -736,7 +756,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
         $ref = min(0.22, 0.5 * $fn(self::palavras($real)));
         $p1  = $ref > 0 ? 0.6 + 0.4 * min(1.0, $fn($palavras) / $ref) : 1.0;
 
-        $terminais = preg_match_all('/[.!?…]/u', $textoJogador);
+        $terminais = count(self::frases($textoJogador)); // ponto final ou fim de linha
         $fr  = self::frases($real);
         $mr  = $fr ? array_sum(array_column($fr, 'palavras')) / count($fr) : 20;
         $lim = max(40, 2 * $mr);
@@ -961,8 +981,9 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
     private static function frases(string $texto): array
     {
         $saida = [];
-        preg_match_all('/[^.!?…\n]+[.!?…]*/u', $texto, $m);
-        foreach ($m[0] as $trecho) {
+        preg_match_all('/[^.!?…\n]+[.!?…]*(\n)?/u', $texto, $m);
+        foreach ($m[0] as $k => $trecho) {
+            $quebra = ($m[1][$k] ?? '') !== '';
             $limpo = trim($trecho);
             $pal   = self::palavras($limpo);
             if (count($pal) < 3) {
@@ -970,7 +991,7 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
             }
             $saida[] = [
                 'palavras'  => count($pal),
-                'terminada' => (bool) preg_match('/[.!?…]$/u', $limpo),
+                'terminada' => $quebra || (bool) preg_match('/[.!?…:]$/u', $limpo),
                 'maiuscula' => (bool) preg_match('/^[^\p{L}\p{N}]*\p{Lu}/u', $limpo),
             ];
         }
@@ -1014,7 +1035,8 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
     /** Termos canônicos que vêm dos metadados (raridade, órgão, apelido): [termo => true]. */
     private static function termosMeta(array $item, ?array $meta, array $maldicoes): array
     {
-        $textos = [(string) ($item['raridade'] ?? ''), (string) ($meta['apelido'] ?? '')];
+        $textos = [(string) ($item['raridade'] ?? ''), (string) ($meta['apelido'] ?? ''), (string) ($meta['nome'] ?? ''),
+                   (string) ($meta['categoria'] ?? ''), self::CABECALHO];
         foreach (explode('&', (string) ($meta['orgao'] ?? '')) as $parte) {
             $textos = array_merge($textos, self::aliasesOrgao($parte));
         }

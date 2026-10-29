@@ -47,6 +47,8 @@
         desvio: 'fuga do sentido original',
         lista_palavras: 'lista de palavras sem frases',
         invencao: 'níveis ou números inventados',
+        omissao: 'números das regras que faltaram',
+        incoerencia: 'palavras fora de ordem',
     };
 
     let itens = [];
