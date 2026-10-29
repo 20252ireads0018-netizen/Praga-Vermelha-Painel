@@ -1228,7 +1228,9 @@ class Gladio
     {
         self::exigirAtivo($e, $lado);
 
-        return self::seguir(self::eliminar($e, $lado, 'desistência'));
+        $e = self::eliminar($e, $lado, 'desistência');
+
+        return $e['fase'] === 'mulligan' ? self::fimMulligan($e) : self::seguir($e);
     }
 
     /** Segundos de vez antes de os outros poderem apressar quem está demorando. */
@@ -1251,7 +1253,9 @@ class Gladio
         }
         $quem = self::esperando($e);
         self::log($e, '⏰ Acabou o tempo de ' . self::quem($e, $quem) . '.');
-        if ($e['escolha']) {
+        if ($e['fase'] === 'mulligan') {
+            $e = self::tempoMulligan($e);
+        } elseif ($e['escolha']) {
             $es = $e['escolha'];
             $e = self::escolher($e, $es['lado'], $es['obrig'] ? $es['opcoes'][0] : null);
         } elseif ($e['fase'] === 'defesa') {
@@ -1270,7 +1274,15 @@ class Gladio
     /** De quem a mesa está esperando agora: quem escolhe um efeito, quem defende ou quem tem a vez. */
     public static function esperando(array $e): string
     {
-        return $e['escolha']['lado'] ?? ($e['fase'] === 'defesa' ? ($e['ataque']['defensor'] ?? $e['vez']) : $e['vez']);
+        if ($e['fase'] === 'mulligan') { // o primeiro que ainda não decidiu
+            foreach (self::vivos($e) as $l) {
+                if (empty($e['mull'][$l]['ok'])) {
+                    return $l;
+                }
+            }
+        }
+
+        return $e['escolha']['lado'] ??($e['fase'] === 'defesa' ? ($e['ataque']['defensor'] ?? $e['vez']) : $e['vez']);
     }
 
     /** Outro jogador apressa quem está demorando (depois de APRESSAR_APOS segundos; de novo só a cada 20 s). */

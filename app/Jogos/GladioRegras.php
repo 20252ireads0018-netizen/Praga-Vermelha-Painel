@@ -627,6 +627,111 @@ trait GladioRegras
     }
 
     /* ================================================================== */
+    /*  Mulligan (antes do primeiro turno)                                 */
+    /* ================================================================== */
+
+    /**
+     * Abre a fase de mulligan: cada jogador olha a mão inicial e decide manter ou trocar. Mulligan: a mão volta para o
+     * baralho, embaralha e compra MAO_INICIAL de novo; ao manter, põe no fundo do baralho uma carta por mulligan feito
+     * (como o London mulligan do Magic). Quando todos mantêm, começa o turno 1.
+     * Estado: mull { lado: { n (mulligans feitos), ok (manteve) } }, fase 'mulligan'.
+     */
+    public static function abrirMulligan(array $e): array
+    {
+        $e['fase'] = 'mulligan';
+        $e['mull'] = [];
+        foreach (self::vivos($e) as $l) {
+            $e['mull'][$l] = ['n' => 0, 'ok' => false];
+        }
+        $e['desde'] = time();
+        self::log($e, 'Mulligan: cada um olha a mão inicial e decide se mantém ou troca.');
+
+        return $e;
+    }
+
+    private static function exigirMulligan(array $e, string $lado): void
+    {
+        self::exigirAtivo($e, $lado);
+        if ($e['fase'] !== 'mulligan' || !isset($e['mull'][$lado])) {
+            throw new \InvalidArgumentException('O mulligan só acontece antes do primeiro turno.');
+        }
+        if ($e['mull'][$lado]['ok']) {
+            throw new \InvalidArgumentException('Você já manteve a sua mão.');
+        }
+    }
+
+    /** Troca a mão: tudo volta para o baralho, embaralha e compra a mão inicial de novo. */
+    public static function mulligan(array $e, string $lado, ?callable $embaralhar = null): array
+    {
+        self::exigirMulligan($e, $lado);
+        if ($e['mull'][$lado]['n'] + 1 >= self::MAO_INICIAL) {
+            throw new \InvalidArgumentException('Não dá para fazer mais mulligans: você ficaria sem cartas na mão.');
+        }
+        $L = &$e['lados'][$lado];
+        $b = array_merge($L['baralho'], array_map(fn ($c) => ['i' => $c['i'], 'c' => $c['c']], $L['mao']));
+        $L['baralho'] = array_values($embaralhar ? $embaralhar($b) : (function ($b) { shuffle($b); return $b; })($b));
+        $L['mao'] = array_splice($L['baralho'], 0, self::MAO_INICIAL);
+        unset($L);
+        $e['mull'][$lado]['n']++;
+        $n = $e['mull'][$lado]['n'];
+        self::log($e, self::quem($e, $lado) . " fez mulligan ($n): ao manter, põe $n carta" . ($n > 1 ? 's' : '') . ' no fundo do baralho.');
+
+        return $e;
+    }
+
+    /** Mantém a mão, pondo no fundo do baralho as cartas escolhidas (uma por mulligan feito). Todos mantiveram: começa. */
+    public static function manter(array $e, string $lado, array $fundo = []): array
+    {
+        self::exigirMulligan($e, $lado);
+        $n = $e['mull'][$lado]['n'];
+        $fundo = array_values(array_unique(array_map('intval', $fundo)));
+        if (count($fundo) !== $n) {
+            throw new \InvalidArgumentException($n ? "Escolha $n carta" . ($n > 1 ? 's' : '') . ' da mão para o fundo do baralho.' : 'Não precisa escolher cartas.');
+        }
+        foreach ($fundo as $i) {
+            $k = self::idx($e['lados'][$lado]['mao'], $i);
+            if ($k < 0) {
+                throw new \InvalidArgumentException('Essa carta não está na sua mão.');
+            }
+            $e['lados'][$lado]['baralho'][] = $e['lados'][$lado]['mao'][$k];
+            array_splice($e['lados'][$lado]['mao'], $k, 1);
+        }
+        $e['mull'][$lado]['ok'] = true;
+        self::log($e, self::quem($e, $lado) . ' manteve a mão' . ($n ? " com " . count($e['lados'][$lado]['mao']) . ' cartas' : '') . '.');
+
+        return self::fimMulligan($e);
+    }
+
+    /** Todos mantiveram (ou saíram): começa o primeiro turno. */
+    private static function fimMulligan(array $e): array
+    {
+        foreach (self::vivos($e) as $l) {
+            if (empty($e['mull'][$l]['ok'])) {
+                return $e;
+            }
+        }
+        $e['fase'] = 'principal';
+        $e['desde'] = time();
+        self::log($e, 'Todos mantiveram a mão: a partida começa. Turno 1 de ' . self::quem($e, $e['vez']) . '.');
+
+        return $e;
+    }
+
+    /** Acabou o tempo do mulligan: quem não decidiu mantém (o fundo vai ao acaso). */
+    private static function tempoMulligan(array $e): array
+    {
+        foreach (self::vivos($e) as $l) {
+            if (empty($e['mull'][$l]['ok'])) {
+                $mao = array_column($e['lados'][$l]['mao'], 'i');
+                shuffle($mao);
+                $e = self::manter($e, $l, array_slice($mao, 0, $e['mull'][$l]['n']));
+            }
+        }
+
+        return $e;
+    }
+
+    /* ================================================================== */
     /*  Respostas fora do turno (Vergonha de Dante, Imbuir)                */
     /* ================================================================== */
 

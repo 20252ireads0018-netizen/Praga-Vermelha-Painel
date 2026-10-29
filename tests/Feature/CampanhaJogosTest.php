@@ -70,6 +70,14 @@ class CampanhaJogosTest extends TestCase
         }
     }
 
+    /** Gladio começa no mulligan: quem está na partida mantém a mão inicial. */
+    private function manterTodos($p): void
+    {
+        foreach ([$this->mestre, $this->ana, $this->bia] as $u) {
+            $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'manter']);
+        }
+    }
+
     private function url(string $resto = ''): string
     {
         return '/campanhas/' . $this->camp->id . '/jogos' . $resto;
@@ -107,6 +115,7 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertStatus(422);
         $this->actingAs($this->ana)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertStatus(422);
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $this->assertSame([60, 60], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
 
         // a Bia não vê a mão da Ana
@@ -151,6 +160,7 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'deck_id' => $deckAna])->assertOk();
         $p = JogoPartida::firstOrFail();
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk(); // Bia: 20 sorteadas
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $e = $p->fresh()->estado;
         $this->assertSame(10, count($e['lados']['a']['baralho']), 'deck de 16 menos 5 na mão e o comandante');
         $this->assertSame(14, count($e['lados']['b']['baralho']));
@@ -212,6 +222,7 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk()->assertJsonPath('comecou', false);
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/comecar"))->assertStatus(422);
         $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk()->assertJsonPath('comecou', true);
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $p->refresh();
         $this->assertSame('andamento', $p->status);
         $this->assertSame(['a', 'b', 'c'], $p->estado['ordem']);
@@ -235,6 +246,7 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
         $p = JogoPartida::firstOrFail();
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $p->refresh();
         $this->assertStringContainsString('toma 1 shot', $p->estado['cartas'][array_key_first($p->estado['cartas'])]['auto']);
 
@@ -257,6 +269,7 @@ class CampanhaJogosTest extends TestCase
         $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
         $p = JogoPartida::firstOrFail();
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $p->refresh();
         $carta = array_values($p->estado['cartas'])[0];
         $this->assertSame('Ao entrar: você compra 2 cartas.', $carta['auto']);
@@ -371,6 +384,7 @@ class CampanhaJogosTest extends TestCase
         $this->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'deck_id' => $r->json('deck.id')])->assertOk();
         $p = JogoPartida::firstOrFail();
         $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p); // fase de mulligan: todos mantêm a mão
         $e = $p->fresh()->estado;
         $this->assertSame([(string) $lenda->id], array_column($e['lados']['a']['comando'], 'c'));
         $this->assertSame('lenda', $e['cartas'][$e['lados']['b']['comando'][0]['c']]['tipo'], 'Bia sem deck: Lenda sorteada');

@@ -537,7 +537,8 @@ class CampanhaJogoController extends Controller
         }
         $p->config = $cfg;
         $p->jogador2_id = $cfg['jogadores'][1] ?? null;
-        $p->estado = Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes, array_filter($comandantes));
+        // antes do primeiro turno, cada um decide se mantém a mão inicial ou faz mulligan
+        $p->estado = Gladio::abrirMulligan(Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes, array_filter($comandantes)));
         $p->status = 'andamento';
         $p->versao = (int) $p->versao + 1;
         $p->save();
@@ -703,6 +704,8 @@ class CampanhaJogoController extends Controller
                         'comandar'   => Gladio::comandar($e, $lado), // invocar o comandante pagando o custo + taxa
                         // resposta a uma escolha pedida por um efeito: alvo = instância ou 'j:<lado>'; vazio pula
                         'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
+                        'mulligan'   => Gladio::mulligan($e, $lado), // troca a mão inicial
+                        'manter'     => Gladio::manter($e, $lado, (array) $request->input('insts', [])), // insts: cartas para o fundo
                         'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
                         'tempo'      => Gladio::tempo($e, $lado), // acabou o tempo da vez: a mesa segue sozinha
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),

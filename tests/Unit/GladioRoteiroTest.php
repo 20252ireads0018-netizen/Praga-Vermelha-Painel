@@ -74,6 +74,31 @@ class GladioRoteiroTest extends TestCase
         return in_array($i, array_map('intval', array_column($e['lados'][$lado]['cemiterio'], 'i')), true);
     }
 
+    public function test_mulligan_troca_a_mao_e_poe_cartas_no_fundo_antes_de_comecar(): void
+    {
+        $deck = array_merge(array_fill(0, 10, 'x'), array_fill(0, 10, 'tiro'));
+        $e = Gladio::abrirMulligan(Gladio::iniciar(self::BASE, 50, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']));
+        $this->assertSame('mulligan', $e['fase']);
+        try {
+            Gladio::passar($e, 'a');
+            $this->fail('ninguém joga durante o mulligan');
+        } catch (\InvalidArgumentException) {
+        }
+        $e = Gladio::mulligan($e, 'a', fn ($b) => array_reverse($b));
+        $this->assertCount(5, $e['lados']['a']['mao']);
+        try {
+            Gladio::manter($e, 'a');
+            $this->fail('precisa escolher 1 carta para o fundo');
+        } catch (\InvalidArgumentException) {
+        }
+        $fundo = $e['lados']['a']['mao'][0]['i'];
+        $e = Gladio::manter($e, 'a', [$fundo]);
+        $this->assertSame([4, $fundo, 'mulligan'], [count($e['lados']['a']['mao']), end($e['lados']['a']['baralho'])['i'], $e['fase']]);
+        $this->assertSame('b', Gladio::esperando($e));
+        $e = Gladio::manter($e, 'b');
+        $this->assertSame(['principal', 'a', 19], [$e['fase'], $e['vez'], count($e['lados']['a']['baralho']) + count($e['lados']['a']['mao']) + 0]);
+    }
+
     public function test_aposta_multiplica_poder_e_vida_das_cartas(): void
     {
         $this->assertSame([1, 1, 2, 4, 6], array_map([Gladio::class, 'multiplicador'], [0, 99, 100, 250, 300]));

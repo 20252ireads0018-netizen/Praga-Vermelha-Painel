@@ -62,6 +62,7 @@
     let alvo = null;          // mirando o alvo de um feitiço antigo sem texto: { tipo: 'feitico', inst, precisa }
     let atacantes = [];       // Lendas escolhidas para o ataque
     let bloqueador = null;    // na defesa: Lenda minha escolhida, esperando o clique no atacante
+    let paraFundo = [];       // mulligan: cartas da mão escolhidas para o fundo do baralho
     let modal = null;         // { tipo: 'cemiterio' | 'mao' | 'mesa' | 'feitico' | 'comando' | 'escolha' | 'detalhe', inst?, lado? }
     let engolirClique = false; // depois de arrastar uma carta, o clique que o navegador dispara é ignorado
     const PRECISA = { dano: 'inimigo', cura: 'aliado', fortalecer: 'lenda' };
@@ -246,7 +247,17 @@
 
         // barra do meio: pote, vez e o que dá para fazer agora
         let acoes = '';
-        if (M.esc) {
+        const mull = e.fase === 'mulligan' && ativo ? ((e.mull || {})[D.lado] || null) : null;
+        if (!(e.fase === 'mulligan')) paraFundo = [];
+        if (mull && !mull.ok) {
+            paraFundo = paraFundo.filter(i => (L[eu].mao || []).some(x => x.i === i));
+            acoes = `<span class="gl-dica gl-dica--escolha">Mão inicial: mantenha ou faça mulligan (a mão volta ao baralho e você compra 5 de novo)` +
+                (mull.n ? ` · escolha <b>${mull.n}</b> carta${mull.n > 1 ? 's' : ''} para o fundo do baralho (${paraFundo.length}/${mull.n})` : '') + '</span>' +
+                `<button type="button" class="camp-btn camp-btn-primario" data-gl="manter"${paraFundo.length === mull.n ? '' : ' disabled'}>Manter a mão</button>` +
+                (mull.n + 1 < 5 ? `<button type="button" class="camp-btn" data-gl="mulligan" title="Embaralha a mão de volta e compra 5; ao manter, põe ${mull.n + 1} no fundo">Mulligan</button>` : '');
+        } else if (e.fase === 'mulligan' && ativo) {
+            acoes = `<span class="gl-dica gl-dica--suave">${mull ? 'Você manteve a mão. ' : ''}Esperando: ${M.ordem.filter(l => !((e.mull || {})[l] || {}).ok && !L[l].fora).map(nomeDe).join(', ')}</span>`;
+        } else if (M.esc) {
             const cartasEsc = ['baralho', 'cemiterio', 'palavra', 'confirmar', 'opcao', 'resposta'].includes(M.esc.tipo);
             acoes = M.escolho
                 ? `<span class="gl-dica gl-dica--escolha" title="${esc(M.esc.texto)}">${esc(M.esc.texto)}${M.esc.tipo === 'mao' ? ' (clique numa carta da sua mão)' : (cartasEsc ? '' : ' (clique no alvo destacado)')}</span>` +
@@ -287,7 +298,8 @@
                 const c = Object.assign(cartaDef(x.c), { custo: custoAgora(l, x, cartaDef(x.c)) });
                 return `<div class="gl-slot gl-slot--mao${x.rev ? ' gl-revelada-minha' : ''}" style="--k:${k}">` +
                     window.JG.carta(c, { classe: (podeJogar(c, x) ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : '') +
-                        (M.escolho && M.esc.tipo === 'mao' && M.esc.opcoes.includes(x.i) ? ' gl-alvo' : ''), attrs: `data-mao="${x.i}"${ver(x.c)}` }) +
+                        (M.escolho && M.esc.tipo === 'mao' && M.esc.opcoes.includes(x.i) ? ' gl-alvo' : '') +
+                        (paraFundo.includes(x.i) ? ' gl-mirando' : ''), attrs: `data-mao="${x.i}"${ver(x.c)}` }) +
                     (x.rev ? '<span class="gl-olho" title="Revelada para os outros jogadores">👁</span>' : '') +
                     (M.jogo ? `<button type="button" class="gl-mais" data-mais-mao="${x.i}" title="Ações desta carta" aria-label="Ações de ${esc(c.nome)}">⋯</button>` : '') +
                     `</div>`;
@@ -323,6 +335,8 @@
             status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>` +
                 (D.aposta ? ` · leva o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro` : ''));
         } else if (D.lado && L[D.lado].fora) status('Você está fora desta partida. Pode continuar assistindo.');
+        else if (e.fase === 'mulligan') status(((e.mull || {})[D.lado] || {}).ok === false
+            ? '<strong>Mão inicial.</strong> Mantenha ou faça mulligan antes de a partida começar.' : 'Esperando todos decidirem o mulligan.');
         else if (M.escolho) status(`<strong>Sua escolha:</strong> ${esc(M.esc.texto)}.`);
         else if (M.esc) status(`Esperando <strong>${nomeDe(M.esc.lado)}</strong> escolher: ${esc(M.esc.texto)}.`);
         else if (defendo) status(`<strong>${nomeDe(e.vez)} está atacando você!</strong> ${atacando.length} Lenda(s) avançam. Bloqueie ou jogue Lendas para se defender.`);
@@ -540,6 +554,8 @@
             else if (g === 'defender') { bloqueador = null; acao({ acao: 'defender' }); }
             else if (g === 'passar') { alvo = null; atacantes = []; acao({ acao: 'passar' }); }
             else if (g === 'apressar') acao({ acao: 'apressar' });
+            else if (g === 'manter') { const lista = paraFundo.slice(); paraFundo = []; acao({ acao: 'manter', insts: lista }); }
+            else if (g === 'mulligan') { paraFundo = []; acao({ acao: 'mulligan' }); }
             else if (g === 'desistir' && confirm('Desistir da partida?' + (D.aposta ? ' Você perde a aposta.' : ''))) acao({ acao: 'desistir' });
             return;
         }
@@ -556,6 +572,16 @@
         const l = ev.target.closest('[data-lenda]');
         const cartaMao = ev.target.closest('[data-mao]');
 
+        // ----- mulligan: o clique na mão marca as cartas que vão para o fundo -----
+        if (e.fase === 'mulligan') {
+            const mull = (e.mull || {})[D.lado];
+            if (cartaMao && mull && !mull.ok && mull.n > 0) {
+                const i = +cartaMao.dataset.mao;
+                paraFundo = paraFundo.includes(i) ? paraFundo.filter(x => x !== i) : (paraFundo.length < mull.n ? paraFundo.concat(i) : paraFundo);
+                render();
+            } else abrirDetalhe(cartaVer);
+            return;
+        }
         // ----- escolha pedida por um efeito: o clique no alvo destacado responde -----
         if (M.escolho) {
             const marcado = [l, h, cartaMao].find(x => x && x.classList.contains('gl-alvo'));
