@@ -68,7 +68,7 @@
 
             <article class="pl-plano pl-plano--destaque {{ $plano === 'vitalicio' ? 'pl-plano--atual' : '' }}">
                 <h2 class="pl-plano__titulo">Vitalício <span class="pl-selo">livro do sistema</span></h2>
-                <div class="pl-plano__preco">Compra única do livro do sistema (info-produto)</div>
+                <div class="pl-plano__preco">{{ $preco }} · compra única do livro do sistema (info-produto)</div>
                 <ul>
                     <li>Painel sem anúncios, para sempre</li>
                     <li>Fichas e campanhas sem limite</li>
@@ -76,24 +76,19 @@
                     <li>Todos os livros de histórias em info-produto</li>
                 </ul>
                 @if ($plano !== 'vitalicio')
-                    @if ($compraUrl !== '')
-                        <a href="{{ $compraUrl }}" class="pv-btn pv-btn--primary" target="_blank" rel="noopener">Comprar o livro do sistema</a>
-                    @endif
-                    @auth
-                        <form method="POST" action="{{ route('livro.verificar') }}">
-                            @csrf
-                            <label for="pl-chave"><small>Já comprou? Digite a chave que veio com o livro:</small></label>
-                            <div class="pl-chave">
-                                <input type="password" id="pl-chave" name="chave" placeholder="Chave do livro" autocomplete="off" required>
-                                <button type="submit" class="pv-btn pv-btn--outline">Ativar</button>
-                            </div>
-                            @error('chave')
-                                <small class="pl-erro">{{ $message }}</small>
-                            @enderror
-                        </form>
+                    @if (!$compraDisponivel)
+                        <span class="pv-btn pv-btn--outline is-breve">Compra em breve</span>
                     @else
-                        <a href="{{ route('login') }}" class="pv-btn pv-btn--outline">Entre na conta para ativar a chave</a>
-                    @endauth
+                        @auth
+                            <form method="POST" action="{{ route('livro.comprar') }}">
+                                @csrf
+                                <button type="submit" class="pv-btn pv-btn--primary" style="width:100%">Comprar por {{ $preco }}</button>
+                            </form>
+                            <small class="pl-atual__uso">Pix, boleto ou cartão. Depois de pagar, volte a esta página: o plano é ativado na hora em que o pagamento confirma.</small>
+                        @else
+                            <a href="{{ route('login') }}" class="pv-btn pv-btn--primary">Entre na conta para comprar por {{ $preco }}</a>
+                        @endauth
+                    @endif
                 @else
                     <a href="{{ route('livro.index') }}" class="pv-btn pv-btn--primary">Abrir o livro do sistema</a>
                 @endif

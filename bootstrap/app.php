@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // O webhook do Asaas chega sem sessão: a autenticação é o token no header "asaas-access-token"
+        $middleware->validateCsrfTokens(except: ['webhooks/asaas']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // JSON também para requisições AJAX que pedem JSON (ex.: salvamento automático da ficha).

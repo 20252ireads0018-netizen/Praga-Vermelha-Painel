@@ -5,7 +5,7 @@
  *
  *  - teste:     plano completo, sem anúncios e sem limites, nos primeiros dias da conta;
  *  - gratis:    depois do teste: vê anúncios, até 5 fichas e 1 campanha (como mestre);
- *  - vitalicio: quem comprou o info-produto do livro do sistema (aplicou a chave do livro logado):
+ *  - vitalicio: quem pagou o info-produto do livro do sistema (Asaas):
  *               sem anúncios, sem limites, para sempre, e libera todos os livros em info-produto.
  */
 return [
@@ -19,8 +19,8 @@ return [
         'campanhas' => 1,
     ],
 
-    // Página de venda do info-produto do livro do sistema (vazio: o botão de compra não aparece)
-    'compra_livro_url' => env('LIVRO_COMPRA_URL', ''),
+    // Preço do info-produto do livro do sistema (cobrança única no Asaas, ver config/asaas.php)
+    'preco_livro' => (float) env('LIVRO_PRECO', 6.99),
 
     // Google AdSense do plano grátis (vazio: nenhum anúncio é carregado). Ex.: ca-pub-1234567890123456
     'adsense_cliente' => env('ADSENSE_CLIENTE', ''),

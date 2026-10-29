@@ -48,15 +48,8 @@ class LivroController extends Controller
         // Chave correta → livro completo
         if ($esperada !== '' && hash_equals($esperada, $enviada)) {
             $request->session()->regenerate();
+            // Só abre o livro nesta sessão: o plano vitalício vem apenas do pagamento (CompraLivroController)
             session(['livro_completo' => true]);
-
-            // A chave vem com a compra do info-produto: na conta logada, vira o plano vitalício
-            $user = $request->user();
-            if ($user && Plano::temColunas() && !Plano::comprouLivro($user)) {
-                $user->forceFill(['livro_comprado_em' => now()])->save();
-                return redirect()->route('planos.index')
-                    ->with('ok', 'Livro do sistema ativado na sua conta: plano vitalício sem anúncios e todos os livros liberados.');
-            }
 
             return redirect()->route('livro.index');
         }

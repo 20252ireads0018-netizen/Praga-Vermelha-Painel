@@ -14,6 +14,7 @@ use App\Http\Controllers\CampanhaRolagemController;
 use App\Http\Controllers\CampanhaIniciativaController;
 use App\Http\Controllers\CampanhaJogoController;
 use App\Http\Controllers\PlanoController;
+use App\Http\Controllers\CompraLivroController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -37,6 +38,13 @@ Route::middleware('auth')->group(function () {
     // Boas-vindas do iniciante: veio comprar os livros ou jogar o RPG?
     Route::get('/boas-vindas', [PlanoController::class, 'boasVindas'])->name('boas-vindas');
     Route::post('/boas-vindas', [PlanoController::class, 'objetivo'])->name('boas-vindas.salvar');
+
+    // Compra do livro do sistema (Asaas): CPF/CNPJ e cobrança única que libera o plano vitalício
+    Route::post('/planos/livro/comprar', [CompraLivroController::class, 'comprar'])
+        ->middleware('throttle:10,1')->name('livro.comprar');
+    Route::get('/planos/livro/dados', [CompraLivroController::class, 'dados'])->name('livro.compra.dados');
+    Route::post('/planos/livro/dados', [CompraLivroController::class, 'salvarDados'])
+        ->middleware('throttle:10,1')->name('livro.compra.dados.salvar');
 
 
     // Fichas
@@ -219,3 +227,7 @@ Route::get('/historias/{slug}/pdf', [HistoriaController::class, 'pdf'])->name('h
 
 // Planos (teste, grátis, vitalício com o livro do sistema) e links dos livros físicos
 Route::get('/planos', [PlanoController::class, 'index'])->name('planos.index');
+
+// Webhook do Asaas (sem login e sem CSRF; a autenticação é o token no header "asaas-access-token")
+Route::post('/webhooks/asaas', [CompraLivroController::class, 'webhook'])
+    ->middleware('throttle:120,1')->name('webhooks.asaas');

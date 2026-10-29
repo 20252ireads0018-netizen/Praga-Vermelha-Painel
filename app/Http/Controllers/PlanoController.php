@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AsaasCliente;
+use App\Support\CompraLivro;
 use App\Support\Plano;
 use Illuminate\Http\Request;
 
 class PlanoController extends Controller
 {
     // /planos: os planos, o plano da pessoa, a compra do livro do sistema e os links dos livros físicos
-    public function index()
+    public function index(AsaasCliente $asaas)
     {
-        $user  = auth()->user();
+        $user = auth()->user();
+        // de volta da fatura: confere o pagamento no Asaas sem esperar o webhook
+        if ($user && CompraLivro::conferir($user, $asaas)) {
+            session()->now('ok', 'Pagamento confirmado: plano vitalício ativado. Obrigado por comprar o livro!');
+        }
         $plano = $user ? Plano::de($user) : null;
 
         return view('planos', [
@@ -20,7 +26,8 @@ class PlanoController extends Controller
             'campanhas'  => $user ? Plano::campanhas($user) : 0,
             'limites'    => (array) config('planos.limites_gratis'),
             'diasPlano'  => (int) config('planos.dias_teste', 45),
-            'compraUrl'  => (string) config('planos.compra_livro_url'),
+            'preco'            => CompraLivro::precoTexto(),
+            'compraDisponivel' => CompraLivro::disponivel(),
             'fisicos'    => (array) config('planos.livros_fisicos'),
             'compradoEm' => $user && Plano::comprouLivro($user) ? $user->livro_comprado_em : null,
         ]);
