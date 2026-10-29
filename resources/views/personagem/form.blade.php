@@ -1992,10 +1992,6 @@
                     Rolar sua Aura
                 </button>
 
-                <button class="semi-botao atributo-card" style="color:white" id="rolagem-maldicao">
-                    Rolar sua Maldição
-                </button>
-
                 <hr>
 
                 <div class="titulo-rolagem">
@@ -2089,27 +2085,6 @@
             </div>
         </div>
 
-        <div class="popup" id="popup-maldicao">
-            <div class="popup-conteudo">
-                <p id="mensagem-popup-maldicao"></p>
-
-                <button class="atributo-card btn-popup-card" id="rolagem-raridade">
-                    Rolar Raridade
-                </button>
-                
-                <div id="div-maldicao" style="display:none">
-                    <button class="atributo-card btn-popup-card" id="rolagem-maldicao-def">
-                        Rolar Maldição
-                    </button>
-                </div>
-
-                <button id="popup-fechar-maldicao" style="width: 50%">
-                    Fechar
-                </button>
-
-                <p id="resultado-maldicao">Resultado: ?</p>
-            </div>
-        </div>
 
         <div id="rolagem-habilidade" class="popup">
             <div class="popup-conteudo">
@@ -2903,9 +2878,6 @@ window.PastasFicha = (function(){
     const popupMensagem = document.getElementById("popup-mensagem");
     const popupFechar = document.getElementById("popup-fechar");
     const porteFisico = document.getElementById("porte-fisico");
-    const popupMaldicao = document.getElementById("popup-maldicao");
-    const mensagemPopupMaldicao = document.getElementById("mensagem-popup-maldicao");
-    const popupFecharMaldicao = document.getElementById("popup-fechar-maldicao");
     const popupReRoll = document.getElementById("popup-re-roll");
     const popupReRollMensagem = document.getElementById("popup-re-roll-mensagem");
     const popupReRollFechar = document.getElementById("popup-re-roll-fechar");
@@ -2924,11 +2896,6 @@ window.PastasFicha = (function(){
     const rolagemSanidade = document.getElementById("rolagem-sanidade");
     const rolagemVida = document.getElementById("rolagem-vida");
     const nomeSorte = document.getElementById("nome-sorte");
-    const rolagemMaldicao = document.getElementById("rolagem-maldicao");
-    const rolagemRaridade = document.getElementById("rolagem-raridade");
-    const resultadoMaldicao = document.getElementById("resultado-maldicao");
-    const divMaldicao = document.getElementById("div-maldicao");
-    const rolagemMaldicaoDef = document.getElementById("rolagem-maldicao-def");
     const reRoll = document.getElementById("re-roll");
     const reRollVida = document.getElementById("re-roll-vida");
     const reRollSanidade = document.getElementById("re-roll-sanidade");
@@ -3330,15 +3297,6 @@ window.PastasFicha = (function(){
 
 
     //Popup Maldição
-    function mostrarPopupMaldicao(texto){
-        mensagemPopupMaldicao.textContent = texto;
-        popupMaldicao.classList.add("ativo");
-    }
-
-    popupFecharMaldicao.addEventListener("click", function(){
-        popupMaldicao.classList.remove("ativo");
-        divMaldicao.style.display = "none";
-    });
 
 
 
@@ -3496,35 +3454,6 @@ window.PastasFicha = (function(){
         rolagemAura.classList.add("usado");
     });
 
-    rolagemMaldicao.addEventListener("click", function(){
-        mostrarPopupMaldicao("Rolagem Maldição");
-    });
-
-    rolagemRaridade.addEventListener("click", function(){
-        let lados = 100;
-        let resultado = rolarDado(lados);
-        if(resultado>=60){
-            resultadoMaldicao.textContent = "Maldição Comum: " + resultado;
-        }
-        else if(resultado>=35 && resultado <60){
-            resultadoMaldicao.textContent = "Maldição incomum: " + resultado;
-        }
-        else if(resultado>=20 && resultado <35){
-            resultadoMaldicao.textContent = "Maldição rara: " + resultado;
-        }
-        else if(resultado>=5 && resultado <20){
-            resultadoMaldicao.textContent = "Maldição exótica: " + resultado;
-        }
-        else if(resultado>=1 && resultado <5){
-            resultadoMaldicao.textContent = "Maldição impossível: " + resultado;
-        }
-        divMaldicao.style.display = "block";
-        rolagemRaridade.classList.add("usado");
-    });
-
-    rolagemMaldicaoDef.addEventListener("click", function(){
-        resultadoMaldicao.textContent = "to funcionando";
-    });
 
     rolagemSanidade.addEventListener("click", function(){
         let lados = 100;
