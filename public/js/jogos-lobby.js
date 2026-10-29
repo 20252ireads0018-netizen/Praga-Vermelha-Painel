@@ -220,7 +220,7 @@
             const ehCmd = comandante === String(c.id);
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
-                `<span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : 'Feitiço'}</small></span>` +
+                `<span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : esc(window.JG.TIPOS[c.tipo] || 'Feitiço')}</small></span>` +
                 (c.tipo === 'lenda' ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
                 `<b class="jg-deck-qtd">${q}</b>` +
@@ -420,7 +420,12 @@
         });
         const previa = () => {
             const lenda = fc.tipo.value === 'lenda';
+            const equipo = fc.tipo.value === 'equipo';
             $$('.jg-so-lenda', fc).forEach(el => { el.hidden = !lenda; });
+            // ataque/vida: da Lenda, ou o bônus que o Equipamento dá a quem ele equipa
+            $$('.jg-com-atributos', fc).forEach(el => { el.hidden = !lenda && !equipo; });
+            $('[data-rotulo-atk]', fc).textContent = equipo ? 'Bônus de ataque' : 'Ataque';
+            $('[data-rotulo-vida]', fc).textContent = equipo ? 'Bônus de vida' : 'Vida';
             $$('.jg-so-feitico', fc).forEach(el => { el.hidden = lenda; });
             $('#jg-previa-carta').innerHTML = window.JG.carta(lerCarta());
         };
@@ -578,7 +583,7 @@
             const c = lerCarta();
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
                             descricao: c.descricao,
-                            palavras: c.tipo === 'lenda' ? c.palavras : [] };
+                            palavras: c.palavras }; // qualquer tipo de carta pode ter palavras-chave
             // a imagem vai como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio (erro 406)
             if (imagem) dados.imagem_arquivo = new File([await (await fetch(imagem)).blob()], 'arte.jpg', { type: 'image/jpeg' });
             if (semImagem) dados.sem_imagem = 1;

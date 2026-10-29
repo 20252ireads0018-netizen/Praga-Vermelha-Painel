@@ -126,19 +126,20 @@ class CampanhaJogoController extends Controller
             : new GladioCarta(['campanha_id' => $campanha->id]);
 
         $lenda = $d['tipo'] === 'lenda';
+        $equipo = $d['tipo'] === 'equipo'; // Equipamento: ataque/vida são o bônus que a Lenda equipada recebe
         $carta->fill([
             'nome'      => trim($d['nome']),
             'tipo'      => $d['tipo'],
             'custo'     => (int) $d['custo'],
-            'ataque'    => $lenda ? (int) ($d['ataque'] ?? 0) : 0,
-            'vida'      => $lenda ? (int) ($d['vida'] ?? 1) : 0,
+            'ataque'    => $lenda || $equipo ? (int) ($d['ataque'] ?? 0) : 0,
+            'vida'      => $lenda ? (int) ($d['vida'] ?? 1) : ($equipo ? (int) ($d['vida'] ?? 0) : 0),
             // feitiço não tem efeito automático: quem joga escolhe o efeito e o valor que a descrição pede
             'efeito'    => null,
             'valor'     => 0,
             'descricao' => trim((string) ($d['descricao'] ?? '')) ?: null,
         ]);
         if (Schema::hasColumn('gladio_cartas', 'palavras')) {
-            $palavras = $lenda ? implode(',', array_unique($d['palavras'] ?? [])) : '';
+            $palavras = implode(',', array_unique($d['palavras'] ?? [])); // qualquer tipo de carta pode ter palavras-chave
             if (strlen($palavras) > 100) { // tamanho da coluna
                 return response()->json(['ok' => false, 'erro' => 'Palavras-chave demais numa carta só: escolha menos.'], 422);
             }
@@ -644,6 +645,7 @@ class CampanhaJogoController extends Controller
             'quanto' => ['nullable', 'integer', 'min:-9999', 'max:9999'], // shots / vida
             'cont' => ['nullable', 'integer', 'min:-99', 'max:99'],       // contador de uma carta
             'nota' => ['nullable', 'string', 'max:60'],                   // anotação de uma carta
+            'palavra' => ['nullable', Rule::in(array_keys(Gladio::PALAVRAS))], // palavra-chave dada/tirada de uma Lenda
             'origem' => ['nullable', Rule::in(['mao', 'cemiterio', 'comando'])], // invocar sem custo
             'energia' => ['nullable', 'integer', 'min:-99', 'max:99'], 'energia_max' => ['nullable', 'integer', 'min:-99', 'max:99'],
             'x' => ['nullable', 'integer'], 'y' => ['nullable', 'integer'],
@@ -699,6 +701,7 @@ class CampanhaJogoController extends Controller
                         'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
                         'ativar'     => Gladio::ativar($e, $lado, $inst),
                         'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
+                        'palavra'    => Gladio::palavra($e, $lado, $inst, (string) $request->input('palavra', '')),
                         'equipar'    => Gladio::equipar($e, $lado, $inst, (int) $outro),
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };

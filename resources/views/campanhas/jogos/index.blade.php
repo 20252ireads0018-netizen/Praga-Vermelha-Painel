@@ -69,9 +69,11 @@
                         <div class="jg-deck-filtros" id="jg-deck-filtros" role="search">
                             <input type="search" id="jg-deck-pesquisa" class="jg-deck-pesquisa" placeholder="Pesquisar pelo nome ou texto…" aria-label="Pesquisar carta para o deck">
                             <select data-deck-filtro="tipo" aria-label="Tipo">
-                                <option value="">Lendas e feitiços</option>
+                                <option value="">Todos os tipos</option>
                                 <option value="lenda">Só Lendas</option>
                                 <option value="feitico">Só feitiços</option>
+                                <option value="encanto">Só encantamentos</option>
+                                <option value="equipo">Só equipamentos</option>
                             </select>
                             <select data-deck-filtro="custo" aria-label="Custo"><option value="">Qualquer custo</option></select>
                             <select data-deck-filtro="palavra" aria-label="Palavra-chave"><option value="">Qualquer palavra-chave</option></select>
@@ -99,7 +101,7 @@
                         <h2>Cartas</h2>
                         <span class="camp-contagem" id="jg-cont-cartas">0</span>
                     </div>
-                    <p class="camp-dica"><strong>Lenda</strong>: fica na mesa e ataca a partir do turno seguinte. <strong>Feitiço</strong>: efeito de uso único. Cada um monta um baralho de 20 com as cartas abaixo.</p>
+                    <p class="camp-dica"><strong>Lenda</strong>: fica na mesa e ataca a partir do turno seguinte. <strong>Feitiço</strong>: efeito de uso único (resolve e vai para o cemitério). <strong>Encantamento</strong>: fica no campo com o efeito ativo. <strong>Equipamento</strong>: fica preso a uma Lenda sua, com bônus de ataque/vida e palavras-chave, e cai junto com ela. Cada um monta um baralho com as cartas abaixo.</p>
                     @if ($souMestre)
                         <button type="button" class="camp-btn camp-btn-primario" id="jg-nova-carta">+ Nova carta</button>
                         <form class="jg-criador" id="jg-criador-carta" hidden>
@@ -110,12 +112,14 @@
                                     <select name="tipo">
                                         <option value="lenda">Lenda</option>
                                         <option value="feitico">Feitiço</option>
+                                        <option value="encanto">Encantamento</option>
+                                        <option value="equipo">Equipamento</option>
                                     </select>
                                 </label>
                                 <label>Custo (energia)<input type="number" name="custo" min="0" max="10" value="1"></label>
-                                <label class="jg-so-lenda">Ataque<input type="number" name="ataque" min="0" max="9999" value="1"></label>
-                                <label class="jg-so-lenda">Vida<input type="number" name="vida" min="1" max="9999" value="1"></label>
-                                <fieldset class="jg-so-lenda jg-larga jg-palavras">
+                                <label class="jg-com-atributos"><span data-rotulo-atk>Ataque</span><input type="number" name="ataque" min="0" max="9999" value="1"></label>
+                                <label class="jg-com-atributos"><span data-rotulo-vida>Vida</span><input type="number" name="vida" min="0" max="9999" value="1"></label>
+                                <fieldset class="jg-larga jg-palavras">
                                     <legend>Palavras-chave <small>(passe o mouse para ver o efeito)</small></legend>
                                     <div class="jg-palavras-grade" id="jg-palavras-grade"></div>{{-- preenchido com JG.PALAVRA --}}
                                 </fieldset>
@@ -148,9 +152,11 @@
                     <div class="jg-filtros" id="jg-filtros-cartas" role="search">
                         <input type="search" data-filtro="nome" placeholder="Pesquisar carta pelo nome…" aria-label="Pesquisar carta pelo nome">
                         <select data-filtro="tipo" aria-label="Tipo">
-                            <option value="">Lendas e feitiços</option>
+                            <option value="">Todos os tipos</option>
                             <option value="lenda">Só Lendas</option>
                             <option value="feitico">Só feitiços</option>
+                            <option value="encanto">Só encantamentos</option>
+                            <option value="equipo">Só equipamentos</option>
                         </select>
                         <select data-filtro="custo" aria-label="Custo"></select>
                         <select data-filtro="palavra" aria-label="Palavra-chave"></select>

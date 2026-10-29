@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 3;
+    public const VERSAO = 4;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -77,7 +77,7 @@ class GladioTexto
      */
     public static function ler(?string $texto, string $tipo, string $nome = '', array $nomes = []): array
     {
-        if ($tipo !== 'lenda' && preg_match('/\bequip/', self::normalizar((string) $texto))) {
+        if ($tipo === 'equipo' || ($tipo !== 'lenda' && preg_match('/\bequip/', self::normalizar((string) $texto)))) {
             return self::equipamento((string) $texto);
         }
         $eu = self::nomesProprios($nome);
@@ -157,7 +157,11 @@ class GladioTexto
                 continue;
             }
             $achou = false;
-            if (preg_match_all('/([+-]\d+)\s*\/\s*([+-]\d+)/', $f, $mm, PREG_SET_ORDER)) {
+            if (preg_match('/\bbonus|\baumentad|\brecebid|\bse (?:o |a )?equipad[oa] for inimig/', $f)) {
+                $parcial = true; // regra sobre outros bônus ou condição: fica à mão
+                continue;
+            }
+            if (preg_match_all('/([+-]\d+)\s*\/\s*([+-]?\d+)/', $f, $mm, PREG_SET_ORDER)) { // "+1/+1", "+0/5"
                 foreach ($mm as $m) {
                     $atk += (int) $m[1];
                     $vida += (int) $m[2];

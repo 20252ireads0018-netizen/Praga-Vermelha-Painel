@@ -445,6 +445,9 @@
                     `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="0" data-v="1">+1 vida</button>` +
                     `<button type="button" class="camp-btn camp-btn-pequeno" data-m="ajustar" data-a="0" data-v="-1">−1 vida</button>` +
                 `</div>` +
+                // palavras-chave: clique para dar ou tirar (as que ela tem ficam marcadas)
+                `<div class="gl-palavras-mesa" aria-label="Palavras-chave">${Object.keys(window.JG.PALAVRA).map(p =>
+                    `<button type="button" class="gl-mini${tem(x, p) ? ' ativo' : ''}" data-m="palavra" data-p="${p}" title="${esc(window.JG.PALAVRA[p].desc)}">${tem(x, p) ? '✓ ' : '+ '}${esc(window.JG.PALAVRA[p].nome)}</button>`).join('')}</div>` +
                 marcacao(x, 'na Lenda') +
                 (minha && minhaVez && outras ? `<button type="button" class="camp-btn" data-m="copiar">Virar cópia de outra Lenda sua</button>` : '') +
                 (minha && (defLenda(x).hab || []).length ? `<button type="button" class="camp-btn" data-m="ativar" title="${esc(defLenda(x).auto || '')}">⚙ Usar o texto desta carta de novo</button>` : '') +
@@ -603,6 +606,7 @@
             if (tipo === 'descartar' && !confirm('Descartar esta carta?')) return;
             if (tipo === 'ajustar') { acao({ acao: 'ajustar', inst, atk: +m.dataset.a, vida: +m.dataset.v }); return; }
             if (tipo === 'cont') { acao({ acao: 'marcar', inst, cont: +m.dataset.d }); return; }
+            if (tipo === 'palavra') { acao({ acao: 'palavra', inst, palavra: m.dataset.p }); return; }
             if (tipo === 'revelar') { acao({ acao: 'revelar', inst }); return; }
             if (tipo === 'invocar') { modal = null; acao({ acao: 'invocar', inst, origem: 'mao' }); return; }
             if (tipo === 'ativar') { modal = null; acao({ acao: 'ativar', inst }); return; }

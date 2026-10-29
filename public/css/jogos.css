@@ -746,3 +746,12 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .jg-deck-filtros .jg-deck-pesquisa { flex: 1 1 100%; min-width: 0; box-sizing: border-box; }
 .jg-deck-filtros select { flex: 1 1 8rem; min-width: 0; }
 .jg-deck-so { display: inline-flex; align-items: center; gap: .3rem; font-size: .85rem; white-space: nowrap; }
+
+/* palavras-chave dadas/tiradas à mão numa Lenda da mesa */
+.gl-palavras-mesa { display: flex; flex-wrap: wrap; gap: .25rem; }
+.gl-palavras-mesa .gl-mini.ativo { background: rgba(201, 164, 92, .3); border-color: #c9a45c; color: #fde68a; }
+/* tipos de carta: encantamento e equipamento com moldura própria */
+.jg-carta--t-encanto { --jg-moldura: #7c3aed; }
+.jg-carta--t-encanto .jg-carta-tipo { color: #c4b5fd; }
+.jg-carta--t-equipo .jg-carta-tipo { color: #fcd34d; }
+.jg-carta-bonus b { color: #fde68a; }

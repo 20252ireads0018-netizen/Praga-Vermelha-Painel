@@ -67,6 +67,8 @@ window.JG = (function () {
         indestrutivel: { nome: 'Indestrutível', desc: 'Não cai por dano nem por Toque mortal: a vida não baixa de 1. Ainda pode ser sacrificada.' },
         resistencia:   { nome: 'Hexo-Imune', desc: 'Não pode ser alvo de feitiços do adversário.' },
     };
+    /** Tipos de carta (Gladio::NOMES_TIPOS). */
+    const TIPOS = { lenda: 'Lenda', feitico: 'Feitiço', encanto: 'Encantamento', equipo: 'Equipamento' };
     const palavras = c => (Array.isArray(c.palavras) ? c.palavras : String(c.palavras || '').split(',')).map(s => s.trim()).filter(Boolean);
     // nomes compridos diminuem; os muito compridos quebram em duas linhas
     const tamNome = n => { const k = String(n || '').length; return k > 18 ? ' jg-nome-2l' : (k > 11 ? ' jg-nome-longo' : ''); };
@@ -79,6 +81,7 @@ window.JG = (function () {
     function carta(c, o) {
         o = o || {};
         const lenda = c.tipo === 'lenda';
+        const equipo = c.tipo === 'equipo';
         const atk = o.atk != null ? o.atk : c.ataque;
         const vida = o.vida != null ? o.vida : c.vida;
         const ferida = o.max != null && vida < o.max ? ' jg-ferida' : '';
@@ -90,17 +93,19 @@ window.JG = (function () {
         const arte = c.imagem
             ? `<img src="${esc(c.imagem)}" alt="" draggable="false">`
             : `<span class="jg-carta-emblema">${EMBLEMA[lenda ? 'lenda' : 'feitico']}</span>`;
-        return `<div class="jg-carta jg-carta--${lenda ? 'lenda' : 'feitico'} ${o.classe || ''}" ${o.attrs || ''} title="${esc(dica)}">` +
+        return `<div class="jg-carta jg-carta--${lenda ? 'lenda' : 'feitico'} jg-carta--t-${esc(c.tipo || 'feitico')} ${o.classe || ''}" ${o.attrs || ''} title="${esc(dica)}">` +
             `<span class="jg-carta-custo" title="Custo em energia"><b>${esc(c.custo)}</b></span>` +
             `<div class="jg-carta-arte">${arte}</div>` +
             `<div class="jg-carta-nome${tamNome(c.nome)}"><span>${esc(c.nome)}</span></div>` +
-            `<div class="jg-carta-tipo">${lenda ? 'Lenda' : 'Feitiço'}</div>` +
+            `<div class="jg-carta-tipo">${esc(TIPOS[c.tipo] || 'Feitiço')}</div>` +
             (pal.length ? `<div class="jg-carta-palavras">${pal.map(p =>
                 `<span class="jg-palavra" tabindex="0" title="${esc(PALAVRA[p].nome + ': ' + PALAVRA[p].desc)}">${esc(PALAVRA[p].nome)}</span>`).join(' · ')}</div>` : '') +
             `<div class="jg-carta-texto">${esc(texto)}</div>` +
             (lenda ? `<div class="jg-carta-atributos">` +
                 `<span class="jg-carta-atk" title="Ataque">${ESPADA}<b>${esc(atk)}</b></span>` +
-                `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>` : '') +
+                `<span class="jg-carta-vida${ferida}" title="Vida">${GOTA}<b>${esc(vida)}</b></span></div>`
+                : (equipo && (+c.ataque || +c.vida) ? `<div class="jg-carta-atributos jg-carta-bonus" title="Bônus para a Lenda equipada">` +
+                    `<span class="jg-carta-atk">${ESPADA}<b>+${esc(+c.ataque || 0)}</b></span><span class="jg-carta-vida">${GOTA}<b>+${esc(+c.vida || 0)}</b></span></div>` : '')) +
             `</div>`;
     }
 
@@ -180,5 +185,5 @@ window.JG = (function () {
         setTimeout(() => { if (balao === este) { este.remove(); balao = null; } }, 4000);
     }, true);
 
-    return { esc, post, carta, textoEfeito, diagrama, PALAVRA };
+    return { esc, post, carta, textoEfeito, diagrama, PALAVRA, TIPOS };
 })();

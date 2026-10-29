@@ -637,7 +637,57 @@ class GladioTest extends TestCase
                      'descricao' => 'Descarte sua mão.'],
         'tesouro' => ['nome' => 'Tesouro', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
                       'descricao' => 'Recupere 20$.'],
+        'papelada' => ['nome' => 'Hexo-papelada', 'tipo' => 'feitico', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                       'descricao' => 'Compre uma carta, descarte uma carta, pague 10$'],
+        'confia' => ['nome' => 'Confiança', 'tipo' => 'encanto', 'custo' => 0, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                     'descricao' => 'Todo início de turno, suas lendas ganham +0/+2'],
+        'manto' => ['nome' => 'Manto', 'tipo' => 'equipo', 'custo' => 0, 'ataque' => 1, 'vida' => 2, 'palavras' => 'voar',
+                    'descricao' => ''],
     ] + self::CARTAS;
+
+    public function test_hexo_papelada_compra_descarta_e_paga(): void
+    {
+        $e = $this->comTextos(['papelada']);
+        $mao = count($e['lados']['a']['mao']);
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'papelada'));
+        $this->assertSame(['a', 'mao'], [$e['escolha']['lado'], $e['escolha']['tipo']], 'comprou e pede o descarte da mão');
+        $this->assertCount($mao, $e['lados']['a']['mao'], 'jogou uma, comprou uma');
+        $e = Gladio::escolher($e, 'a', $e['escolha']['opcoes'][0]);
+        $this->assertCount($mao - 1, $e['lados']['a']['mao']);
+        $this->assertSame(90, $e['lados']['a']['vida'], 'pagou 10$');
+        $this->assertSame('papelada', $e['lados']['a']['cemiterio'][0]['c'], 'feitiço vai para o cemitério');
+    }
+
+    public function test_tipos_encantamento_fica_e_equipamento_usa_campos_e_palavras(): void
+    {
+        $e = $this->comTextos(['confia', 'manto']);
+        $e = $this->lendaPronta($e, 'a', '1');
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'confia'));
+        $this->assertSame('confia', end($e['lados']['a']['feiticos'])['c'], 'encantamento fica no campo');
+        $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'manto'));
+        $lenda = $e['lados']['a']['mesa'][0]['i'];
+        $e = Gladio::escolher($e, 'a', $lenda);
+        $m = $e['lados']['a']['mesa'][0];
+        $this->assertSame([4, 4], [$m['atk'], $m['max']], 'bônus de ataque/vida do equipamento');
+        $this->assertContains('voar', $m['pal'], 'palavra-chave da carta de equipamento');
+        // o encantamento age no início do turno do dono
+        $e = Gladio::passar(Gladio::passar($e, 'a'), 'b');
+        $this->assertSame(6, $e['lados']['a']['mesa'][0]['max']);
+    }
+
+    public function test_sem_limite_na_mesa_e_palavra_chave_a_mao(): void
+    {
+        $e = $this->novo();
+        for ($k = 0; $k < 10; $k++) {
+            $e = Gladio::ficha($e, 'a', 'F', 1, 1);
+        }
+        $this->assertCount(10, $e['lados']['a']['mesa']);
+        $i = $e['lados']['a']['mesa'][0]['i'];
+        $e = Gladio::palavra($e, 'b', $i, 'voar');
+        $this->assertContains('voar', $e['lados']['a']['mesa'][0]['pal']);
+        $e = Gladio::palavra($e, 'b', $i, 'voar');
+        $this->assertNotContains('voar', $e['lados']['a']['mesa'][0]['pal'], 'clicar de novo tira');
+    }
 
     public function test_uma_onda_de_ataque_por_turno(): void
     {

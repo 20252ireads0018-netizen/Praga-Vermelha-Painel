@@ -57,7 +57,14 @@ namespace App\Jogos;
  */
 class Gladio
 {
-    public const TIPOS = ['lenda', 'feitico'];
+    /**
+     * Tipos de carta: Lenda (vai para a mesa e luta), Feitiço (efeito de uso único: resolve e vai para o cemitério),
+     * Encantamento (fica no campo com o efeito ativo: gatilhos de turno, de morte…) e Equipamento (fica preso a uma
+     * Lenda sua, com o bônus de ataque/vida e as palavras-chave da carta e do texto; cai junto com ela).
+     * As chaves cabem na coluna tipo (10 letras).
+     */
+    public const TIPOS = ['lenda', 'feitico', 'encanto', 'equipo'];
+    public const NOMES_TIPOS = ['lenda' => 'Lenda', 'feitico' => 'Feitiço', 'encanto' => 'Encantamento', 'equipo' => 'Equipamento'];
     public const EFEITOS = ['dano', 'dano_todos', 'cura', 'comprar', 'fortalecer', 'energia'];
     /** Palavras-chave (chave curta => nome). As dicas com o efeito de cada uma ficam em public/js/jogos-comum.js. */
     public const PALAVRAS = [
@@ -82,7 +89,6 @@ class Gladio
     public const MAO_INICIAL = 5;
     public const MAO_MAX = 10;      // comprando com a mão cheia, a carta vai para o cemitério
     public const MAO_FIM = 7;       // no fim do turno, quem joga descarta até ficar com isso
-    public const MESA_MAX = 7;
     public const ENERGIA_MAX = 10;
     public const VIDA_AMISTOSO = 30;
     public const TAXA_COMANDANTE = 2; // custo extra por vez que o comandante já saiu da zona de comando
@@ -225,6 +231,9 @@ class Gladio
                 continue;
             }
             $r = GladioTexto::ler($c['descricao'] ?? '', (string) ($c['tipo'] ?? 'lenda'), (string) ($c['nome'] ?? ''), $nomes);
+            if (($c['tipo'] ?? '') === 'equipo' && !$r['hab']) { // equipamento sem texto: o bônus vem dos campos e palavras-chave
+                $r['hab'] = [['g' => 'conjurar', 'passos' => [['a' => 'equipar', 'alvo' => 'lenda', 'filtro' => 'meu', 'atk' => 0, 'vida' => 0, 'pal' => []]]]];
+            }
             $cartas[$id]['hab'] = $r['hab'];
             $cartas[$id]['parcial'] = $r['parcial'];
             $cartas[$id]['auto'] = GladioTexto::resumo($r['hab']);
@@ -587,9 +596,6 @@ class Gladio
         $semCusto = $gratis ? ' (sem pagar energia)' : '';
 
         if ($carta['tipo'] === 'lenda') {
-            if (count($l['mesa']) >= self::MESA_MAX) {
-                throw new \InvalidArgumentException('Sua mesa já tem ' . self::MESA_MAX . ' Lendas.');
-            }
             $pal = self::palavrasDe($e, $id);
             $l['mesa'][] = ['i' => $l['mao'][$k]['i'], 'c' => $id, 'atk' => (int) $carta['ataque'], 'vida' => (int) $carta['vida'],
                             'max' => (int) $carta['vida'], 'pode' => !$defendendo && in_array('impeto', $pal, true), 'virada' => false,
@@ -608,8 +614,9 @@ class Gladio
         $hab = $e['cartas'][$id]['hab'] ?? [];
         if (empty($carta['efeito']) && !$efeitoEscolhido && $hab) {
             $inst = (int) $l['mao'][$k]['i'];
-            // fica no campo: gatilho de turno, ou equipamento (vinculado a uma Lenda)
-            $fica = (bool) array_filter($hab, fn ($h) => $h['g'] !== 'conjurar' || in_array('equipar', array_column($h['passos'], 'a'), true));
+            // Encantamento e Equipamento ficam no campo; Feitiço só fica se tiver gatilho de turno/morte (senão, cemitério)
+            $fica = in_array($carta['tipo'], ['encanto', 'equipo'], true)
+                || (bool) array_filter($hab, fn ($h) => $h['g'] !== 'conjurar' || in_array('equipar', array_column($h['passos'], 'a'), true));
             if ($fica) {
                 $l['feiticos'][] = ['i' => $inst, 'c' => $id, 'cont' => 0, 'nota' => ''];
             } else {
@@ -618,7 +625,7 @@ class Gladio
             array_splice($l['mao'], $k, 1);
             $l['energia'] -= $custo;
             unset($l);
-            self::log($e, "$quem conjurou $nome$semCusto.");
+            self::log($e, "$quem " . self::verbo($carta['tipo']) . " $nome$semCusto.");
 
             return self::seguir(self::enfileirar($e, $lado, $id, $inst, 'conjurar'));
         }
@@ -1173,9 +1180,6 @@ class Gladio
         if ($vida < 1) {
             throw new \InvalidArgumentException('A ficha precisa de pelo menos 1 de vida.');
         }
-        if (count($e['lados'][$lado]['mesa']) >= self::MESA_MAX) {
-            throw new \InvalidArgumentException('Sua mesa já tem ' . self::MESA_MAX . ' Lendas.');
-        }
         $atk = max(0, min(9999, $atk));
         $vida = min(9999, $vida);
         $e['lados'][$lado]['mesa'][] = ['i' => ++$e['seq'], 'c' => null, 'nome' => $nome, 'atk' => $atk, 'vida' => $vida,
@@ -1186,6 +1190,31 @@ class Gladio
     }
 
     /** Ajusta ataque e vida de qualquer Lenda na mesa (sua ou de um adversário), a qualquer momento. Vida 0: ela cai. */
+    /** Dá (ou tira, se ela já tiver) uma palavra-chave a qualquer Lenda na mesa, a qualquer momento (mesa livre). */
+    public static function palavra(array $e, string $lado, int $inst, string $pal): array
+    {
+        self::exigirAtivo($e, $lado);
+        if (!isset(self::PALAVRAS[$pal])) {
+            throw new \InvalidArgumentException('Palavra-chave desconhecida.');
+        }
+        $onde = self::acharLenda($e, $inst);
+        if (!$onde) {
+            throw new \InvalidArgumentException('Essa Lenda não está na mesa.');
+        }
+        [$dono, $k] = $onde;
+        $m = &$e['lados'][$dono]['mesa'][$k];
+        $tinha = in_array($pal, $m['pal'] ?? [], true);
+        $m['pal'] = $tinha ? array_values(array_diff($m['pal'], [$pal])) : array_merge($m['pal'] ?? [], [$pal]);
+        if (!$tinha && $pal === 'impeto' && $dono === $e['vez'] && empty($m['virada'])) {
+            $m['pode'] = true; // Ímpeto recebido no turno: já pode atacar
+        }
+        $nome = self::nomeLenda($e, $m) . ($dono === $lado ? '' : ' de ' . self::quem($e, $dono));
+        unset($m);
+        self::log($e, self::quem($e, $lado) . ($tinha ? ' tirou ' : ' deu ') . self::PALAVRAS[$pal] . ($tinha ? ' de ' : ' a ') . "$nome.");
+
+        return self::seguir($e);
+    }
+
     public static function ajustar(array $e, string $lado, int $inst, int $datk, int $dvida): array
     {
         self::exigirAtivo($e, $lado);
@@ -1310,18 +1339,32 @@ class Gladio
     /*  Equipamentos (feitiço vinculado a uma Lenda)                       */
     /* ================================================================== */
 
+    private static function verbo(string $tipo): string
+    {
+        return ['encanto' => 'pôs em jogo o encantamento', 'equipo' => 'pôs em jogo o equipamento'][$tipo] ?? 'conjurou';
+    }
+
     /** Bônus que o texto do feitiço dá à Lenda equipada: { atk, vida, pal[] } (vazio para feitiço sem texto de equipar). */
     private static function bonusDe(array $e, ?string $c): array
     {
+        $b = ['atk' => 0, 'vida' => 0, 'pal' => self::palavrasDe($e, $c)];
+        if (($e['cartas'][$c]['tipo'] ?? '') === 'equipo') { // os campos de ataque/vida do Equipamento são o bônus
+            $b['atk'] += (int) ($e['cartas'][$c]['ataque'] ?? 0);
+            $b['vida'] += (int) ($e['cartas'][$c]['vida'] ?? 0);
+        }
         foreach ($e['cartas'][$c]['hab'] ?? [] as $h) {
             foreach ($h['passos'] as $p) {
                 if ($p['a'] === 'equipar') {
-                    return ['atk' => (int) ($p['atk'] ?? 0), 'vida' => (int) ($p['vida'] ?? 0), 'pal' => (array) ($p['pal'] ?? [])];
+                    $b['atk'] += (int) ($p['atk'] ?? 0);
+                    $b['vida'] += (int) ($p['vida'] ?? 0);
+                    $b['pal'] = array_values(array_unique(array_merge($b['pal'], (array) ($p['pal'] ?? []))));
+
+                    return $b;
                 }
             }
         }
 
-        return ['atk' => 0, 'vida' => 0, 'pal' => []];
+        return $b;
     }
 
     /**
@@ -1427,9 +1470,6 @@ class Gladio
             $e['lados'][$lado]['feiticos'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'cont' => 0, 'nota' => ''];
 
             return $e;
-        }
-        if (count($e['lados'][$lado]['mesa']) >= self::MESA_MAX) {
-            throw new \InvalidArgumentException('Sua mesa já tem ' . self::MESA_MAX . ' Lendas.');
         }
         $pal = self::palavrasDe($e, $carta['c']);
         $e['lados'][$lado]['mesa'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'atk' => (int) $def['ataque'], 'vida' => (int) $def['vida'],
@@ -1730,7 +1770,7 @@ class Gladio
     private static function cartasDe(array $e, array $lista, ?string $tipo): array
     {
         return array_values(array_map(fn ($c) => (int) $c['i'], array_filter($lista,
-            fn ($c) => $tipo === null || ($e['cartas'][$c['c']]['tipo'] ?? '') === $tipo)));
+            fn ($c) => $tipo === null || ($tipo === 'feitico' ? ($e['cartas'][$c['c']]['tipo'] ?? '') !== 'lenda' : ($e['cartas'][$c['c']]['tipo'] ?? '') === $tipo))));
     }
 
     /** Aplica um passo de efeito (pode pedir uma escolha antes). */
@@ -1930,7 +1970,7 @@ class Gladio
                 case 'ficha':
                     unset($L);
                     $pal = array_values(array_intersect($p['pal'] ?? [], array_keys(self::PALAVRAS)));
-                    for ($k = 0; $k < max(1, $n) && count($e['lados'][$l]['mesa']) < self::MESA_MAX; $k++) {
+                    for ($k = 0; $k < max(1, $n); $k++) {
                         $e['lados'][$l]['mesa'][] = ['i' => ++$e['seq'], 'c' => null, 'nome' => $p['nome'] ?? 'Ficha', 'atk' => (int) $p['atk'],
                             'vida' => max(1, (int) $p['vida']), 'max' => max(1, (int) $p['vida']), 'pode' => in_array('impeto', $pal, true),
                             'virada' => false, 'pal' => $pal, 'cont' => 0, 'nota' => ''];
@@ -1953,10 +1993,6 @@ class Gladio
                         }
                     }
                     for ($k = 0; $id !== null && $k < max(1, $n); $k++) {
-                        if (count($e['lados'][$l]['mesa']) >= self::MESA_MAX) {
-                            self::log($e, "$fonte: a mesa de $quem está cheia.");
-                            break;
-                        }
                         $nova = ['i' => ++$e['seq'], 'c' => $id]; // antes de passar $e adiante: senão a cópia leva o seq antigo
                         $e = self::entrar($e, $l, $nova);
                         self::log($e, "$fonte: $quem invocou " . self::nome($e, $id) . '.');
