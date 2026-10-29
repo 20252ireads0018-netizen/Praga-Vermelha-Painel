@@ -787,11 +787,31 @@
 
     const fp = $('#jg-criador-peca');
     const N = 7; // a grade vai de -7 a +7
-    const DIRS = [[0, 1, '↑'], [1, 1, '↗'], [1, 0, '→'], [1, -1, '↘'], [0, -1, '↓'], [-1, -1, '↙'], [-1, 0, '←'], [-1, 1, '↖']];
-    const CICLO = ['', 'ambos', 'mover', 'capturar'];
+    // bússola dos deslizes (frente = para cima), na ordem da grade 3×3
+    const BUSSOLA = [[-1, 1, '↖'], [0, 1, '↑'], [1, 1, '↗'], [-1, 0, '←'], null, [1, 0, '→'], [-1, -1, '↙'], [0, -1, '↓'], [1, -1, '↘']];
+    const MODOS = { ambos: 'Move e captura', mover: 'Só move', capturar: 'Só captura' };
+    const SIMBOLOS = ['♜', '♞', '♝', '♛', '♚', '♟', '✦', '★', '✚', '⚔', '🛡', '🏹', '🐉', '🦅', '🐺', '👑', '☠', '⚡', '🔥', '❄', '☽', '☀', '♠', '♣', 'A', 'B', 'C', 'X'];
+    // modelos para começar (as peças do xadrez e duas clássicas de variantes)
+    const raio = (dirs, alc = 7) => dirs.map(([dx, dy]) => ({ dx, dy, d: true, alc, m: 'ambos' }));
+    const salto = dirs => dirs.map(([dx, dy]) => ({ dx, dy, d: false, alc: 1, m: 'ambos' }));
+    const RETAS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const DIAGS = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    const EM_L = (a, b) => [[a, b], [b, a], [-a, b], [-b, a], [a, -b], [b, -a], [-a, -b], [-b, -a]];
+    const MODELOS = {
+        Torre: raio(RETAS), Bispo: raio(DIAGS), Dama: raio(RETAS.concat(DIAGS)), Rei: salto(RETAS.concat(DIAGS)),
+        Cavalo: salto(EM_L(1, 2)), Camelo: salto(EM_L(1, 3)), Arcebispo: raio(DIAGS).concat(salto(EM_L(1, 2))),
+        Chanceler: raio(RETAS).concat(salto(EM_L(1, 2))),
+    };
+    let pincel = 'ambos';
     let saltos = {}; // "dx,dy" => modo
-    let raios = {};  // "dx,dy" => { m, alc }
+    let raios = {};  // "dx,dy" (direção) => { m, alc }
 
+    const espelhos = (dx, dy) => {
+        const lista = [[dx, dy]];
+        if ($('#jg-espelhar').checked) lista.push([-dx, dy]);
+        if ($('#jg-espelhar-v').checked) lista.slice().forEach(([x, y]) => lista.push([x, -y]));
+        return lista.filter(([x, y], i) => lista.findIndex(([a, b]) => a === x && b === y) === i);
+    };
     function regrasDoCriador() {
         const out = [];
         Object.keys(raios).forEach(k => { const [dx, dy] = k.split(',').map(Number); out.push({ dx, dy, d: true, alc: raios[k].alc, m: raios[k].m }); });
@@ -802,9 +822,23 @@
         });
         return out;
     }
+    // resumo em palavras do que a peça faz
+    function resumoPeca(regras) {
+        if (!regras.length) return 'Nenhum movimento ainda: escolha um modelo ou pinte casas na grade.';
+        const setas = Object.fromEntries(BUSSOLA.filter(Boolean).map(([dx, dy, s]) => [dx + ',' + dy, s]));
+        const partes = [];
+        const desl = regras.filter(r => r.d);
+        Object.keys(MODOS).forEach(m => {
+            const d = desl.filter(r => r.m === m);
+            if (d.length) partes.push(`desliza ${d.map(r => setas[r.dx + ',' + r.dy] + (r.alc < 7 ? ' até ' + r.alc : '')).join(' ')} (${MODOS[m].toLowerCase()})`);
+            const s = regras.filter(r => !r.d && r.m === m);
+            if (s.length) partes.push(`salta para ${s.length} casa${s.length > 1 ? 's' : ''} (${MODOS[m].toLowerCase()})`);
+        });
+        return partes.join('; ') + '.';
+    }
     function renderCriador() {
         const regras = regrasDoCriador();
-        // a grade mostra os saltos (clicáveis) e, mais clarinho, as casas alcançadas deslizando
+        // a grade mostra os saltos e, mais clarinho, as casas alcançadas deslizando
         const alcance = {};
         regras.filter(r => r.d).forEach(r => { for (let k = 1; k <= r.alc; k++) alcance[(r.dx * k) + ',' + (r.dy * k)] = r.m; });
         let h = '';
@@ -814,66 +848,92 @@
                 if (dx === 0 && dy === 0) { h += `<span class="jg-centro">${esc(fp.simbolo.value || '?')}</span>`; continue; }
                 const m = saltos[k] || '';
                 const r = alcance[k];
-                h += `<button type="button" data-k="${k}" class="${m ? 'jg-m-' + m : ''}${!m && r ? ' jg-raio jg-m-' + r : ''}" aria-label="Casa ${dx}, ${dy}"></button>`;
+                const anel = Math.max(Math.abs(dx), Math.abs(dy)) % 2 ? ' jg-anel' : '';
+                h += `<button type="button" data-k="${k}" class="${m ? 'jg-m-' + m : ''}${!m && r ? ' jg-raio jg-m-' + r : ''}${anel}" aria-label="Casa ${dx}, ${dy}" title="${dx >= 0 ? '+' : ''}${dx}, ${dy >= 0 ? '+' : ''}${dy}${m ? ' · salto: ' + MODOS[m] : (r ? ' · deslizando' : '')}"></button>`;
             }
         }
         $('#jg-grade-mov').innerHTML = h;
-        $('#jg-raios').innerHTML = DIRS.map(([dx, dy, seta]) => {
+        $('#jg-raios').innerHTML = BUSSOLA.map(b => {
+            if (!b) return `<span class="jg-bussola-centro">${esc(fp.simbolo.value || '?')}</span>`;
+            const [dx, dy, seta] = b;
             const k = dx + ',' + dy;
             const r = raios[k];
-            return `<div class="jg-raio-linha"><span class="jg-seta">${seta}</span>` +
-                `<select data-raio="${k}" aria-label="Deslizar ${seta}">` +
-                CICLO.map(m => `<option value="${m}"${(r ? r.m : '') === m ? ' selected' : ''}>${({ '': 'Não desliza', ambos: 'Move e captura', mover: 'Só move', capturar: 'Só captura' })[m]}</option>`).join('') +
-                `</select><label>até <input type="number" min="1" max="7" value="${r ? r.alc : 7}" data-alc="${k}"${r ? '' : ' disabled'}> casas</label></div>`;
+            return `<div class="jg-bussola-dir${r ? ' jg-m-' + r.m : ''}"><button type="button" data-raio="${k}" title="${r ? 'Desliza ' + seta + ': ' + MODOS[r.m] + ' (clique para trocar pelo pincel ou tirar)' : 'Clique para deslizar ' + seta + ' com o pincel'}">${seta}</button>` +
+                (r ? `<label title="Até quantas casas">até <input type="number" min="1" max="7" value="${r.alc}" data-alc="${k}"></label>` : '<small>não desliza</small>') + '</div>';
         }).join('');
+        $('#jg-peca-resumo').textContent = resumoPeca(regras);
+        $$('[data-pincel]', fp).forEach(b => b.classList.toggle('ativo', b.dataset.pincel === pincel));
     }
     function abrirPeca(p) {
         fp.reset();
         saltos = {}; raios = {};
+        pincel = 'ambos';
         fp.registro.value = p ? p.id : '';
         if (p) {
             fp.nome.value = p.nome; fp.simbolo.value = p.simbolo;
             p.regras.forEach(r => { if (r.d) raios[r.dx + ',' + r.dy] = { m: r.m, alc: r.alc }; else saltos[r.dx + ',' + r.dy] = r.m; });
         }
         $('#jg-espelhar').checked = true;
+        $('#jg-espelhar-v').checked = false;
+        $('#jg-simbolos').innerHTML = SIMBOLOS.map(s => `<button type="button" data-simbolo="${esc(s)}" title="Usar ${esc(s)}">${esc(s)}</button>`).join('');
+        $('#jg-modelos').innerHTML = Object.keys(MODELOS).map(n => `<button type="button" class="camp-btn camp-btn-pequeno" data-modelo="${esc(n)}">${esc(n)}</button>`).join('');
         fp.hidden = false;
         renderCriador();
         fp.nome.focus();
     }
-    $('#jg-nova-peca').addEventListener('click', () => abrirPeca(null));
-    $('#jg-grade-mov').addEventListener('click', e => {
+    $('#jg-nova-peca').addEventListener('click', () => { abrirPeca(null); fp.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+
+    // pintar a grade com o pincel (clique ou arrastando); pintar com o mesmo modo apaga
+    let pintando = null; // modo que o arrasto aplica ('' apaga)
+    const pintar = b => {
+        const [dx, dy] = b.dataset.k.split(',').map(Number);
+        espelhos(dx, dy).forEach(([x, y]) => { const k = x + ',' + y; if (pintando) saltos[k] = pintando; else delete saltos[k]; });
+        renderCriador();
+    };
+    $('#jg-grade-mov').addEventListener('pointerdown', e => {
         const b = e.target.closest('button[data-k]');
         if (!b) return;
-        const [dx, dy] = b.dataset.k.split(',').map(Number);
-        const novo = CICLO[(CICLO.indexOf(saltos[b.dataset.k] || '') + 1) % CICLO.length];
-        const aplicar = k => { if (novo) saltos[k] = novo; else delete saltos[k]; };
-        aplicar(b.dataset.k);
-        if ($('#jg-espelhar').checked && dx !== 0) aplicar((-dx) + ',' + dy);
+        e.preventDefault();
+        pintando = pincel === 'apagar' || saltos[b.dataset.k] === pincel ? '' : pincel;
+        pintar(b);
+    });
+    $('#jg-grade-mov').addEventListener('pointerover', e => {
+        if (pintando === null || !(e.buttons & 1)) return;
+        const b = e.target.closest('button[data-k]');
+        if (b) pintar(b);
+    });
+    document.addEventListener('pointerup', () => { pintando = null; });
+    $('#jg-raios').addEventListener('click', e => {
+        const b = e.target.closest('button[data-raio]');
+        if (!b) return;
+        const [dx, dy] = b.dataset.raio.split(',').map(Number);
+        const tira = pincel === 'apagar' || (raios[b.dataset.raio] && raios[b.dataset.raio].m === pincel);
+        const alc = raios[b.dataset.raio] ? raios[b.dataset.raio].alc : 7;
+        espelhos(dx, dy).forEach(([x, y]) => { const k = x + ',' + y; if (tira) delete raios[k]; else raios[k] = { m: pincel, alc: raios[k] ? raios[k].alc : alc }; });
         renderCriador();
     });
     $('#jg-raios').addEventListener('change', e => {
-        const s = e.target.closest('[data-raio]');
         const a = e.target.closest('[data-alc]');
-        if (s) {
-            const k = s.dataset.raio;
-            if (s.value) raios[k] = { m: s.value, alc: raios[k] ? raios[k].alc : 7 }; else delete raios[k];
-            if ($('#jg-espelhar').checked) {
-                const [dx, dy] = k.split(',').map(Number);
-                const esp = (-dx) + ',' + dy;
-                if (dx !== 0) { if (s.value) raios[esp] = { m: s.value, alc: raios[k].alc }; else delete raios[esp]; }
-            }
-        }
-        if (a && raios[a.dataset.alc]) {
-            const alc = Math.min(7, Math.max(1, +a.value || 1));
-            raios[a.dataset.alc].alc = alc;
-            const [dx, dy] = a.dataset.alc.split(',').map(Number);
-            if ($('#jg-espelhar').checked && dx !== 0 && raios[(-dx) + ',' + dy]) raios[(-dx) + ',' + dy].alc = alc;
-        }
+        if (!a || !raios[a.dataset.alc]) return;
+        const alc = Math.min(7, Math.max(1, +a.value || 1));
+        const [dx, dy] = a.dataset.alc.split(',').map(Number);
+        espelhos(dx, dy).forEach(([x, y]) => { if (raios[x + ',' + y]) raios[x + ',' + y].alc = alc; });
         renderCriador();
     });
-    fp.simbolo.addEventListener('input', () => { const c = $('#jg-grade-mov .jg-centro'); if (c) c.textContent = fp.simbolo.value || '?'; });
+    fp.simbolo.addEventListener('input', () => { $$('.jg-centro, .jg-bussola-centro', fp).forEach(c => { c.textContent = fp.simbolo.value || '?'; }); });
     fp.addEventListener('click', e => {
         const a = e.target.closest('[data-acao]');
+        const pc = e.target.closest('[data-pincel]');
+        const sb = e.target.closest('[data-simbolo]');
+        const md = e.target.closest('[data-modelo]');
+        if (pc) { pincel = pc.dataset.pincel; renderCriador(); }
+        if (sb) { fp.simbolo.value = sb.dataset.simbolo; fp.simbolo.dispatchEvent(new Event('input')); }
+        if (md) { // começa do modelo (o nome só entra se ainda estiver vazio)
+            saltos = {}; raios = {};
+            MODELOS[md.dataset.modelo].forEach(r => { if (r.d) raios[r.dx + ',' + r.dy] = { m: r.m, alc: r.alc }; else saltos[r.dx + ',' + r.dy] = r.m; });
+            if (!fp.nome.value.trim()) fp.nome.value = md.dataset.modelo + ' novo';
+            renderCriador();
+        }
         if (!a) return;
         if (a.dataset.acao === 'cancelar') fp.hidden = true;
         if (a.dataset.acao === 'limpar') { saltos = {}; raios = {}; renderCriador(); }
@@ -881,7 +941,9 @@
     fp.addEventListener('submit', async e => {
         e.preventDefault();
         const regras = regrasDoCriador();
-        if (!regras.length) return msg('Marque pelo menos um movimento para a peça.', true);
+        if (!fp.nome.value.trim()) return msg('Dê um nome para a peça.', true);
+        if (!fp.simbolo.value.trim()) return msg('Escolha um símbolo para a peça.', true);
+        if (!regras.length) return msg('Marque pelo menos um movimento para a peça (ou comece de um modelo).', true);
         try {
             const r = await post(D.url.pecas, { id: fp.registro.value || null, nome: fp.nome.value.trim(), simbolo: fp.simbolo.value.trim(), regras: JSON.stringify(regras) }, D.csrf);
             const i = pecas.findIndex(p => p.id === r.peca.id);

@@ -18,7 +18,7 @@ class GladioRoteiroTest extends TestCase
     private function mesa(array $cartas): array
     {
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar(self::BASE + $cartas, 100, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
+        $e = Gladio::iniciar(self::BASE + $cartas, 99, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
         foreach (['a', 'b'] as $l) {
             $e['lados'][$l]['mao'] = [];
             $e['lados'][$l]['energia'] = 20;
@@ -74,6 +74,15 @@ class GladioRoteiroTest extends TestCase
         return in_array($i, array_map('intval', array_column($e['lados'][$lado]['cemiterio'], 'i')), true);
     }
 
+    public function test_aposta_multiplica_poder_e_vida_das_cartas(): void
+    {
+        $this->assertSame([1, 1, 2, 4, 6], array_map([Gladio::class, 'multiplicador'], [0, 99, 100, 250, 300]));
+        $deck = array_fill(0, 20, 'x');
+        $e = Gladio::iniciar(self::BASE, 200, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
+        $this->assertSame([4, 4, 0], [$e['cartas']['x']['ataque'], $e['cartas']['x']['vida'], $e['cartas']['tiro']['ataque']]);
+        $this->assertSame(200, $e['lados']['a']['vida'], 'a vida do jogador continua sendo a aposta');
+    }
+
     public function test_lesma_da_vida_pela_mao_e_bob_da_toque_aos_hexomantes(): void
     {
         $e = $this->mesa([
@@ -119,7 +128,7 @@ class GladioRoteiroTest extends TestCase
         [$e, $b2] = $this->poe($e, 'b', 'x');
         $e = Gladio::atacar($e, 'a', [$m], 'b');
         $e = Gladio::defender($e, 'b');
-        $this->assertSame([null, null, 100], [$this->m($e, 'b', $b1), $this->m($e, 'b', $b2), $e['lados']['b']['vida']]);
+        $this->assertSame([null, null, 99], [$this->m($e, 'b', $b1), $this->m($e, 'b', $b2), $e['lados']['b']['vida']]);
         $this->assertSame(7, $this->m($e, 'a', $m)['vida']);
     }
 
@@ -217,7 +226,7 @@ class GladioRoteiroTest extends TestCase
         [$e, $j] = $this->poe($e, 'a', 'josael');
         $e = Gladio::habilidade($e, 'a', $j, '0');
         $e = Gladio::escolher($e, 'a', 'j:b');
-        $this->assertSame([90, 2, true], [$e['lados']['a']['vida'], $e['lados']['b']['shots'], $this->m($e, 'a', $j)['virada']]);
+        $this->assertSame([89, 2, true], [$e['lados']['a']['vida'], $e['lados']['b']['shots'], $this->m($e, 'a', $j)['virada']]);
         $this->expectException(\InvalidArgumentException::class);
         Gladio::habilidade($e, 'a', $j, '0');
     }
@@ -415,7 +424,7 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame('b', $e['escolha']['lado']);
         $e = Gladio::escolher($e, 'b', $escudo); // segura 1
         $e = Gladio::escolher($e, 'b', 'j:b');   // o resto (4) vai nele
-        $this->assertSame(96, $e['lados']['b']['vida']);
+        $this->assertSame(95, $e['lados']['b']['vida']);
     }
 
     public function test_lucas_e_friga_da_golpe_extra_e_flavinho_volta_do_cemiterio(): void
@@ -429,7 +438,7 @@ class GladioRoteiroTest extends TestCase
         [$e, $lf] = $this->poe($e, 'a', 'lf');
         $e = Gladio::atacar($e, 'a', [$lf], 'b');
         $e = Gladio::defender($e, 'b');
-        $this->assertSame(94, $e['lados']['b']['vida'], '3 golpes de 2');
+        $this->assertSame(93, $e['lados']['b']['vida'], '3 golpes de 2');
         $e['lados']['a']['cemiterio'][] = ['i' => 8888, 'c' => 'fla'];
         $lixo = $this->naMao($e, 'a', 'x');
         $e = Gladio::habilidade($e, 'a', 8888, '0');
@@ -447,8 +456,8 @@ class GladioRoteiroTest extends TestCase
         $this->assertNotNull($this->m($e, 'b', $apo));
         $e = Gladio::defender($e, 'b');
         $e = Gladio::passar($e, 'a');
-        $this->assertSame(100, $e['lados']['a']['vida']);
+        $this->assertSame(99, $e['lados']['a']['vida']);
         $e = Gladio::passar($e, 'b');
-        $this->assertSame(90, $e['lados']['b']['vida']);
+        $this->assertSame(89, $e['lados']['b']['vida']);
     }
 }

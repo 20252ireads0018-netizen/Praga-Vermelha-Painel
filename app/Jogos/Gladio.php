@@ -124,13 +124,21 @@ class Gladio
 
             return $a;
         };
+        // aposta alta, cartas mais fortes: poder e vida base de Lendas e Equipamentos x2 a cada 100$ apostados
+        $mult = self::multiplicador($aposta);
+        foreach ($cartas as $id => $c) {
+            if (in_array($c['tipo'] ?? '', ['lenda', 'equipo'], true)) {
+                $cartas[$id]['ataque'] = (int) ($c['ataque'] ?? 0) * $mult;
+                $cartas[$id]['vida'] = (int) ($c['vida'] ?? 0) * $mult;
+            }
+        }
         $n = max(2, min(self::MAX_JOGADORES, count($decks)));
         $ordem = array_slice(self::LADOS, 0, $n);
         $vida = $aposta > 0 ? $aposta : self::VIDA_AMISTOSO;
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
               'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
               'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n,
-              'atacou' => false, 'desde' => time(), 'apressado' => null, 'ev' => [], 'atrasos' => [], 'pilha' => null];
+              'atacou' => false, 'desde' => time(), 'apressado' => null, 'ev' => [], 'atrasos' => [], 'pilha' => null, 'mult' => $mult];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -174,10 +182,16 @@ class Gladio
         $e['lados']['a']['energiaMax'] = 1;
         $e['lados']['a']['energia'] = 1;
         $e['log'] = [];
-        self::log($e, 'A partida começou com ' . $n . ' jogadores.');
+        self::log($e, 'A partida começou com ' . $n . ' jogadores.' . ($mult > 1 ? " Aposta de $aposta: poder e vida das cartas x$mult." : ''));
         $e['iniciado'] = true; // daqui em diante compras e mortes disparam gatilhos
 
         return $e;
+    }
+
+    /** Multiplicador do poder e da vida base das cartas: x2 a cada 100$ apostados (100 = x2, 200 = x4, 300 = x6…). */
+    public static function multiplicador(int $aposta): int
+    {
+        return max(1, 2 * intdiv(max(0, $aposta), 100));
     }
 
     /** Estado salvo por uma versão antiga do jogo (2 jogadores, sem shots nem feitiços no campo): completa o que falta. */

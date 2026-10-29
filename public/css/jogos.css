@@ -364,11 +364,33 @@
 .jg-raio { opacity: .5; }
 .jg-leg { display: inline-block; padding: 0 .35rem; border-radius: 4px; color: #fff; font-size: .8rem; }
 
-.jg-raios { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .35rem .8rem; }
-.jg-raio-linha { display: flex; align-items: center; gap: .4rem; font-size: .85rem; }
-.jg-seta { width: 1.4rem; text-align: center; font-size: 1.1rem; }
-.jg-raio-linha input { width: 3.2rem; }
-.jg-raio-linha select { flex: 1 1 auto; min-width: 0; }
+/* criador de peças: passos, pincel, símbolos, saltos e a bússola dos deslizes */
+.jg-simbolos { display: flex; flex-wrap: wrap; gap: .25rem; }
+.jg-simbolos button { width: 2.1rem; height: 2.1rem; border-radius: 8px; border: 1px solid var(--camp-borda); background: rgba(255, 255, 255, .05); color: inherit; font-size: 1.15rem; cursor: pointer; }
+.jg-simbolos button:hover { border-color: var(--pv-gold, #c9a45c); background: rgba(201, 164, 92, .15); }
+.jg-peca-passo { display: flex; flex-direction: column; gap: .4rem; padding: .6rem .7rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); background: rgba(0, 0, 0, .18); font-size: .9rem; }
+.jg-modelos, .jg-pinceis, .jg-simetria { display: flex; flex-wrap: wrap; gap: .35rem .6rem; }
+.jg-pinceis button { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .7rem; border-radius: 999px; border: 1px solid var(--camp-borda); background: rgba(255, 255, 255, .04); color: inherit; font: inherit; font-size: .85rem; cursor: pointer; }
+.jg-pinceis button.ativo { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 0 2px rgba(201, 164, 92, .35); background: rgba(201, 164, 92, .14); }
+.jg-pinceis .jg-leg { width: .9rem; height: .9rem; padding: 0; border-radius: 50%; }
+.jg-leg-apagar { background: repeating-linear-gradient(45deg, #777 0 3px, #333 3px 6px); }
+.jg-peca-editor { display: flex; flex-wrap: wrap; gap: 1rem 1.4rem; align-items: flex-start; }
+.jg-peca-bloco { display: flex; flex-direction: column; gap: .4rem; }
+.jg-peca-bloco h4 { margin: 0; font-size: .95rem; }
+.jg-peca-bloco h4 small { font-weight: 400; opacity: .7; }
+.jg-grade-mov { touch-action: none; user-select: none; border-radius: 6px; overflow: hidden; }
+.jg-grade-mov > button.jg-anel:not([class*="jg-m-"]) { background: rgba(255, 255, 255, .1); }
+.jg-bussola { display: grid; grid-template-columns: repeat(3, 5.4rem); grid-auto-rows: 5.4rem; gap: .35rem; }
+.jg-bussola-dir { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; border: 1px solid var(--camp-borda); border-radius: 10px; background: rgba(255, 255, 255, .04) !important; font-size: .72rem; }
+.jg-bussola-dir button { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid var(--camp-borda); background: rgba(0, 0, 0, .3); color: inherit; font-size: 1.3rem; cursor: pointer; }
+.jg-bussola-dir.jg-m-ambos button { background: #16a34a; }
+.jg-bussola-dir.jg-m-mover button { background: #2563eb; }
+.jg-bussola-dir.jg-m-capturar button { background: #dc2626; }
+.jg-bussola-dir label { display: flex; align-items: center; gap: .2rem; }
+.jg-bussola-dir input { width: 2.8rem; padding: .05rem .25rem; border: 1px solid var(--camp-borda); border-radius: 4px; background: rgba(0, 0, 0, .35); color: inherit; }
+.jg-bussola-dir small { opacity: .55; }
+.jg-bussola-centro { display: flex; align-items: center; justify-content: center; border-radius: 50%; margin: .6rem; background: var(--pv-gold, #c9a45c); color: #1a1010; font-size: 1.6rem; font-weight: 800; }
+.jg-peca-resumo { margin: 0; padding: .5rem .7rem; border-left: 3px solid var(--pv-gold, #c9a45c); background: rgba(201, 164, 92, .08); font-size: .88rem; }
 
 .jg-pecas { display: flex; flex-direction: column; gap: .5rem; margin-top: .8rem; }
 .jg-peca-item { display: flex; align-items: center; gap: .8rem; padding: .5rem .7rem; border: 1px solid var(--camp-borda); border-radius: var(--camp-raio); flex-wrap: wrap; }
@@ -384,9 +406,9 @@
 .jg-exercito { display: flex; flex-direction: column; gap: .4rem; overflow-x: auto; padding-bottom: .3rem; }
 .jg-ex-linha { display: flex; gap: .3rem; align-items: stretch; }
 .jg-ex-rot { writing-mode: vertical-rl; transform: rotate(180deg); font-size: .7rem; opacity: .6; text-align: center; }
-.jg-ex-casa { display: flex; flex-direction: column; align-items: center; gap: .1rem; min-width: 4.4rem; flex: 1 1 0; padding: .3rem .2rem; border: 1px solid var(--camp-borda); border-radius: 6px; font-size: .7rem; }
+.jg-ex-casa { display: flex; flex-direction: column; align-items: center; gap: .1rem; min-width: 0; flex: 1 1 0; padding: .3rem .2rem; border: 1px solid var(--camp-borda); border-radius: 6px; font-size: .7rem; }
 .jg-ex-simb { font-size: 1.5rem; line-height: 1.1; }
-.jg-ex-casa select { width: 100%; font-size: .72rem; padding: .15rem; }
+.jg-ex-casa select { width: 100%; min-width: 0; font-size: .68rem; padding: .1rem 0; }
 
 /* ==========================================================
    Partida de Gladio: mesa de feltro, adversários no alto,
@@ -631,22 +653,30 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
    Partida de Pela Dama
    ========================================================== */
 .pd-area { display: flex; gap: 1.2rem; align-items: flex-start; flex-wrap: wrap; }
-.pd-tabuleiro { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: min(100%, 560px); aspect-ratio: 1; border: 3px solid #5b3a1e; border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, .55); }
+.pd-tabuleiro { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: min(100%, 580px); aspect-ratio: 1; box-sizing: border-box; padding: clamp(6px, 1.6vw, 12px); border-radius: 10px;
+    background: linear-gradient(135deg, #6b4423, #3d2412 55%, #5a371b); box-shadow: 0 0 0 1px #c9a45c55, 0 14px 34px rgba(0, 0, 0, .6), inset 0 0 0 2px #2a170a; }
+.pd-tabuleiro > .pd-casa:first-child { border-top-left-radius: 3px; }
 .pd-casa { position: relative; border: 0; padding: 0; margin: 0; font: inherit; cursor: default; display: flex; align-items: center; justify-content: center; min-width: 0; }
-.pd-clara { background: #e9d5b0; }
-.pd-escura { background: #9a6b43; }
+.pd-clara { background: linear-gradient(135deg, #f0dfbd, #e3cc9f); }
+.pd-escura { background: linear-gradient(135deg, #a8774c, #8d5f37); }
 .pd-movivel { cursor: pointer; }
+.pd-movivel:hover { box-shadow: inset 0 0 0 3px rgba(201, 164, 92, .8); }
 .pd-ultimo { box-shadow: inset 0 0 0 999px rgba(250, 204, 21, .3); }
 .pd-sel { box-shadow: inset 0 0 0 999px rgba(34, 197, 94, .45); }
 .pd-xeque { box-shadow: inset 0 0 0 999px rgba(220, 38, 38, .55); }
 .pd-destino { cursor: pointer; }
-.pd-destino::after { content: ''; width: 28%; height: 28%; border-radius: 50%; background: rgba(20, 83, 45, .55); }
+.pd-destino::after { content: ''; width: 30%; height: 30%; border-radius: 50%; background: radial-gradient(circle, rgba(22, 101, 52, .75), rgba(22, 101, 52, .35)); box-shadow: 0 0 6px rgba(22, 101, 52, .5); }
+.pd-destino:hover::after { width: 38%; height: 38%; }
 .pd-captura { cursor: pointer; box-shadow: inset 0 0 0 4px rgba(220, 38, 38, .75); }
 .pd-peca { font-size: clamp(1.4rem, 6.5vw, 3rem); line-height: 1; pointer-events: none; font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', serif; }
 .pd-b { color: #fafafa; text-shadow: 0 0 2px #000, 0 0 2px #000, 0 2px 3px rgba(0, 0, 0, .7); }
 .pd-p { color: #141414; text-shadow: 0 0 2px rgba(255, 255, 255, .55), 0 2px 3px rgba(0, 0, 0, .5); }
-.pd-custom { font-weight: 800; font-family: var(--fonte-titulo, serif); }
-.pd-casa .pd-custom { font-size: clamp(1.1rem, 5vw, 2.3rem); }
+/* peças customizadas viram fichas redondas, na cor do lado, com o símbolo no meio */
+.pd-custom { display: inline-flex; align-items: center; justify-content: center; width: 1.8em; height: 1.8em; border-radius: 50%; font-weight: 800;
+    font-family: var(--fonte-titulo, serif); font-size: clamp(.8rem, 3.2vw, 1.5rem); line-height: 1; text-shadow: none; }
+.pd-custom.pd-b { background: radial-gradient(circle at 35% 30%, #fffdf6, #d9cfb8); color: #3a2410; box-shadow: 0 0 0 2px #c9a45c, 0 3px 6px rgba(0, 0, 0, .55); }
+.pd-custom.pd-p { background: radial-gradient(circle at 35% 30%, #4a4a4a, #111); color: #f3e3c0; box-shadow: 0 0 0 2px #8a6a3a, 0 3px 6px rgba(0, 0, 0, .6); }
+.pd-casa .pd-custom { font-size: clamp(.85rem, 3.6vw, 1.7rem); }
 .pd-rot { position: absolute; font-size: .62rem; font-weight: 700; color: rgba(0, 0, 0, .55); pointer-events: none; }
 .pd-rot-y { top: 2px; left: 3px; }
 .pd-rot-x { bottom: 1px; right: 3px; }

@@ -733,12 +733,12 @@ class GladioTest extends TestCase
         $this->assertSame($mao + 1, count($e['lados']['a']['mao']), 'Pedra: uma Lenda sua morreu, comprou');
         $this->assertSame(2, $e['lados']['a']['mesa'][0]['atk'], 'Pedra ganhou +1 de ataque');
         $this->assertSame($vidaB + 10, $e['lados']['b']['vida'], 'Carneiro roubou 10 de quem perdeu a Lenda');
-        $this->assertSame(100 - 10, $e['lados']['a']['vida']);
+        $this->assertSame(99 - 10, $e['lados']['a']['vida']);
         // feitiço de a: Baguinho (de b) cobra 5$ de quem conjurou
         $e['lados']['a']['mao'][] = ['i' => 900, 'c' => 'raio'];
         $e = Gladio::jogar($e, 'a', 900);
         $e = Gladio::escolher($e, 'a', null);
-        $this->assertSame(85, $e['lados']['a']['vida']);
+        $this->assertSame(84, $e['lados']['a']['vida']);
     }
 
     public function test_cicero_mata_em_combate_e_cresce(): void
@@ -807,7 +807,7 @@ class GladioTest extends TestCase
         $this->assertCount($mao, $e['lados']['a']['mao'], 'jogou uma, comprou uma');
         $e = Gladio::escolher($e, 'a', $e['escolha']['opcoes'][0]);
         $this->assertCount($mao - 1, $e['lados']['a']['mao']);
-        $this->assertSame(90, $e['lados']['a']['vida'], 'pagou 10$');
+        $this->assertSame(89, $e['lados']['a']['vida'], 'pagou 10$');
         $this->assertSame('papelada', $e['lados']['a']['cemiterio'][0]['c'], 'feitiço vai para o cemitério');
     }
 
@@ -927,7 +927,7 @@ class GladioTest extends TestCase
         $this->assertStringContainsString('apressando', end($e['log']));
     }
 
-    private function comTextos(array $a, array $b = [], int $aposta = 100): array
+    private function comTextos(array $a, array $b = [], int $aposta = 99): array
     {
         $a = array_merge($a, array_fill(0, 20 - count($a), '1'));
         $b = array_merge($b, array_fill(0, 20 - count($b), '1'));
@@ -999,9 +999,9 @@ class GladioTest extends TestCase
         // Daiki: "todo início de turno, todo jogador perde 10" vale só no início do turno do dono (a)
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'daiki'));
         $e = Gladio::passar($e, 'a');
-        $this->assertSame([100, 100], [$e['lados']['a']['vida'], $e['lados']['b']['vida']], 'no turno de b não dispara');
+        $this->assertSame([99, 99], [$e['lados']['a']['vida'], $e['lados']['b']['vida']], 'no turno de b não dispara');
         $e = Gladio::passar($e, 'b');
-        $this->assertSame([90, 90], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+        $this->assertSame([89, 89], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
     }
 
     public function test_hexo_imune_concedido_protege_dos_alvos_do_adversario(): void

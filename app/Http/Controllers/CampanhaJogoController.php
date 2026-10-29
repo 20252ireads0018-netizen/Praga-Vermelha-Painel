@@ -184,14 +184,18 @@ class CampanhaJogoController extends Controller
         $d = $request->validate([
             'id'      => ['nullable', 'integer'],
             'nome'    => ['required', 'string', 'max:40'],
-            'simbolo' => ['required', 'string', 'max:8'],
+            'simbolo' => ['required', 'string', 'max:24'],
             'regras'  => ['required', 'string', 'max:20000'],
         ]);
         $regras = PelaDama::limparRegras(json_decode($d['regras'], true));
         if (!$regras) {
             return response()->json(['ok' => false, 'erro' => 'Marque pelo menos um movimento para a peça.'], 422);
         }
-        $simbolo = mb_substr(trim($d['simbolo']), 0, 2);
+        // até 2 símbolos inteiros: um emoji com modificadores (⚔️, 🧙‍♂️) conta como um só e não é cortado no meio
+        $simbolo = preg_match('/^\X{1,2}/u', trim($d['simbolo']), $ms) ? $ms[0] : mb_substr(trim($d['simbolo']), 0, 2);
+        if (mb_strlen($simbolo) > 8 && preg_match('/^\X/u', $simbolo, $ms)) { // a coluna guarda até 8 caracteres
+            $simbolo = mb_substr($ms[0], 0, 8);
+        }
         if ($simbolo === '') {
             return response()->json(['ok' => false, 'erro' => 'Escolha um símbolo para a peça.'], 422);
         }

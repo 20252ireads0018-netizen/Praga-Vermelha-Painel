@@ -245,13 +245,34 @@
                         <input type="hidden" name="registro">
                         <div class="jg-criador-campos">
                             <label>Nome<input type="text" name="nome" maxlength="40" required placeholder="Ex.: Arqueiro"></label>
-                            <label>Símbolo<input type="text" name="simbolo" maxlength="2" required placeholder="A ou ✦"></label>
+                            <label>Símbolo<input type="text" name="simbolo" maxlength="8" required placeholder="A, ✦ ou 🏹"></label>
                         </div>
-                        <p class="camp-dica">A peça fica no centro e a frente é para cima. Clique numa casa para marcar um <strong>salto</strong> até ela (pula peças). Cada clique troca o modo: <span class="jg-leg jg-m-ambos">move e captura</span> <span class="jg-leg jg-m-mover">só move</span> <span class="jg-leg jg-m-capturar">só captura</span>.</p>
-                        <label class="camp-check"><input type="checkbox" id="jg-espelhar" checked> Espelhar esquerda/direita</label>
-                        <div class="jg-grade-mov" id="jg-grade-mov"></div>
-                        <p class="camp-dica"><strong>Deslizar</strong>: anda em linha reta várias casas (não atravessa peças).</p>
-                        <div class="jg-raios" id="jg-raios"></div>
+                        <div class="jg-simbolos" id="jg-simbolos" aria-label="Símbolos sugeridos"></div>
+                        <div class="jg-peca-passo"><strong>1. Comece de um modelo</strong> <span class="camp-dica">(opcional: depois é só ajustar)</span>
+                            <div class="jg-modelos" id="jg-modelos"></div></div>
+                        <div class="jg-peca-passo"><strong>2. Escolha o pincel</strong> e pinte as casas (dá para arrastar). Pintar de novo com o mesmo pincel apaga.
+                            <div class="jg-pinceis">
+                                <button type="button" data-pincel="ambos"><span class="jg-leg jg-m-ambos"></span>Move e captura</button>
+                                <button type="button" data-pincel="mover"><span class="jg-leg jg-m-mover"></span>Só move</button>
+                                <button type="button" data-pincel="capturar"><span class="jg-leg jg-m-capturar"></span>Só captura</button>
+                                <button type="button" data-pincel="apagar"><span class="jg-leg jg-leg-apagar"></span>Apagar</button>
+                            </div>
+                            <div class="jg-simetria">
+                                <label class="camp-check"><input type="checkbox" id="jg-espelhar" checked> Espelhar esquerda/direita</label>
+                                <label class="camp-check"><input type="checkbox" id="jg-espelhar-v"> Espelhar frente/trás</label>
+                            </div>
+                        </div>
+                        <div class="jg-peca-editor">
+                            <div class="jg-peca-bloco">
+                                <h4>Saltos <small>(pula peças; a frente é para cima)</small></h4>
+                                <div class="jg-grade-mov" id="jg-grade-mov"></div>
+                            </div>
+                            <div class="jg-peca-bloco">
+                                <h4>Deslizar <small>(em linha reta, sem atravessar peças)</small></h4>
+                                <div class="jg-bussola" id="jg-raios"></div>
+                            </div>
+                        </div>
+                        <p class="jg-peca-resumo" id="jg-peca-resumo"></p>
                         <div class="jg-botoes">
                             <button class="camp-btn camp-btn-primario">Salvar peça</button>
                             <button type="button" class="camp-btn" data-acao="limpar">Limpar movimentos</button>
