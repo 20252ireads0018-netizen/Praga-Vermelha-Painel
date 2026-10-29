@@ -102,7 +102,6 @@
                                     <legend>Palavras-chave <small>(passe o mouse para ver o efeito)</small></legend>
                                     <div class="jg-palavras-grade" id="jg-palavras-grade"></div>{{-- preenchido com JG.PALAVRA --}}
                                 </fieldset>
-                                <p class="jg-so-feitico jg-larga camp-dica jg-dica-feitico">O feitiço é a descrição abaixo. Quem jogar escolhe na hora o efeito e o valor que o texto pede (dano, cura, comprar…), e isso fica registrado na partida.</p>
                                 <label class="jg-larga">Descrição<textarea name="descricao" rows="2" maxlength="500" placeholder="Texto de ambientação (opcional)"></textarea></label>
                                 <div class="jg-larga jg-img-linha">
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="galeria">Da galeria</button>

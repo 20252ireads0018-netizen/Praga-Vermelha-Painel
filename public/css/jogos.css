@@ -451,7 +451,6 @@
 .gl-form-conjurar label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-conjurar label[hidden] { display: none; }
 .gl-conjurar-texto { margin: 0; padding: .55rem .7rem; border-left: 2px solid var(--pv-gold, #c9a45c); background: rgba(0, 0, 0, .3); font-size: .9rem; line-height: 1.35; }
-.jg-dica-feitico { margin: 0; }
 .gl-form-ficha { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .6rem; align-items: end; }
 .gl-form-ficha label { display: flex; flex-direction: column; gap: .2rem; font-size: .85rem; }
 .gl-form-ficha button { grid-column: 1 / -1; }
