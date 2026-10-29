@@ -89,6 +89,15 @@ class LivroController extends Controller
         return response()->file($arquivo, ['Content-Type' => 'application/pdf']);
     }
 
+    // Catálogo de talentos do livro (config/talentos_livro.php) em JSON, para a ficha e o leitor
+    public function talentos()
+    {
+        return response()->json([
+            'grupos'   => config('talentos_livro.grupos', []),
+            'talentos' => config('talentos_livro.talentos', []),
+        ])->header('Cache-Control', 'public, max-age=3600');
+    }
+
     public function sair(Request $request)
     {
         $request->session()->forget('livro_completo');

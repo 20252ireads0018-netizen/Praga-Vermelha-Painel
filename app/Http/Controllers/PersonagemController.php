@@ -260,7 +260,7 @@ class PersonagemController extends Controller
             'artes_marciais.*.talentos' => 'nullable|array|max:60',
             'artes_marciais.*.talentos.*.nome' => 'required|string|max:120',
             'artes_marciais.*.talentos.*.custo' => 'nullable|integer|min:0|max:99999',
-            'artes_marciais.*.talentos.*.descricao' => 'nullable|string|max:3000',
+            'artes_marciais.*.talentos.*.descricao' => 'nullable|string|max:5000',
             'artes_marciais.*.talentos.*.ativo' => 'nullable|boolean',
             'propriedades_fisiomantes.*.nome' => 'required|string|max:120',
             'propriedades_fisiomantes.*.fonte' => 'nullable|string|max:120',

@@ -949,6 +949,19 @@
 .am-talento input, .am-talento textarea { width: 100%; box-sizing: border-box; min-width: 0; }
 .am-talento-acoes { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* Lista de talentos do livro (config/talentos_livro.php): pesquisar e adicionar já preenchido */
+.livro-tal { background: rgba(0, 0, 0, .25); border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; padding: 0 12px; margin-top: 10px; }
+.livro-tal > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 42px; font-weight: 600; }
+.livro-tal > summary::-webkit-details-marker { display: none; }
+.livro-tal > summary::before { content: "▸"; opacity: .7; font-size: .8rem; }
+.livro-tal[open] > summary::before { content: "▾"; }
+.livro-tal .prop-qtd { opacity: .65; font-size: .78rem; font-weight: 400; margin-left: auto; }
+.livro-tal-busca { width: 100%; height: 40px; box-sizing: border-box; margin-bottom: 6px; }
+.livro-tal-lista { max-height: 45vh; overflow-y: auto; margin: 0 -4px 10px; padding: 0 4px; }
+.livro-tal-item .livro-tal-desc { white-space: pre-line; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.livro-tal-item.aberto .livro-tal-desc { display: block; }
+.livro-tal-item.adicionado { background: rgba(70, 160, 90, .12); }
+
 /* ===== Pilha dos painéis da esquerda: abertos ficam um embaixo do outro, na ordem em que foram abertos ===== */
 /* a coluna não captura cliques no espaço vazio; só os painéis abertos recebem o mouse */
 #paineis-pilha {
@@ -1846,6 +1859,9 @@
             <button type="button" class="botao-adicionar-talento" id="adicionar-talento">
                 + Adicionar Talento
             </button>
+            @unless ($somenteLeitura)
+                <div id="livro-talentos-mundano"></div>
+            @endunless
 
             <div class="lista-talentos" id="lista-talentos"></div>
             <p class="vazio-lista" id="talentos-vazio" style="display:none"></p>
@@ -1945,6 +1961,9 @@
             <input type="hidden" id="artes_marciais" name="artes_marciais" value="">
             <div class="am-abas" id="am-abas" role="tablist"></div>
             <div class="am-corpo" id="am-corpo"></div>
+            @unless ($somenteLeitura)
+                <div id="am-livro"></div>
+            @endunless
         </div>
 
         <div class="card card-rolagem" id="card-rolagem">
@@ -2233,6 +2252,95 @@
 <script>window.VITAIS_EXTRAS = @json($vitaisExtrasSalvos);</script>
 <script src="{{ asset('js/vitais.js') }}"></script>
 <script>
+// ==================== Talentos do livro ====================
+// Catálogo de config/talentos_livro.php, baixado só quando alguém abre a lista. montar() cria um bloco
+// recolhível com pesquisa; clicar em "+ Adicionar" chama aoEscolher(talento) e o painel cria o talento já preenchido.
+window.LivroTalentos = (function(){
+    const URL_CATALOGO = @json(route('livro.talentos'));
+    let dados = null;
+    let carregando = null;
+
+    function carregar(){
+        if(dados) return Promise.resolve(dados);
+        if(!carregando){
+            carregando = fetch(URL_CATALOGO, { headers: { Accept: "application/json" } })
+                .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+                .then(function(d){ dados = d; return d; })
+                .catch(function(e){ carregando = null; throw e; });
+        }
+        return carregando;
+    }
+
+    function esc(s){ return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function simples(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+
+    // Descrição que vai para a ficha: o texto do livro com o requisito no fim
+    function descricaoCompleta(t){ return t.descricao + (t.requisito ? "\n\nRequisito: " + t.requisito : ""); }
+
+    function montar(el, grupo, aoEscolher){
+        el.innerHTML =
+            '<details class="livro-tal"><summary>📖 Lista do livro <span class="prop-qtd"></span></summary>' +
+                '<input type="search" class="livro-tal-busca" placeholder="Pesquisar nome, requisito ou efeito…" autocomplete="off">' +
+                '<div class="livro-tal-lista"><p class="vazio-lista">Carregando…</p></div>' +
+            '</details>';
+        const det = el.querySelector("details");
+        const busca = el.querySelector(".livro-tal-busca");
+        const lista = el.querySelector(".livro-tal-lista");
+        const qtd = el.querySelector(".prop-qtd");
+        let achados = [];
+
+        function desenhar(){
+            if(!dados) return;
+            const todos = dados.talentos[grupo] || [];
+            const q = simples(busca.value.trim());
+            achados = todos.filter(t => !q || simples(t.nome + " " + (t.requisito || "") + " " + t.descricao).includes(q));
+            // quem tem o termo no nome vem primeiro
+            if(q) achados.sort((a, b) => (simples(b.nome).includes(q) ? 1 : 0) - (simples(a.nome).includes(q) ? 1 : 0));
+            qtd.textContent = (dados.grupos[grupo] || "") + " · " + (q ? achados.length + " de " : "") + todos.length;
+            lista.innerHTML = achados.length ? achados.map(function(t, i){
+                return '<div class="prop-item livro-tal-item" data-i="' + i + '">' +
+                    '<div class="prop-item-cab"><strong>' + esc(t.nome) + '</strong>' +
+                        (t.custo !== null ? '<span class="prop-ameaca">' + t.custo + ' Aura</span>' : '') +
+                        '<button type="button" class="button livro-tal-add">+ Adicionar</button></div>' +
+                    (t.requisito ? '<p class="prop-ref">Requisito: ' + esc(t.requisito) + '</p>' : '') +
+                    '<p class="livro-tal-desc" title="Clique para ver tudo">' + esc(t.descricao) + '</p>' +
+                '</div>';
+            }).join("") : '<p class="vazio-lista">Nenhum talento do livro com esse termo.</p>';
+        }
+
+        det.addEventListener("toggle", function(){
+            if(!det.open) return;
+            carregar().then(desenhar).catch(function(){
+                lista.innerHTML = '<p class="vazio-lista">Não foi possível carregar a lista do livro.</p>';
+            });
+            busca.focus();
+        });
+        busca.addEventListener("input", desenhar);
+        lista.addEventListener("click", function(e){
+            const item = e.target.closest(".livro-tal-item");
+            if(!item) return;
+            const t = achados[Number(item.dataset.i)];
+            if(e.target.closest(".livro-tal-add")){
+                if(!t) return;
+                aoEscolher(t);
+                item.classList.add("adicionado");
+                const b = e.target.closest(".livro-tal-add");
+                b.textContent = "✓ Adicionado";
+                setTimeout(function(){ b.textContent = "+ Adicionar"; item.classList.remove("adicionado"); }, 1500);
+            } else if(e.target.closest(".livro-tal-desc")){
+                item.classList.toggle("aberto");
+            }
+        });
+
+        return {
+            // Troca o grupo mostrado (aba de arte marcial), mantendo a pesquisa e o bloco aberto
+            grupo: function(g){ grupo = g; if(dados) desenhar(); }
+        };
+    }
+
+    return { carregar: carregar, montar: montar, descricaoCompleta: descricaoCompleta };
+})();
+
 // ==================== Pastas (talentos, técnicas, anotações) + atalhos ====================
 window.PastasFicha = (function(){
     const TIPOS = ["talentos", "tecnicas", "anotacoes", "talentos_hexomancia", "talentos_fisiomancia"];
@@ -4950,7 +5058,15 @@ window.PastasFicha = (function(){
 
     return {
         carregar: function(t){ criarCardTalento(t, true, false); },
-        atualizar: depoisDeMudarTalentos
+        atualizar: depoisDeMudarTalentos,
+        // Talento vindo da lista do livro: entra no topo ainda editável; "Adicionar" confirma como no fluxo normal
+        adicionarDoLivro: function(t){
+            const card = criarCardTalento(t, false, true);
+            depoisDeMudarTalentos();
+            avisarMudancaTalentos();
+            card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            return card;
+        }
     };
     }
 
@@ -4986,6 +5102,17 @@ window.PastasFicha = (function(){
         grupo.carregar(t);
     });
     Object.values(gruposTalentos).forEach(g => g.atualizar());
+
+    const livroMundanos = document.getElementById("livro-talentos-mundano");
+    if(livroMundanos){
+        LivroTalentos.montar(livroMundanos, "mundano", function(t){
+            gruposTalentos.mundano.adicionarDoLivro({
+                titulo: t.nome,
+                descricao: LivroTalentos.descricaoCompleta(t),
+                custo: t.custo === null ? "" : t.custo
+            });
+        });
+    }
 
     const cardTalento = document.getElementById("card-talento");
 
@@ -6775,7 +6902,7 @@ const ArtesMarciais = {
         return '<div class="am-talento' + (t.ativo ? " ativo" : "") + '" data-i="' + i + '">' +
             '<label>Nome<input type="text" data-campo="nome" maxlength="120" value="' + esc(t.nome) + '" placeholder="Nome do talento"></label>' +
             '<label>Custo (Aura)<input type="number" min="0" data-campo="custo" value="' + t.custo + '"></label>' +
-            '<label class="larga">Descrição<textarea rows="2" data-campo="descricao" maxlength="3000" placeholder="O que o talento faz">' + esc(t.descricao) + '</textarea></label>' +
+            '<label class="larga">Descrição<textarea rows="2" data-campo="descricao" maxlength="5000" placeholder="O que o talento faz">' + esc(t.descricao) + '</textarea></label>' +
             '<div class="am-talento-acoes">' +
                 '<button type="button" class="arm-mini" data-acao="ativar">' + (t.ativo ? "Desativar" : "Ativar") + '</button>' +
                 '<button type="button" class="arm-mini" data-acao="remover">Remover</button>' +
@@ -6806,12 +6933,24 @@ const ArtesMarciais = {
         resumoTalentos();
     }
 
+    // Lista do livro: o talento entra na arte da aba atual, já preenchido e editável
+    const livroEl = document.getElementById("am-livro");
+    const livro = livroEl ? LivroTalentos.montar(livroEl, atual, function(t){
+        const a = artes[atual];
+        if(a.talentos.length >= 60){ alert("Limite de 60 talentos por arte."); return; }
+        a.talentos.push({ nome: t.nome, custo: t.custo || 0, descricao: LivroTalentos.descricaoCompleta(t), ativo: false });
+        render(); sincronizar();
+        const ult = corpo.querySelector(".am-talento:last-child");
+        if(ult) ult.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }) : null;
+
     abas.addEventListener("click", function(e){
         const b = e.target.closest(".am-aba");
         if(!b) return;
         atual = b.dataset.arte;
         try { localStorage.setItem("ficha-arte-marcial", atual); } catch(err) {}
         render();
+        if(livro) livro.grupo(atual);
     });
 
     corpo.addEventListener("input", function(e){

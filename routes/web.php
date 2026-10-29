@@ -203,6 +203,7 @@ Route::post('/livro/acesso', [LivroController::class, 'verificar'])
     ->middleware('throttle:10,1')
     ->name('livro.verificar');
 Route::get('/livro/players', [LivroController::class, 'players'])->name('livro.players');
+Route::get('/livro/talentos', [LivroController::class, 'talentos'])->name('livro.talentos');
 Route::get('/livro/pdf/{versao}', [LivroController::class, 'pdf'])
     ->whereIn('versao', ['completo', 'players'])
     ->name('livro.pdf');

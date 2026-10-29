@@ -3,7 +3,7 @@
 @section('title', $titulo . ' | Praga Vermelha')
 
 @section('conteudo')
-<link rel="stylesheet" href="{{ asset('css/leitor.css') }}">
+<link rel="stylesheet" href="{{ asset('css/leitor.css') }}?v={{ @filemtime(public_path('css/leitor.css')) }}">
 
 <section class="pv-reader">
     <div class="pv-container">
@@ -35,7 +35,9 @@
         <div class="pv-reader__app" id="leitor"
              data-pdf="{{ route('livro.pdf', $versao) }}"
              data-worker="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
-             data-chave="{{ $chave }}">
+             data-chave="{{ $chave }}"
+             data-talentos="{{ route('livro.talentos') }}"
+             data-talentos-pagina="{{ $completo ? 'pagina' : 'pagina_players' }}">
 
             {{-- Barra lateral --}}
             <aside class="pv-reader__side" id="leitor-side">
@@ -44,6 +46,7 @@
                     <button type="button" data-tab="marcadores" role="tab">
                         Marcadores <span class="pv-reader__count" id="leitor-count">0</span>
                     </button>
+                    <button type="button" data-tab="talentos" role="tab">Talentos</button>
                 </div>
 
                 <div class="pv-reader__panel" data-panel="sumario">
@@ -55,6 +58,13 @@
                     <p class="pv-reader__empty" id="leitor-vazio">
                         Nenhum marcador ainda. Selecione um trecho de texto e clique em "Marcar trecho", ou use a estrela (★) / tecla <kbd>B</kbd> para destacar a página atual.
                     </p>
+                </div>
+
+                {{-- Talentos do livro (config/talentos_livro.php): pesquisa e salto para a página --}}
+                <div class="pv-reader__panel" data-panel="talentos" hidden>
+                    <input type="search" class="pv-reader__busca" id="leitor-talentos-busca" placeholder="Pesquisar talento, requisito ou efeito…" autocomplete="off" aria-label="Pesquisar talentos">
+                    <ul class="pv-reader__list" id="leitor-talentos"></ul>
+                    <p class="pv-reader__empty" id="leitor-talentos-vazio">Carregando talentos…</p>
                 </div>
             </aside>
 
@@ -105,5 +115,5 @@
 
 @section('script')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="{{ asset('js/leitor.js') }}"></script>
+<script src="{{ asset('js/leitor.js') }}?v={{ @filemtime(public_path('js/leitor.js')) }}"></script>
 @endsection

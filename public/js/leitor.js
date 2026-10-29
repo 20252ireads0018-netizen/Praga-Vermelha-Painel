@@ -378,6 +378,79 @@
         });
     }
 
+    /* ---------- talentos do livro ----------
+       Catálogo de config/talentos_livro.php (data-talentos). Só baixa ao abrir a aba;
+       cada talento é um .pv-reader__item[data-page], então o clique já usa irPara(). */
+    var listTal  = $('#leitor-talentos');
+    var buscaTal = $('#leitor-talentos-busca');
+    var vazioTal = $('#leitor-talentos-vazio');
+    var talCarregado = false;
+
+    function simples(s) {
+        return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    function montarTalentos() {
+        if (talCarregado || !listTal || !app.dataset.talentos) return;
+        talCarregado = true;
+        var campoPagina = app.dataset.talentosPagina || 'pagina';
+
+        fetch(app.dataset.talentos, { headers: { Accept: 'application/json' } }).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        }).then(function (d) {
+            Object.keys(d.talentos || {}).forEach(function (g) {
+                var cab = mk('li', 'pv-reader__group', d.grupos[g] || g);
+                cab.style.cssText = 'padding:14px 12px 6px;font-size:.72rem;font-weight:700;' +
+                                    'letter-spacing:.08em;text-transform:uppercase;opacity:.65;list-style:none;';
+                listTal.appendChild(cab);
+
+                d.talentos[g].forEach(function (t) {
+                    var p = t[campoPagina];
+                    var li = mk('li');
+                    li.dataset.busca = simples(t.nome + ' ' + (t.requisito || '') + ' ' + t.descricao + ' ' + (d.grupos[g] || ''));
+                    li.dataset.nome = simples(t.nome);
+                    var b = mk('button', 'pv-reader__item');
+                    b.type = 'button';
+                    if (p) b.dataset.page = p;
+                    b.title = (t.requisito ? 'Requisito: ' + t.requisito + '\n\n' : '') + t.descricao;
+                    b.appendChild(mk('span', '', t.nome));
+                    b.appendChild(mk('small', '', p ? 'p. ' + p : '—'));
+                    li.appendChild(b);
+                    listTal.appendChild(li);
+                });
+            });
+            filtrarTalentos();
+        }).catch(function () {
+            talCarregado = false;
+            vazioTal.hidden = false;
+            vazioTal.textContent = 'Não foi possível carregar os talentos.';
+        });
+    }
+
+    // Esconde o que não bate com a pesquisa (e os grupos que ficam vazios)
+    function filtrarTalentos() {
+        var q = simples(buscaTal.value.trim());
+        var cab = null, visiveisNoGrupo = 0, total = 0;
+        // display (não o atributo hidden): .pv-reader__list li tem display:flex no CSS
+        function fecharGrupo() { if (cab) cab.style.display = visiveisNoGrupo === 0 ? 'none' : ''; }
+        Array.prototype.forEach.call(listTal.children, function (li) {
+            if (li.classList.contains('pv-reader__group')) {
+                fecharGrupo();
+                cab = li; visiveisNoGrupo = 0;
+                return;
+            }
+            var ok = !q || li.dataset.busca.indexOf(q) !== -1;
+            li.style.display = ok ? '' : 'none';
+            if (ok) { visiveisNoGrupo++; total++; }
+        });
+        fecharGrupo();
+        vazioTal.hidden = total > 0;
+        vazioTal.textContent = 'Nenhum talento encontrado.';
+    }
+
+    if (buscaTal) buscaTal.addEventListener('input', function () { if (talCarregado) filtrarTalentos(); });
+
     /* ---------- interface ---------- */
 
     function atualizar() {
@@ -788,6 +861,10 @@
             Array.prototype.forEach.call(app.querySelectorAll('[data-panel]'), function (p) {
                 p.hidden = p.dataset.panel !== tab.dataset.tab;
             });
+            if (tab.dataset.tab === 'talentos') {
+                montarTalentos();
+                if (buscaTal && !mobileMQ.matches) buscaTal.focus();
+            }
         }
     });
 

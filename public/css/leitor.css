@@ -193,6 +193,25 @@
     white-space:nowrap;
 }
 
+/* Talentos (pesquisa) */
+
+.pv-reader__busca{
+    width:100%;
+    box-sizing:border-box;
+    margin-bottom:8px;
+    padding:9px 12px;
+    border:1px solid var(--pv-border);
+    border-radius:6px;
+    background:var(--pv-surface);
+    color:var(--pv-text);
+    font-size:.9rem;
+}
+
+.pv-reader__busca:focus{
+    outline:none;
+    border-color:var(--pv-red);
+}
+
 /* Marcadores */
 
 .pv-reader__mark-info{
