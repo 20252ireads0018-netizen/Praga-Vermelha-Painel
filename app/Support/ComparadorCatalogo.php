@@ -770,6 +770,193 @@ private const STOPWORDS = 'a o as os um uma uns umas de do da dos das dum duma e
     }
 
     // ------------------------------------------------------------------
+    // Dica para o jogador (uma por catálogo)
+    // ------------------------------------------------------------------
+
+    /**
+     * O que mais tira pontos do texto, em uma frase, sem entregar o texto do livro: no máximo uma palavra
+     * do original (a ideia mais importante que faltou) ou do próprio texto do jogador (o que foi inventado).
+     * Ordem: ideia central (texto que diz pouco), raridade errada, pior penalidade, ideia que faltou, raridade/órgão/apelido, números, frases, ordem, tamanho.
+     */
+    public static function dica(string $textoJogador, string $slug, ?array $maldicoes = null, ?array $lista = null): string
+    {
+        $maldicoes ??= (array) config('maldicoes', []);
+        $lista     ??= (array) config('maldicoes_lista', []);
+        $item = $maldicoes[$slug] ?? null;
+        if (!$item) {
+            return 'Não há dica para esta maldição.';
+        }
+        $meta = null;
+        foreach ($lista as $m) {
+            if (($m['slug'] ?? null) === $slug) {
+                $meta = $m;
+                break;
+            }
+        }
+        $r = self::comparar($textoJogador, $slug, $maldicoes, $lista);
+        $d = $r['detalhes'];
+        $p = $r['penalidades'];
+        if ($r['pontuacao'] >= 97) {
+            return 'Seu catálogo já está praticamente perfeito: não há nada importante para mudar.';
+        }
+
+        $texto      = self::limpar($textoJogador);
+        $real       = self::textoReal($item);
+        $idf        = self::idf($maldicoes);
+        $metaTermos = self::termosMeta($item, $meta, $maldicoes);
+        $paresR     = self::conteudo($real);
+        $setR       = array_flip(self::termos($real));
+        $paresJ     = array_values(array_filter(self::conteudo($texto), fn ($x) => isset($setR[$x['c']]) || !isset($metaTermos[$x['c']])));
+
+        // texto que ainda diz pouco da maldição: o que mais rende é a ideia central que faltou
+        if ($d['significado'] < 50 && ($falta = self::termoFaltando($paresJ, $paresR, $idf, $real, $metaTermos))) {
+            return "Seu texto ainda diz pouco do que esta maldição é. Comece pela ideia central: algo ligado a \"$falta\".";
+        }
+        if (self::pontuarRaridade($texto, (string) ($item['raridade'] ?? ''), $maldicoes, $real)['erro']) {
+            return 'A raridade que você citou não é a desta maldição: corrija a raridade (ou não cite nenhuma).';
+        }
+
+        // a penalidade que mais pesa
+        $pior = array_keys($p, min($p))[0] ?? null;
+        if ($pior !== null && $p[$pior] < 0.9) {
+            switch ($pior) {
+                case 'desvio':
+                    $sobra = self::termoInventado($paresJ, $paresR, $idf, $texto);
+                    return 'Boa parte do seu texto fala de coisas que não estão nesta maldição'
+                        . ($sobra ? ", como \"$sobra\"" : '') . '. Tire o que não é dela.';
+                case 'invencao':
+                    $inv = self::numeroInventado($texto, $real, $item);
+                    return 'Você citou ' . ($inv ? "\"$inv\", " : '') . 'um nível de ameaça ou número que não existe nesta maldição.';
+                case 'omissao':
+                    return 'Faltam números das regras: a maldição tem ' . self::numerosFaltando($texto, $real)
+                        . ' número(s) (dano, chance, dados, duração) que não aparecem no seu texto.';
+                case 'incoerencia':
+                    return 'As palavras certas estão soltas ou fora de ordem: escreva frases que expliquem a maldição.';
+                case 'lista_palavras':
+                    return 'Seu texto parece uma lista de palavras: escreva em frases completas.';
+                case 'prolixidade':
+                    return 'Seu texto está bem mais longo que a descrição original: corte o que não faz parte da maldição.';
+                case 'redundancia':
+                    return 'Seu texto repete as mesmas expressões: corte as repetições.';
+            }
+        }
+
+        // a ideia mais importante que ficou de fora
+        if (min($d['significado'], $d['termos_chave']) < 90 && ($falta = self::termoFaltando($paresJ, $paresR, $idf, $real, $metaTermos))) {
+            return "Uma ideia importante da maldição ficou de fora (ou foi dita com outras palavras): algo ligado a \"$falta\". Explique essa parte.";
+        }
+        if (trim((string) ($item['raridade'] ?? '')) !== '' && $d['raridade'] < 100) {
+            return 'Cite a raridade da maldição.';
+        }
+        if (trim((string) ($meta['orgao'] ?? '')) !== '' && $d['orgao'] < 100) {
+            return 'Cite o órgão que a maldição hospeda' . (str_contains((string) $meta['orgao'], '&') ? ' (são mais de um).' : '.');
+        }
+        if (trim((string) ($meta['apelido'] ?? '')) !== '' && $d['apelido'] < 100) {
+            return 'Cite o apelido popular de quem tem esta maldição.';
+        }
+        if ($d['estrutura'] < 85) {
+            $n = self::numerosFaltando($texto, $real);
+            return $n > 0
+                ? "As regras da maldição têm $n número(s) (dano, chance, dados, duração) que não aparecem no seu texto."
+                : 'Organize melhor as regras: frases completas, uma ideia por frase, parecido com o original.';
+        }
+        if ($d['ordem'] < 60) {
+            return 'Siga a ordem das ideias da descrição original: suas frases montam as ideias de um jeito bem diferente.';
+        }
+        if ($d['concisao'] < 80) {
+            return self::contarPalavras($texto) < self::contarPalavras($real)
+                ? 'Seu texto está curto: a maldição tem mais detalhes do que você descreveu.'
+                : 'Seu texto está longo demais: seja mais direto.';
+        }
+        if ($falta = self::termoFaltando($paresJ, $paresR, $idf, $real, $metaTermos)) {
+            return "Para subir mais, fale também de algo ligado a \"$falta\".";
+        }
+
+        return 'Seu texto está bom: para subir mais, use palavras mais próximas das do livro.';
+    }
+
+    /** Palavra do real (como está escrita lá) da ideia de maior peso que o jogador não cobriu, fora os metadados. */
+    private static function termoFaltando(array $paresJ, array $paresR, array $idf, string $real, array $metaTermos): ?string
+    {
+        $gj = self::agrupar($paresJ);
+        $gr = self::agrupar($paresR);
+        $w  = [];
+        foreach ($gr as $c => $g) {
+            if (!isset($metaTermos[$c]) && !self::credito((string) $c, $gj, $gr, 1.0)) {
+                $w[$c] = (1 + log($g['n'])) * self::peso((string) $c, $idf);
+            }
+        }
+        arsort($w);
+        foreach (array_keys($w) as $c) {
+            if ($palavra = self::palavraDe($real, (string) $c)) {
+                return $palavra;
+            }
+        }
+
+        return null;
+    }
+
+    /** Palavra do jogador de maior peso que não existe no real. */
+    private static function termoInventado(array $paresJ, array $paresR, array $idf, string $texto): ?string
+    {
+        $gr = self::agrupar($paresR);
+        $w  = [];
+        foreach (self::agrupar($paresJ) as $c => $g) {
+            if (!isset($gr[$c])) {
+                $w[$c] = self::peso((string) $c, $idf);
+            }
+        }
+        arsort($w);
+        foreach (array_keys($w) as $c) {
+            if ($palavra = self::palavraDe($texto, (string) $c)) {
+                return $palavra;
+            }
+        }
+
+        return null;
+    }
+
+    /** Primeira palavra do texto (em minúsculas, como foi escrita) cujo termo canônico é $c; palavras curtas não servem de pista. */
+    private static function palavraDe(string $texto, string $c): ?string
+    {
+        foreach (self::palavras($texto) as $p) {
+            if (mb_strlen($p) < 5) {
+                continue;
+            }
+            $par = self::pares($p);
+            if ($par && $par[0]['c'] === $c) {
+                return mb_strtolower($p);
+            }
+        }
+
+        return null;
+    }
+
+    /** Um nível ou número que o jogador citou e que não existe no real (ou null). */
+    private static function numeroInventado(string $texto, string $real, array $item): ?string
+    {
+        [$lj, $nj] = self::regras($texto);
+        [$lr, $nr] = self::regras($real);
+        foreach ((array) ($item['ameacas'] ?? []) as $a) {
+            $lr[(string) (int) ($a['nivel'] ?? 0)] = true;
+        }
+        foreach (array_keys(array_diff_key($lj, $lr)) as $n) {
+            return 'ameaça ' . $n;
+        }
+        foreach (array_keys(array_diff_key($nj, $nr)) as $n) {
+            return (string) $n;
+        }
+
+        return null;
+    }
+
+    /** Quantos números das regras do real não aparecem no texto do jogador. */
+    private static function numerosFaltando(string $texto, string $real): int
+    {
+        return count(array_diff_key(self::regras($real)[1], self::regras($texto)[1]));
+    }
+
+    // ------------------------------------------------------------------
     // Texto -> termos canônicos
     // ------------------------------------------------------------------
 

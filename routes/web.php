@@ -167,6 +167,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('throttle:6,1')->name('catalogos.recalcular');
         Route::post('/{campanha}/catalogos', [CampanhaCatalogoController::class, 'store'])
             ->middleware('throttle:10,1')->name('catalogos.store');
+        Route::post('/{campanha}/catalogos/{catalogo}/dica', [CampanhaCatalogoController::class, 'dica'])
+            ->whereNumber('catalogo')->middleware('throttle:20,1')->name('catalogos.dica');
         Route::delete('/{campanha}/catalogos/{catalogo}', [CampanhaCatalogoController::class, 'destroy'])
             ->whereNumber('catalogo')->name('catalogos.destroy');
 

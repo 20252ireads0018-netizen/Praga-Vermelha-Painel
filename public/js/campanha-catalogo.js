@@ -128,6 +128,57 @@
         return m ? m.length : 0;
     }
 
+    /* ---------- Dica (uma por catálogo, só para quem o escreveu) ---------- */
+
+    function blocoDica(it) {
+        if (!it.meu || (!it.dica && !it.pode_dica)) return null;
+        const w = el('div', 'cat-dica');
+        if (it.dica) {
+            w.appendChild(el('strong', 'cat-dica-titulo', '💡 Dica'));
+            w.appendChild(el('p', 'cat-dica-texto', it.dica));
+            return w;
+        }
+        const b = el('button', 'camp-btn camp-btn-pequeno cat-dica-botao', '💡 Ver dica para melhorar');
+        b.type = 'button';
+        b.title = 'Mostra o que mais tira pontos deste catálogo. Só uma dica por catálogo.';
+        b.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            if (b.disabled) return;
+            if (!window.confirm('Cada catálogo tem uma única dica. Ver a dica deste agora?')) return;
+            b.disabled = true;
+            b.textContent = 'Pensando…';
+            fetch(urlIndex.replace(/\/?$/, '/') + encodeURIComponent(it.id) + '/dica', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+                .then(function (x) {
+                    if (x.ok && x.d.dica) {
+                        // o mesmo catálogo pode estar no placar e no resultado do envio
+                        itens.forEach(function (o) { if (o.id === it.id) { o.dica = x.d.dica; o.pode_dica = false; } });
+                        it.dica = x.d.dica;
+                        it.pode_dica = false;
+                        const novo = blocoDica(it);
+                        if (novo) w.replaceWith(novo);
+                        desenhar();
+                        return;
+                    }
+                    b.disabled = false;
+                    b.textContent = '💡 Ver dica para melhorar';
+                    mostrarErro(x.d.erro || x.d.message || 'Não foi possível buscar a dica.');
+                })
+                .catch(function () {
+                    b.disabled = false;
+                    b.textContent = '💡 Ver dica para melhorar';
+                    mostrarErro('Falha de conexão ao buscar a dica.');
+                });
+        });
+        w.appendChild(b);
+        w.appendChild(el('span', 'camp-dica', 'Uma por catálogo'));
+        return w;
+    }
+
     /* ---------- Resultado do próprio envio ---------- */
 
     function mostrarResultado(item) {
@@ -142,6 +193,8 @@
         topo.appendChild(info);
         resultado.appendChild(topo);
         if (item.detalhes) resultado.appendChild(detalhes(item.detalhes)); // só o mestre recebe o detalhamento
+        const dica = blocoDica(item);
+        if (dica) resultado.appendChild(dica);
     }
 
     /* ---------- Placar ---------- */
@@ -211,6 +264,8 @@
             if (aberto) {
                 const corpo = el('div', 'cat-item-corpo');
                 if (it.detalhes) corpo.appendChild(detalhes(it.detalhes)); // só o mestre recebe o detalhamento
+                const dica = blocoDica(it);
+                if (dica) corpo.appendChild(dica);
                 if (it.texto) {
                     corpo.appendChild(el('div', 'cat-texto', it.texto));
                 }
@@ -252,7 +307,7 @@
 
     function assin(lst) {
         return lst.map(function (i) {
-            return i.id + ':' + i.pontuacao + ':' + (i.texto ? 1 : 0);
+            return i.id + ':' + i.pontuacao + ':' + (i.texto ? 1 : 0) + ':' + (i.dica ? 1 : 0);
         }).join('|');
     }
 

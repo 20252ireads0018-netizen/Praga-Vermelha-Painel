@@ -68,6 +68,9 @@ class CampanhaCatalogoController extends Controller
             'criado_em'  => optional($c->created_at)->toIso8601String(),
             'meu'        => $meu,
             'texto'      => ($meu || $souMestre) ? $c->texto : null,
+            // uma dica por catálogo, só para quem o escreveu: depois de liberada, fica guardada nos detalhes
+            'dica'       => $meu ? ($c->detalhes['dica'] ?? null) : null,
+            'pode_dica'  => $meu && empty($c->detalhes['dica']),
         ];
     }
 
@@ -128,13 +131,35 @@ class CampanhaCatalogoController extends Controller
             foreach ($lote as $c) {
                 $res = ComparadorCatalogo::comparar((string) $c->texto, (string) $c->maldicao_slug);
                 $c->pontuacao = $res['pontuacao'];
-                $c->detalhes  = $res['detalhes'] + ['penalidades' => $res['penalidades'] ?? []];
+                $c->detalhes  = $res['detalhes'] + ['penalidades' => $res['penalidades'] ?? []]
+                    + (isset($c->detalhes['dica']) ? ['dica' => $c->detalhes['dica']] : []); // a dica já liberada continua
                 $c->save();
                 $total++;
             }
         });
 
         return response()->json(['ok' => true, 'total' => $total]);
+    }
+
+    /** Dono do catálogo: libera (uma vez) a dica do que mudar para subir a nota; pedir de novo devolve a mesma. */
+    public function dica(Campanha $campanha, string $catalogo): JsonResponse
+    {
+        $this->autorizar($campanha);
+        if (!Schema::hasTable('campanha_catalogos')) {
+            return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
+        }
+        $registro = CampanhaCatalogo::where('campanha_id', $campanha->id)->where('id', (int) $catalogo)->first();
+        if (!$registro || (int) $registro->user_id !== (int) auth()->id()) {
+            return response()->json(['erro' => 'Só quem escreveu o catálogo pode ver a dica dele.'], 403);
+        }
+        $detalhes = (array) ($registro->detalhes ?: []);
+        if (empty($detalhes['dica'])) {
+            $detalhes['dica'] = ComparadorCatalogo::dica((string) $registro->texto, (string) $registro->maldicao_slug);
+            $registro->detalhes = $detalhes;
+            $registro->save();
+        }
+
+        return response()->json(['ok' => true, 'dica' => $detalhes['dica']]);
     }
 
     /** Mestre: apaga uma proposta de catálogo da campanha. */
