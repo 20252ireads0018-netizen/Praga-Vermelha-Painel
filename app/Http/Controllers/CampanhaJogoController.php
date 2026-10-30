@@ -46,6 +46,7 @@ class CampanhaJogoController extends Controller
             'pecas'     => PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get(),
             'imagens'   => $this->listaImagens($campanha),
             'decks'     => $this->listaDecks($campanha, $uid),
+            'playmat'   => $this->playmatUrl($campanha, $uid),
             'lobby'     => $this->dadosLobby($campanha),
         ]);
     }
@@ -68,10 +69,21 @@ class CampanhaJogoController extends Controller
                 ->mapWithKeys(fn ($c) => [(string) $c->id => ['imagem' => $c->imagem, 'descricao' => (string) $c->descricao]])
             : collect();
 
+        // playmat de cada jogador do Gladio, pelo lado dele na mesa
+        $playmats = [];
+        if ($partida->jogo === 'gladio') {
+            foreach ($partida->jogadores() as $k => $uid) {
+                if ($url = $this->playmatUrl($campanha, (int) $uid)) {
+                    $playmats[Gladio::LADOS[$k]] = $url;
+                }
+            }
+        }
+
         return view('campanhas.jogos.partida', [
             'campanha' => $campanha,
             'partida'  => $partida,
             'imagens'  => $cartas,
+            'playmats' => (object) $playmats,
             'dados'    => $this->dadosPartida($partida),
         ]);
     }
@@ -313,6 +325,60 @@ class CampanhaJogoController extends Controller
 
         return response()->file($caminho, [
             'Cache-Control'          => 'private, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    /* ---------- Playmat do Gladio (imagem que cada jogador escolhe para o próprio campo) ---------- */
+
+    /** Arquivo do playmat do usuário (um por jogador, vale em todas as campanhas). */
+    private function playmatCaminho(int $uid): string
+    {
+        return "playmats/$uid.jpg";
+    }
+
+    /** Endereço do playmat do usuário (com a versão para o navegador não usar a antiga) ou null se ele não tem. */
+    private function playmatUrl(Campanha $campanha, int $uid): ?string
+    {
+        $disco = Storage::disk('local');
+        $arq = $this->playmatCaminho($uid);
+
+        return $disco->exists($arq) ? route('campanhas.jogos.playmat.ver', [$campanha, $uid]) . '?v=' . $disco->lastModified($arq) : null;
+    }
+
+    /** Envia (arquivo playmat) ou tira (remover=1) o próprio playmat. A tela já manda a imagem reduzida em JPEG. */
+    public function salvarPlaymat(Request $request, Campanha $campanha): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $uid = (int) auth()->id();
+        $request->validate([
+            'playmat' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:3072'],
+            'remover' => ['nullable', 'boolean'],
+        ], ['playmat.mimes' => 'Escolha uma imagem (JPG, PNG ou WebP).', 'playmat.max' => 'A imagem pode ter no máximo 3 MB.']);
+        $disco = Storage::disk('local');
+        if ($request->boolean('remover')) {
+            $disco->delete($this->playmatCaminho($uid));
+
+            return response()->json(['ok' => true, 'playmat' => null]);
+        }
+        if (!$request->hasFile('playmat')) {
+            return $this->erro('Escolha uma imagem para o playmat.');
+        }
+        $disco->put($this->playmatCaminho($uid), (string) file_get_contents($request->file('playmat')->getRealPath()));
+
+        return response()->json(['ok' => true, 'playmat' => $this->playmatUrl($campanha, $uid)]);
+    }
+
+    /** A imagem do playmat de um jogador (para quem é da campanha). */
+    public function verPlaymat(Campanha $campanha, int $usuario)
+    {
+        $this->exigirMembro($campanha);
+        $caminho = Storage::disk('local')->path($this->playmatCaminho($usuario));
+        abort_unless(is_file($caminho), 404);
+
+        return response()->file($caminho, [
+            'Content-Type'           => mime_content_type($caminho) ?: 'image/jpeg',
+            'Cache-Control'          => 'private, max-age=604800',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }

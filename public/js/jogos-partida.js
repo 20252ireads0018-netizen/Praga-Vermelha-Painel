@@ -219,7 +219,8 @@
             const l = L[lado];
             const lendas = l.mesa.map(x => naMesa(x, lado, false)).join('');
             const feiticos = (l.feiticos || []).filter(x => !x.em || !l.mesa.some(m => m.i === x.em)).map(x => naMesa(x, lado, true)).join('');
-            return `<div class="gl-campo" data-campo="${lado}"${lado === D.lado ? ' data-zona="campo"' : ''}>` +
+            const pm = (C.playmats || {})[lado]; // playmat que o dono escolheu para o campo dele
+            return `<div class="gl-campo${pm ? ' gl-campo--playmat' : ''}" data-campo="${lado}"${lado === D.lado ? ' data-zona="campo"' : ''}${pm ? ` style="--playmat:url('${esc(pm)}')"` : ''}>` +
                 (lendas || feiticos ? lendas + (feiticos ? `<div class="gl-feiticos" title="Feitiços em jogo">${feiticos}</div>` : '')
                     : `<p class="gl-vazio">${lado === D.lado && M.jogo ? 'Arraste uma carta da mão para cá' : 'Sem cartas em jogo'}</p>`) + '</div>';
         };

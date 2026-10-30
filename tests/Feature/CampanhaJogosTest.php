@@ -295,6 +295,21 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame([10, 10], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
     }
 
+    public function test_playmat_do_jogador_enviar_ver_e_tirar(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->ana)->post($this->url('/playmat'), ['playmat' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')],
+            ['Accept' => 'application/json'])->assertStatus(422);
+        $r = $this->actingAs($this->ana)->post($this->url('/playmat'), ['playmat' => UploadedFile::fake()->image('mesa.jpg', 800, 400)],
+            ['Accept' => 'application/json'])->assertOk();
+        $this->assertStringContainsString("/playmat/{$this->ana->id}?v=", $r->json('playmat'));
+        Storage::disk('local')->assertExists("playmats/{$this->ana->id}.jpg");
+        $this->actingAs($this->bia)->get($this->url("/playmat/{$this->ana->id}"))->assertOk(); // quem é da campanha vê
+        $this->actingAs($this->bia)->get($this->url("/playmat/{$this->bia->id}"))->assertNotFound();
+        $this->actingAs($this->ana)->post($this->url('/playmat'), ['remover' => 1], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('playmat', null);
+        Storage::disk('local')->assertMissing("playmats/{$this->ana->id}.jpg");
+    }
+
     public function test_galeria_de_imagens_das_cartas(): void
     {
         Storage::fake('local');

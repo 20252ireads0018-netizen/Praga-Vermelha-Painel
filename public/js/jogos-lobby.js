@@ -971,6 +971,50 @@
         }
     });
 
+    /* ---------- playmat (fundo do próprio campo no Gladio) ---------- */
+    (function () {
+        const previa = $('#jg-playmat-previa');
+        const arquivo = $('#jg-playmat-arquivo');
+        const remover = $('#jg-playmat-remover');
+        if (!previa || !arquivo) return;
+        const mostrar = url => {
+            previa.style.backgroundImage = url ? `url("${url}")` : '';
+            previa.classList.toggle('jg-playmat-previa--tem', !!url);
+            remover.hidden = !url;
+        };
+        mostrar(D.playmat);
+        // reduz a imagem no navegador (até 1920×1080, JPEG) antes de enviar
+        const reduzir = f => new Promise((ok, falha) => {
+            const img = new Image();
+            img.onload = () => {
+                const k = Math.min(1, 1920 / img.width, 1080 / img.height);
+                const cv = document.createElement('canvas');
+                cv.width = Math.round(img.width * k);
+                cv.height = Math.round(img.height * k);
+                cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                URL.revokeObjectURL(img.src);
+                cv.toBlob(b => (b ? ok(b) : falha(new Error('Não foi possível ler a imagem.'))), 'image/jpeg', 0.85);
+            };
+            img.onerror = () => falha(new Error('Esse arquivo não é uma imagem que o navegador consiga abrir.'));
+            img.src = URL.createObjectURL(f);
+        });
+        arquivo.addEventListener('change', async () => {
+            const f = arquivo.files[0];
+            arquivo.value = '';
+            if (!f) return;
+            try {
+                const blob = await reduzir(f);
+                const r = await post(D.url.playmat, { playmat: new File([blob], 'playmat.jpg', { type: 'image/jpeg' }) }, D.csrf);
+                mostrar(r.playmat);
+                msg('Playmat salvo: ele aparece no seu campo nas próximas partidas que você abrir.');
+            } catch (err) { falhou(err); }
+        });
+        remover.addEventListener('click', async () => {
+            if (!confirm('Tirar o seu playmat?')) return;
+            try { await post(D.url.playmat, { remover: 1 }, D.csrf); mostrar(null); msg('Playmat removido.'); } catch (err) { falhou(err); }
+        });
+    })();
+
     renderPartidas();
     renderCartas();
     renderDecks();

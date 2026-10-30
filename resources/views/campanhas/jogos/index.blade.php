@@ -89,6 +89,18 @@
                 </section>
 
                 <section class="camp-card">
+                    <div class="camp-card-cab"><h2>Meu playmat</h2></div>
+                    <p class="camp-dica">A imagem de fundo do seu campo nas partidas de Gladio. Todos na mesa veem o seu playmat no seu lado.</p>
+                    <div class="jg-playmat">
+                        <div class="jg-playmat-previa" id="jg-playmat-previa"><span>Sem playmat: o campo fica com o fundo padrão.</span></div>
+                        <div class="jg-botoes">
+                            <label class="camp-btn camp-btn-primario jg-playmat-escolher">Escolher imagem<input type="file" id="jg-playmat-arquivo" accept="image/png,image/jpeg,image/webp" hidden></label>
+                            <button type="button" class="camp-btn" id="jg-playmat-remover" hidden>Tirar playmat</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="camp-card">
                     <div class="camp-card-cab"><h2>Dinheiro</h2></div>
                     @if ($souMestre)<p class="camp-dica">Como mestre, você define quanto Dinheiro cada um tem.</p>@endif
                     <div class="jg-carteiras" id="jg-carteiras"></div>
@@ -305,6 +317,7 @@
     'pecas'     => $pecas->map(fn ($p) => ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: []])->values(),
     'imagens'   => $imagens,
     'decks'     => $decks,
+    'playmat'   => $playmat ?? null,
     'deckRegra' => ['min' => \App\Models\GladioDeck::MIN, 'max' => \App\Models\GladioDeck::MAX, 'copias' => \App\Models\GladioDeck::COPIAS],
     'padrao'    => \App\Jogos\PelaDama::tiposPadrao(),
     'exercito'  => \App\Jogos\PelaDama::exercitoPadrao(),
@@ -315,6 +328,7 @@
         'cartas'   => route('campanhas.jogos.cartas.salvar', $campanha),
         'pecas'    => route('campanhas.jogos.pecas.salvar', $campanha),
         'imagens'  => route('campanhas.jogos.imagens.enviar', $campanha),
+        'playmat'  => route('campanhas.jogos.playmat.salvar', $campanha),
         'decks'    => route('campanhas.jogos.decks.salvar', $campanha),
         'partidas' => route('campanhas.jogos.partidas.criar', $campanha),
         'base'     => url('/campanhas/' . $campanha->id . '/jogos'),

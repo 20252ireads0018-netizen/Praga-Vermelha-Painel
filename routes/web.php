@@ -143,6 +143,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/jogos/imagens', [CampanhaJogoController::class, 'enviarImagens'])
             ->middleware('throttle:30,1')->name('jogos.imagens.enviar'); // galeria das cartas
         Route::get('/{campanha}/jogos/imagens/{imagem}', [CampanhaJogoController::class, 'verImagem'])->name('jogos.imagens.ver');
+        // playmat do Gladio: a imagem que cada jogador escolhe para o próprio campo
+        Route::post('/{campanha}/jogos/playmat', [CampanhaJogoController::class, 'salvarPlaymat'])
+            ->middleware('throttle:20,1')->name('jogos.playmat.salvar');
+        Route::get('/{campanha}/jogos/playmat/{usuario}', [CampanhaJogoController::class, 'verPlaymat'])->whereNumber('usuario')->name('jogos.playmat.ver');
         Route::delete('/{campanha}/jogos/imagens/{imagem}', [CampanhaJogoController::class, 'excluirImagem'])->name('jogos.imagens.excluir');
         Route::post('/{campanha}/jogos/pecas', [CampanhaJogoController::class, 'salvarPeca'])
             ->middleware('throttle:60,1')->name('jogos.pecas.salvar');

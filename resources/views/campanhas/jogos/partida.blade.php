@@ -21,6 +21,7 @@
     'csrf'    => csrf_token(),
     'dados'   => $dados,
     'imagens' => $imagens,
+    'playmats' => $playmats ?? (object) [], // lado => imagem do playmat do jogador
     'url'     => [
         'estado' => route('campanhas.jogos.estado', [$campanha, $partida]),
         'acao'   => route('campanhas.jogos.acao', [$campanha, $partida]),

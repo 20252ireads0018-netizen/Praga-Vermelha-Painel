@@ -801,3 +801,12 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 /* banlist do mestre: selo no montador de deck e na lista de cartas */
 .jg-ban { display: inline-block; margin-left: .3rem; padding: 0 .35rem; border-radius: 4px; font-size: .68rem; font-weight: 700; background: #b45309; color: #fff; vertical-align: middle; }
 .jg-ban--banida { background: #991b1b; }
+
+/* playmat: a imagem que cada jogador escolhe para o fundo do próprio campo */
+.gl-campo--playmat { background-image: linear-gradient(rgba(10, 6, 6, .35), rgba(10, 6, 6, .35)), var(--playmat); background-size: cover; background-position: center; }
+.jg-playmat { display: flex; flex-direction: column; gap: .6rem; }
+.jg-playmat-previa { aspect-ratio: 16 / 7; border-radius: var(--camp-raio); border: 1px dashed var(--camp-borda-forte); background: rgba(0, 0, 0, .25) center / cover no-repeat;
+    display: flex; align-items: center; justify-content: center; text-align: center; padding: .5rem; font-size: .85rem; opacity: .9; }
+.jg-playmat-previa--tem { border-style: solid; }
+.jg-playmat-previa--tem span { display: none; }
+.jg-playmat-escolher { cursor: pointer; }
