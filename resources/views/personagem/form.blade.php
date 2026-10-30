@@ -2713,8 +2713,13 @@ window.PastasFicha = (function(){
             });
             return total;
         },
+        // Técnica de arte acima do nível de maldição do personagem: +5 de Aura por nível que falta
+        penalidadeNivel: function(item){
+            if(item.nivel_atual === undefined) return 0;
+            return 5 * Math.max(0, this.nat(item.nivel_req) - this.nat(item.nivel_atual));
+        },
         custoTotal: function(item){
-            return this.custoBase(item) + this.custoAprimoramentos(item);
+            return this.custoBase(item) + this.custoAprimoramentos(item) + this.penalidadeNivel(item);
         },
         textoCusto: function(item){
             const base = this.custoBase(item);
@@ -2726,8 +2731,10 @@ window.PastasFicha = (function(){
             }));
             let s = "Custo: " + this.nat(item.custo);
             if(ef > 0) s += " − " + ef + " de eficiência = " + base;
-            if(ap > 0 || gr > 0) s += " + " + ap + " de aprimoramentos" + (gr > 0 ? " (" + gr + (gr === 1 ? " grátis)" : " grátis)") : "") + " = " + this.custoTotal(item);
-            return s + " Aura";
+            if(ap > 0 || gr > 0) s += " + " + ap + " de aprimoramentos" + (gr > 0 ? " (" + gr + (gr === 1 ? " grátis)" : " grátis)") : "") + " = " + (base + ap);
+            const pen = this.penalidadeNivel(item);
+            if(pen > 0) s += " + " + pen + " (nível de maldição " + this.nat(item.nivel_atual) + ", requer " + this.nat(item.nivel_req) + ") = " + this.custoTotal(item);
+            return s + " Aura" + (pen === 0 && this.nat(item.nivel_req) > 0 ? " · requer nível " + this.nat(item.nivel_req) : "");
         },
         textoUsados: function(item){
             return "usados " + this.usadosGratis(item) + " de " + item.gratis_disponiveis;
@@ -4706,8 +4713,15 @@ window.PastasFicha = (function(){
             eficiencia: eficienciaTalento(card),
             aprimoramentos: aprimsTalento(card),
             gerais: g,
-            gratis_disponiveis: card.dataset.gratisDisp
+            gratis_disponiveis: card.dataset.gratisDisp,
+            nivel_req: card.dataset.nivelReq,
+            nivel_atual: nivelMaldicaoFicha()
         });
+    }
+    // nível de maldição do personagem (campo "Nível de Hexomante" da aba de maldições)
+    function nivelMaldicaoFicha(){
+        const campo = document.getElementById("nivel-hexomante");
+        return Math.max(0, parseInt(campo ? campo.value : 0, 10) || 0);
     }
     function gravarItemCard(card, item){
         card.dataset.aprims = JSON.stringify(item.aprimoramentos);
@@ -4728,6 +4742,7 @@ window.PastasFicha = (function(){
     function lerEdicaoArte(card){
         if(!ehArte) return;
         card.dataset.eficiencia = String(Math.max(0, parseInt(card.querySelector(".talento-eficiencia-input").value, 10) || 0));
+        card.dataset.nivelReq = String(Math.max(0, parseInt(card.querySelector(".talento-nivel-input").value, 10) || 0));
         const lista = [];
         card.querySelectorAll(".talento-aprim-form .tecnica-aprim-linha").forEach(function(l){
             const texto = l.querySelector(".tec-aprim-texto").value.trim();
@@ -4859,7 +4874,8 @@ window.PastasFicha = (function(){
                 <div class="talento-custo-edicao">
                     <label>Custo (Aura)</label>
                     <input type="number" min="0" class="talento-custo" placeholder="0">
-                    ${ehArte ? '<label title="Aura abatida do custo base. Não afeta o custo dos aprimoramentos.">Eficiência</label><input type="number" min="0" class="talento-eficiencia-input" placeholder="0">' : ''}
+                    ${ehArte ? '<label title="Aura abatida do custo base. Não afeta o custo dos aprimoramentos.">Eficiência</label><input type="number" min="0" class="talento-eficiencia-input" placeholder="0">' +
+                        '<label title="Abaixo dele, a técnica custa +5 de Aura por nível que falta">Nível de maldição requisitado</label><input type="number" min="0" class="talento-nivel-input" placeholder="0">' : ''}
                 </div>
                 ${ehArte ? `
                 <div class="talento-aprim-edicao">
@@ -4886,6 +4902,7 @@ window.PastasFicha = (function(){
         card.dataset.tipo = cfg.tipo;
         if(ehArte){
             card.querySelector(".talento-eficiencia-input").value = t.eficiencia ? t.eficiencia : "";
+            card.querySelector(".talento-nivel-input").value = t.nivel_req ? t.nivel_req : "";
             Aprimoramentos.normalizarLista(t.aprimoramentos).forEach(function(a){
                 if(a.texto.trim() !== ""){ a.texto = a.texto.trim(); linhaAprimTalento(card, a); }
             });
@@ -4897,6 +4914,16 @@ window.PastasFicha = (function(){
         card.querySelector(".pasta-select").innerHTML = PastasFicha.opcoes(cfg.pastaTipo, card.dataset.pasta);
         if(confirmado) confirmarCardTalento(card);
         return card;
+    }
+
+    if(ehArte){
+        const campoNivel = document.getElementById("nivel-hexomante");
+        if(campoNivel) campoNivel.addEventListener("input", function(){
+            cardsTalentos().filter(c => c.dataset.confirmado === "1").forEach(function(card){
+                renderizarAprimsTalento(card);
+                atualizarVisualTalento(card);
+            });
+        });
     }
 
     adicionarTalentos.addEventListener("click", function(){
@@ -5663,6 +5690,7 @@ function sincronizarTalentos(){
             item.aprimoramentos = norm.aprimoramentos;
             item.gerais = Aprimoramentos.serializarGerais(norm.gerais);
             item.gratis_disponiveis = norm.gratis_disponiveis;
+            item.nivel_req = Math.max(0, parseInt(card.dataset.nivelReq, 10) || 0);
         }
         lista.push(item);
     });

@@ -194,6 +194,7 @@ class PersonagemController extends Controller
             'talentos.*.ativo' => 'nullable|boolean',
             // Técnicas de arte (talentos de tipo hexomancia/fisiomancia): eficiência abate só o custo base
             'talentos.*.eficiencia' => 'nullable|integer|min:0',
+            'talentos.*.nivel_req' => 'nullable|integer|min:0|max:99', // nível de maldição requisitado (abaixo: +5 de Aura por nível)
             'talentos.*.aprimoramentos' => 'nullable|array|max:50',
             'talentos.*.aprimoramentos.*.texto' => 'nullable|string|max:1000',
             'talentos.*.aprimoramentos.*.custo' => 'nullable|integer|min:0',
