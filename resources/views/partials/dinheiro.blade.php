@@ -39,7 +39,8 @@
 </div>
 
 <script>
-(function(){
+// o botão da grade de acessos vem depois deste painel na página: liga tudo quando ela terminar de carregar
+document.addEventListener("DOMContentLoaded", function(){
     const card = document.getElementById("dinheiro-card");
     const abrir = document.getElementById("dinheiro-abrir");
     if(!card) return;
@@ -99,5 +100,5 @@
         definir.value = "";
         enviar({ definir: v }, "Ajuste");
     });
-})();
+});
 </script>
