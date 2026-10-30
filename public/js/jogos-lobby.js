@@ -77,6 +77,7 @@
             }).join('') : '<p class="camp-vazio">Nenhuma partida por enquanto.</p>';
         });
         $('#jg-meu-dinheiro').textContent = Number(lobby.carteiras[D.eu] || 0).toLocaleString('pt-BR');
+        renderFichasAposta();
         renderCarteiras();
     }
     function renderCarteiras() {
@@ -106,7 +107,7 @@
         try {
             if (b.dataset.aceitar) {
                 b.disabled = true;
-                const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : { deck_id: deckEscolhido() };
+                const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : { deck_id: deckEscolhido(), ficha_id: fichaEscolhida() };
                 const r = await post(urlPartida(b.dataset.aceitar, 'aceitar'), dados, D.csrf);
                 if (r.comecou === false) { lobby = r; renderPartidas(); msg('Você entrou na mesa. A partida começa quando as vagas encherem ou quando quem criou mandar começar.'); return; }
                 location.href = r.url;
@@ -139,7 +140,7 @@
     $$('.jg-desafio').forEach(f => f.addEventListener('submit', async e => {
         e.preventDefault();
         const dados = { jogo: f.dataset.jogo, convidado_id: f.convidado_id.value || null };
-        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); dados.vagas = f.vagas.value; }
+        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); dados.vagas = f.vagas.value; dados.ficha_id = fichaEscolhida(); }
         else {
             const ex = exercito();
             if (ex.filter(t => t === 'rei').length !== 1) return msg('Seu exército precisa de exatamente um Rei.', true);
@@ -162,6 +163,17 @@
     const chaveDeck = 'jg-deck-' + D.campanha;
     const totalDeck = c => Object.values(c || {}).reduce((s, n) => s + (+n || 0), 0);
     function deckEscolhido() { const v = $('#jg-deck-escolhido').value; return v ? +v : null; }
+    // de onde sai a aposta do Gladio: a carteira da campanha ou o Dinheiro de um personagem vinculado
+    function fichaEscolhida() { const s = $('#jg-ficha-aposta'); return s && s.value ? +s.value : null; }
+    function renderFichasAposta() {
+        const s = $('#jg-ficha-aposta');
+        if (!s) return;
+        const atual = s.value;
+        const fmt = n => Number(n || 0).toLocaleString('pt-BR');
+        s.innerHTML = `<option value="">Carteira da campanha (💰 ${fmt(lobby.carteiras && lobby.carteiras[D.eu])})</option>` +
+            (lobby.fichas || []).map(f => `<option value="${f.id}">${esc(f.nome)} (💰 ${fmt(f.dinheiro)})</option>`).join('');
+        if ([...s.options].some(o => o.value === atual)) s.value = atual;
+    }
     function renderSeletorDeck() {
         const sel = $('#jg-deck-escolhido');
         const atual = sel.options.length ? sel.value : (ls.get(chaveDeck) || '');

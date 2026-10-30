@@ -43,6 +43,9 @@
                         <label>Seu deck (também ao aceitar)
                             <select name="deck_id" id="jg-deck-escolhido"></select>
                         </label>
+                        <label title="Apostar o Dinheiro de um personagem seu vinculado à campanha: a aposta sai da ficha dele e o prêmio volta para ela">Apostar com (também ao aceitar)
+                            <select name="ficha_id" id="jg-ficha-aposta"></select>
+                        </label>
                         <button class="camp-btn camp-btn-primario">Lançar desafio</button>
                     </form>
                     <p class="camp-dica">Seu Dinheiro: <strong id="jg-meu-dinheiro">0</strong></p>

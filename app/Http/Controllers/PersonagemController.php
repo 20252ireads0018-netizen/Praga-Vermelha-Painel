@@ -41,6 +41,43 @@ class PersonagemController extends Controller
         return redirect()->route('personagens.show', $personagem->id);
     }
 
+    /**
+     * Aba Dinheiro da ficha: ganha/gasta (delta) ou define o saldo, gravando na hora (fora do salvamento da ficha, para
+     * não brigar com o autosave nem com as apostas do Gladio, que mexem no mesmo saldo).
+     */
+    public function dinheiro(Request $request, string $id)
+    {
+        if (!Schema::hasColumn('fichas', 'dinheiro')) {
+            return response()->json(['ok' => false, 'erro' => 'O Dinheiro das fichas ainda não existe no banco: rode o SQL da migração 2026_10_29_000019.'], 422);
+        }
+        $d = $request->validate([
+            'delta'    => ['nullable', 'integer', 'min:-1000000000', 'max:1000000000'],
+            'definir'  => ['nullable', 'integer', 'min:0', 'max:1000000000'],
+        ]);
+        try {
+            $saldo = $this->mexerDinheiro($id, $d);
+        } catch (\InvalidArgumentException $x) {
+            return response()->json(['ok' => false, 'erro' => $x->getMessage()], 422);
+        }
+
+        return response()->json(['ok' => true, 'dinheiro' => $saldo]);
+    }
+
+    private function mexerDinheiro(string $id, array $d): int
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($id, $d) {
+            $p = Personagem::lockForUpdate()->findOrFail($id); // o escopo do dono: só a própria ficha
+            $atual = (int) $p->dinheiro;
+            $novo = isset($d['definir']) ? (int) $d['definir'] : $atual + (int) ($d['delta'] ?? 0);
+            if ($novo < 0) {
+                throw new \InvalidArgumentException('Não há Dinheiro suficiente.');
+            }
+            $p->forceFill(['dinheiro' => min($novo, 1000000000)])->save();
+
+            return (int) $p->dinheiro;
+        });
+    }
+
     public function update(Request $request, string $id)
     {
         $personagem = Personagem::findOrFail($id);

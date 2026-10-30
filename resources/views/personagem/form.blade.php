@@ -532,6 +532,7 @@
 #form-ficha #talentos-arte-card > .botao-fechar,
 #form-ficha #tecnicas-card > .botao-fechar,
 #form-ficha #anotacoes-card > .botao-fechar,
+#form-ficha #dinheiro-card > .botao-fechar,
 #form-ficha #maldicao-card > .botao-fechar {
     position: sticky; top: 0; align-self: flex-end;
     margin: 0 0 -36px auto; z-index: 10;
@@ -580,16 +581,21 @@
     min-height: 52px; white-space: normal; text-align: center;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-/* Desktop (6 col): 3 botões em cima, 2 embaixo (Arte, Anotações), Rolagem na linha inteira. */
+/* Desktop (6 col): 3 botões em cima, depois duplas (Arte e Artes Marciais, Anotações e Dinheiro), Rolagem na linha inteira. */
 .acessos-grade #talentos-arte-abrir,
-.acessos-grade #anotacoes-abrir { grid-column: span 3; }
+.acessos-grade #artes-marciais-abrir,
+.acessos-grade #anotacoes-abrir,
+.acessos-grade #dinheiro-abrir { grid-column: span 3; }
 .acessos-grade #rolarD100 { grid-column: 1 / -1; }
 @media (max-width: 560px) {
     .acessos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .acessos-grade .button,
-    .acessos-grade #talentos-arte-abrir { grid-column: span 1; }
-    /* 5 itens em 2 colunas: Anotações ocupa a linha inteira, sem buraco. */
+    .acessos-grade #talentos-arte-abrir,
+    .acessos-grade #artes-marciais-abrir,
     .acessos-grade #anotacoes-abrir,
+    .acessos-grade #dinheiro-abrir { grid-column: span 1; }
+    /* 7 botões em 2 colunas: Maldição e Rolagem ocupam a linha inteira, sem buraco. */
+    .acessos-grade #maldicao-adicao,
     .acessos-grade #rolarD100 { grid-column: 1 / -1; }
 }
 .contador-painel {
@@ -1059,6 +1065,7 @@
         </label>
 
         @include('partials.anotacoes')
+        @include('partials.dinheiro')
         
             <div class="ficha-header colapsavel">
                 <h1 id="titulo-info-pessoais">Informações Pessoais</h1>
@@ -1366,6 +1373,9 @@
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="anotacoes-abrir">
                     Anotações
+                </button>
+                <button type="button" class="button" style="margin-top:8px;" id="dinheiro-abrir" title="Dinheiro do personagem">
+                    💰 Dinheiro
                 </button>
             </div>
 
@@ -2557,7 +2567,7 @@ window.PastasFicha = (function(){
 
 // Painéis flutuantes redimensionáveis: arraste o canto inferior direito; o tamanho fica lembrado no navegador
 (function(){
-    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card", "artes-marciais-card"].forEach(function(id){
+    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card", "artes-marciais-card", "dinheiro-card"].forEach(function(id){
         const card = document.getElementById(id);
         if(!card) return;
         card.classList.add("redimensionavel");
@@ -2581,7 +2591,7 @@ window.PastasFicha = (function(){
 (function(){
     const form = document.getElementById("form-ficha");
     if(!form) return;
-    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card", "artes-marciais-card"];
+    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card", "artes-marciais-card", "dinheiro-card"];
     const cards = ids.map(id => document.getElementById(id)).filter(Boolean);
     if(!cards.length) return;
 

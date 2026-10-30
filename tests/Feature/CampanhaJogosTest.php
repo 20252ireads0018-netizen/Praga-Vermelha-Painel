@@ -295,6 +295,44 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame([10, 10], [$this->dinheiro($this->ana), $this->dinheiro($this->bia)]);
     }
 
+    public function test_gladio_aposta_o_dinheiro_de_um_personagem_vinculado(): void
+    {
+        Schema::create('fichas', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('usuario_id');
+            $t->string('nome');
+            $t->unsignedBigInteger('dinheiro')->default(0);
+            $t->timestamps();
+        });
+        Schema::create('campanha_fichas', function (Blueprint $t) {
+            $t->id();
+            $t->foreignId('campanha_id');
+            $t->foreignId('ficha_id');
+            $t->foreignId('user_id');
+            $t->string('foto_path')->nullable();
+            $t->timestamps();
+        });
+        $ficha = \Illuminate\Support\Facades\DB::table('fichas')->insertGetId(['usuario_id' => $this->ana->id, 'nome' => 'Lia', 'dinheiro' => 100]);
+        $outra = \Illuminate\Support\Facades\DB::table('fichas')->insertGetId(['usuario_id' => $this->ana->id, 'nome' => 'Sem campanha', 'dinheiro' => 999]);
+        \App\Models\CampanhaFicha::create(['campanha_id' => $this->camp->id, 'ficha_id' => $ficha, 'user_id' => $this->ana->id]);
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Soldado', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        JogoCarteira::create(['campanha_id' => $this->camp->id, 'user_id' => $this->bia->id, 'dinheiro' => 50]);
+
+        // só personagem dela, vinculado à campanha, e com Dinheiro bastante
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 30, 'ficha_id' => $outra])->assertStatus(422);
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 300, 'ficha_id' => $ficha])->assertStatus(422);
+        $r = $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 30, 'ficha_id' => $ficha])->assertOk();
+        $this->assertSame([['id' => $ficha, 'nome' => 'Lia', 'dinheiro' => 100]], $r->json('fichas'));
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk(); // Bia: carteira
+        $this->assertSame([70, 20], [(int) \Illuminate\Support\Facades\DB::table('fichas')->where('id', $ficha)->value('dinheiro'), $this->dinheiro($this->bia)]);
+        $this->assertStringStartsWith('Lia (Ana)', $p->fresh()->estado['nomes']['a']);
+        $this->manterTodos($p);
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
+        $this->assertSame(130, (int) \Illuminate\Support\Facades\DB::table('fichas')->where('id', $ficha)->value('dinheiro'), 'o pote volta para a ficha');
+        $this->assertSame(0, $this->dinheiro($this->ana), 'a carteira da campanha não mudou');
+    }
+
     public function test_playmat_do_jogador_enviar_ver_e_tirar(): void
     {
         Storage::fake('local');

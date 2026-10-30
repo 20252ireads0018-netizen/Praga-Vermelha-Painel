@@ -62,6 +62,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/personagens/{id}', [PersonagemController::class, 'show'])->name('personagens.show');
     Route::put('/personagens/{id}', [PersonagemController::class, 'update'])->name('personagens.update');
+    Route::post('/personagens/{id}/dinheiro', [PersonagemController::class, 'dinheiro'])
+        ->middleware('throttle:60,1')->name('personagens.dinheiro'); // aba Dinheiro: grava na hora
     Route::delete('/personagens/{id}', [PersonagemController::class, 'destroy'])->name('personagens.destroy');
 
     // Tabletop (mesa virtual) -> resources/views/tabletop/{index,show}.blade.php

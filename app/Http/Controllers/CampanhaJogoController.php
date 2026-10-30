@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Jogos\Gladio;
 use App\Jogos\PelaDama;
 use App\Models\Campanha;
+use App\Models\CampanhaFicha;
 use App\Models\GladioCarta;
 use App\Models\GladioDeck;
 use App\Models\GladioImagem;
 use App\Models\JogoCarteira;
 use App\Models\JogoPartida;
 use App\Models\PelaDamaPeca;
+use App\Models\Personagem;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -420,6 +422,7 @@ class CampanhaJogoController extends Controller
             'exercito'     => ['nullable', 'string', 'max:2000'],
             'deck_id'      => ['nullable', 'integer'],
             'vagas'        => ['nullable', 'integer', 'min:2', 'max:' . Gladio::MAX_JOGADORES], // Gladio: jogadores na mesa
+            'ficha_id'     => ['nullable', 'integer'], // Gladio: apostar o Dinheiro de um personagem (vazio: carteira da campanha)
         ]);
         $convidado = !empty($d['convidado_id']) ? (int) $d['convidado_id'] : null;
         if ($convidado !== null && ($convidado === $uid || !$campanha->temMembro($convidado))) {
@@ -433,10 +436,11 @@ class CampanhaJogoController extends Controller
                 return $this->erro('O mestre ainda não criou nenhuma carta de Gladio.');
             }
             $aposta = (int) ($d['aposta'] ?? 0);
-            if ($aposta > $this->saldo($campanha, $uid)) {
-                return $this->erro('Você não tem Dinheiro suficiente para essa aposta.');
-            }
             try {
+                $ficha = $this->fichaDaAposta($campanha, $uid, $d['ficha_id'] ?? null);
+                if ($aposta > $this->saldoDaAposta($campanha, $uid, $ficha)) {
+                    return $this->erro($ficha ? 'Esse personagem não tem Dinheiro suficiente para essa aposta.' : 'Você não tem Dinheiro suficiente para essa aposta.');
+                }
                 $deck = $this->deckDe($campanha, $uid, $d['deck_id'] ?? null, $this->catalogo($campanha));
             } catch (\InvalidArgumentException $e) {
                 return $this->erro($e->getMessage());
@@ -447,7 +451,8 @@ class CampanhaJogoController extends Controller
             }
             // quem entra na mesa, na ordem da roda, e o deck de cada um (null: 20 sorteadas)
             $config = ['vagas' => $vagas, 'jogadores' => [$uid], 'decks' => [(string) $uid => $deck],
-                       'comandantes' => [(string) $uid => $this->comandanteDe($campanha, $uid, $d['deck_id'] ?? null)]];
+                       'comandantes' => [(string) $uid => $this->comandanteDe($campanha, $uid, $d['deck_id'] ?? null)],
+                       'fichas' => [(string) $uid => $ficha]];
         } else {
             $ex = json_decode((string) ($d['exercito'] ?? ''), true) ?: PelaDama::exercitoPadrao();
             if ($msg = PelaDama::validarExercito($ex, $this->tiposDe($campanha, $uid))) {
@@ -497,10 +502,12 @@ class CampanhaJogoController extends Controller
                     if (count($cfg['jogadores']) >= $cfg['vagas']) {
                         throw new \InvalidArgumentException('Essa mesa já está cheia.');
                     }
-                    if ($p->aposta > $this->saldo($campanha, $uid)) {
-                        throw new \InvalidArgumentException('Você não tem Dinheiro suficiente para essa aposta.');
+                    $ficha = $this->fichaDaAposta($campanha, $uid, $request->input('ficha_id'));
+                    if ($p->aposta > $this->saldoDaAposta($campanha, $uid, $ficha)) {
+                        throw new \InvalidArgumentException($ficha ? 'Esse personagem não tem Dinheiro suficiente para essa aposta.' : 'Você não tem Dinheiro suficiente para essa aposta.');
                     }
                     $cfg['jogadores'][] = $uid;
+                    $cfg['fichas'][(string) $uid] = $ficha;
                     $cfg['decks'][(string) $uid] = $this->deckDe($campanha, $uid, $request->input('deck_id'), $this->catalogo($campanha));
                     $cfg['comandantes'][(string) $uid] = $this->comandanteDe($campanha, $uid, $request->input('deck_id'));
                     $p->config = $cfg;
@@ -575,6 +582,7 @@ class CampanhaJogoController extends Controller
         $cfg['jogadores'] = array_map('intval', (array) ($cfg['jogadores'] ?? [(int) $p->jogador1_id]));
         $cfg['decks'] = (array) ($cfg['decks'] ?? [(string) $p->jogador1_id => $cfg['deck'] ?? null]);
         $cfg['comandantes'] = (array) ($cfg['comandantes'] ?? []);
+        $cfg['fichas'] = (array) ($cfg['fichas'] ?? []); // personagem de cada um cuja aposta sai do Dinheiro dele
         $cfg['ocultos'] = array_map('intval', (array) ($cfg['ocultos'] ?? []));
         unset($cfg['deck']);
 
@@ -589,15 +597,10 @@ class CampanhaJogoController extends Controller
     {
         $cfg = $this->configMesa($p);
         $cartas = $this->catalogo($campanha);
-        if ($p->aposta > 0) {
+        $p->config = $cfg;
+        if ($p->aposta > 0) { // da ficha vinculada ou da carteira da campanha de cada um
             foreach ($cfg['jogadores'] as $quem) {
-                $c = $this->carteira($campanha, $quem, true);
-                if ($c->dinheiro < $p->aposta) {
-                    $nome = User::whereKey($quem)->value('name') ?? 'Um jogador';
-                    throw new \InvalidArgumentException("$nome não tem mais Dinheiro suficiente para a aposta.");
-                }
-                $c->dinheiro -= $p->aposta;
-                $c->save();
+                $this->moverAposta($campanha, $p, (int) $quem, -(int) $p->aposta, true);
             }
         }
         $decks = [];
@@ -617,6 +620,9 @@ class CampanhaJogoController extends Controller
             $decks[$lado] = $deck ?: null;
             $comandantes[$lado] = $cfg['comandantes'][(string) $quem] ?? null;
             $nomes[$lado] = (string) (User::whereKey($quem)->value('name') ?? 'Jogador');
+            if ($f = ($cfg['fichas'][(string) $quem] ?? null)) { // partida vinculada a um personagem: aparece o nome dele
+                $nomes[$lado] = (string) (Personagem::withoutGlobalScopes()->whereKey($f)->value('nome') ?? '') . ' (' . $nomes[$lado] . ')';
+            }
         }
         $p->config = $cfg;
         $p->jogador2_id = $cfg['jogadores'][1] ?? null;
@@ -659,9 +665,7 @@ class CampanhaJogoController extends Controller
                     }
                     if ($p->jogo === 'gladio' && $p->aposta > 0) {
                         foreach ($p->jogadores() as $quem) {
-                            $c = $this->carteira($campanha, $quem, true);
-                            $c->dinheiro += $p->aposta;
-                            $c->save();
+                            $this->moverAposta($campanha, $p, (int) $quem, (int) $p->aposta);
                         }
                     }
                 } else {
@@ -817,10 +821,8 @@ class CampanhaJogoController extends Controller
                         // o vencedor leva o pote inteiro: a aposta de todos os jogadores da mesa
                         $k = $venceu === null ? false : array_search($venceu, Gladio::LADOS, true);
                         $vencedorId = $k === false ? null : ($p->jogadores()[$k] ?? null);
-                        if ($p->aposta > 0 && $vencedorId) {
-                            $c = $this->carteira($campanha, (int) $vencedorId, true);
-                            $c->dinheiro += $p->aposta * count($p->jogadores());
-                            $c->save();
+                        if ($p->aposta > 0 && $vencedorId) { // para a ficha que ele vinculou ou para a carteira
+                            $this->moverAposta($campanha, $p, (int) $vencedorId, (int) $p->aposta * count($p->jogadores()));
                         }
                     } else {
                         // Pela Dama: brancas ('b') é quem criou o desafio; empate não tem vencedor
@@ -874,6 +876,61 @@ class CampanhaJogoController extends Controller
     private function saldo(Campanha $campanha, int $uid): int
     {
         return (int) (JogoCarteira::where('campanha_id', $campanha->id)->where('user_id', $uid)->value('dinheiro') ?? 0);
+    }
+
+    /** As fichas de $uid vinculadas à campanha que podem apostar o Dinheiro delas: [{ id, nome, dinheiro }]. */
+    private function fichasApostaveis(Campanha $campanha, int $uid): array
+    {
+        if (!Schema::hasColumn('fichas', 'dinheiro')) {
+            return [];
+        }
+        $ids = CampanhaFicha::where('campanha_id', $campanha->id)->pluck('ficha_id');
+
+        return Personagem::withoutGlobalScopes()->whereIn('id', $ids)->where('usuario_id', $uid)->orderBy('nome')
+            ->get(['id', 'nome', 'dinheiro'])->map(fn ($f) => ['id' => $f->id, 'nome' => (string) $f->nome, 'dinheiro' => (int) $f->dinheiro])->all();
+    }
+
+    /** Ficha escolhida para apostar (do próprio jogador e vinculada à campanha) ou null para a carteira da campanha. */
+    private function fichaDaAposta(Campanha $campanha, int $uid, mixed $fichaId): ?int
+    {
+        if ($fichaId === null || $fichaId === '' || (int) $fichaId === 0) {
+            return null;
+        }
+        foreach ($this->fichasApostaveis($campanha, $uid) as $f) {
+            if ($f['id'] === (int) $fichaId) {
+                return $f['id'];
+            }
+        }
+        throw new \InvalidArgumentException('Escolha um personagem seu vinculado a esta campanha para apostar.');
+    }
+
+    /** Dinheiro disponível para apostar: o da ficha escolhida ou o da carteira da campanha. */
+    private function saldoDaAposta(Campanha $campanha, int $uid, ?int $ficha): int
+    {
+        return $ficha === null ? $this->saldo($campanha, $uid)
+            : (int) (Personagem::withoutGlobalScopes()->whereKey($ficha)->value('dinheiro') ?? 0);
+    }
+
+    /** Põe (+) ou tira (−) Dinheiro de quem apostou: da ficha vinculada à partida ou da carteira da campanha. */
+    private function moverAposta(Campanha $campanha, JogoPartida $p, int $uid, int $quanto, bool $exigir = false): void
+    {
+        $ficha = (($p->config ?? [])['fichas'] ?? [])[(string) $uid] ?? null;
+        if ($ficha !== null && Schema::hasColumn('fichas', 'dinheiro')
+            && ($f = Personagem::withoutGlobalScopes()->lockForUpdate()->find((int) $ficha))) {
+            if ($exigir && (int) $f->dinheiro + $quanto < 0) {
+                throw new \InvalidArgumentException("{$f->nome} não tem mais Dinheiro suficiente para a aposta.");
+            }
+            $f->forceFill(['dinheiro' => max(0, (int) $f->dinheiro + $quanto)])->save();
+
+            return;
+        }
+        $c = $this->carteira($campanha, $uid, true);
+        if ($exigir && $c->dinheiro + $quanto < 0) {
+            $nome = User::whereKey($uid)->value('name') ?? 'Um jogador';
+            throw new \InvalidArgumentException("$nome não tem mais Dinheiro suficiente para a aposta.");
+        }
+        $c->dinheiro += $quanto;
+        $c->save();
     }
 
     /** Mestre e jogadores ativos: [{ id, nome, mestre }]. */
@@ -992,6 +1049,7 @@ class CampanhaJogoController extends Controller
 
         return [
             'carteiras' => JogoCarteira::where('campanha_id', $campanha->id)->pluck('dinheiro', 'user_id'),
+            'fichas'    => $this->fichasApostaveis($campanha, $uid), // personagens dele que podem apostar o próprio Dinheiro
             'partidas'  => $partidas->map(function ($p) use ($nome, $uid, $mestre, $campanha) {
                 $gladio = $p->jogo === 'gladio';
                 $cfg = $gladio ? $this->configMesa($p) : null;
