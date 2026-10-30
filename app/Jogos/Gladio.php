@@ -95,6 +95,7 @@ class Gladio
     public const VIDA_AMISTOSO = 30;
     public const TAXA_COMANDANTE = 2; // custo extra por vez que o comandante já saiu da zona de comando
     public const ENERGIA_LIMITE = 99; // teto da energia ajustada à mão
+    public const MESA_MAX = 100;      // Lendas (criaturas e fichas) na mesa de cada jogador
 
     /** Quais efeitos precisam de alvo e de que tipo. */
     public const ALVOS = [
@@ -681,6 +682,9 @@ class Gladio
         $sac = (int) ($carta['sac'] ?? 0);
         if ($carta['tipo'] === 'lenda' && $sac > count($e['lados'][$lado]['mesa'])) {
             throw new \InvalidArgumentException("Para invocar $nome você precisa sacrificar $sac Lenda" . ($sac > 1 ? 's' : '') . '.');
+        }
+        if ($carta['tipo'] === 'lenda' && !$sac && !self::cabeNaMesa($e, $lado)) {
+            throw new \InvalidArgumentException('Sua mesa já tem ' . self::MESA_MAX . ' Lendas: é o máximo por jogador.');
         }
         array_splice($e['lados'][$lado][$zona], $k, 1);
         $e['lados'][$lado]['energia'] -= $custo;
@@ -1743,6 +1747,12 @@ class Gladio
         $def = $e['cartas'][$carta['c']] ?? null;
         if (!$def) {
             throw new \InvalidArgumentException('Carta desconhecida.');
+        }
+        if ($def['tipo'] === 'lenda' && !self::cabeNaMesa($e, $lado)) { // mesa cheia: a carta vai para o cemitério
+            self::cem($e, $lado, $carta);
+            self::log($e, self::nome($e, $carta['c']) . ' não coube na mesa de ' . self::quem($e, $lado) . ' (máximo de ' . self::MESA_MAX . ' Lendas) e foi para o cemitério.');
+
+            return $e;
         }
         if ($def['tipo'] !== 'lenda') {
             $e['lados'][$lado]['feiticos'][] = ['i' => $carta['i'], 'c' => $carta['c'], 'cont' => 0, 'nota' => ''];

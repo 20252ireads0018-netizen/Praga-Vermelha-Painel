@@ -111,6 +111,20 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame(['aguinha', 'x', 'x'], $deck->lista($cartas), 'deck antigo: limitada fica em 1 e banida sai');
     }
 
+    public function test_no_maximo_100_lendas_na_mesa_de_cada_jogador(): void
+    {
+        $e = $this->mesa(['zezin' => ['nome' => 'Zezin', 'tipo' => 'lenda', 'custo' => 0, 'ataque' => 1, 'vida' => 1, 'palavras' => '',
+            'descricao' => 'Invoque uma ficha de mão 1/1']]);
+        for ($k = 0; $k < Gladio::MESA_MAX - 1; $k++) {
+            $e['lados']['a']['mesa'][] = ['i' => 90000 + $k, 'c' => null, 'nome' => 'Ficha', 'atk' => 1, 'vida' => 1, 'max' => 1, 'pode' => false, 'virada' => false, 'pal' => []];
+        }
+        $e = $this->joga($e, 'a', 'zezin'); // entra a 100ª; a ficha dela não cabe
+        $this->assertCount(Gladio::MESA_MAX, $e['lados']['a']['mesa']);
+        $this->assertStringContainsString('máximo de 100 Lendas', implode(' ', $e['log']));
+        $this->expectExceptionMessage('máximo por jogador');
+        $this->joga($e, 'a', 'x');
+    }
+
     public function test_aposta_multiplica_poder_e_vida_das_cartas(): void
     {
         $this->assertSame([1, 1, 2, 4, 6], array_map([Gladio::class, 'multiplicador'], [0, 99, 100, 250, 300]));

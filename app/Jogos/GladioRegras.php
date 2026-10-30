@@ -175,6 +175,12 @@ trait GladioRegras
         self::sinal($e, 'perde', ['lado' => $lado, 'i' => null, 'valor' => $n]);
     }
 
+    /** Ainda cabe mais uma Lenda (criatura ou ficha) na mesa de $lado? Máximo de MESA_MAX por jogador. */
+    private static function cabeNaMesa(array $e, string $lado): bool
+    {
+        return count($e['lados'][$lado]['mesa']) < self::MESA_MAX;
+    }
+
     /** Uma Lenda nova na mesa (da carta $id), com os valores da carta. */
     private static function novaLenda(array $e, string $id, int $inst): array
     {
@@ -1041,8 +1047,8 @@ trait GladioRegras
                 return $e;
             case 'posse': // Aporium: passa para o jogador atacado (e sai do ataque)
                 $para = $ef['ctx']['lado'] ?? null;
-                if (!$fx || $fx[1] !== 'mesa' || $para === null || $para === $fx[0]) {
-                    return $e;
+                if (!$fx || $fx[1] !== 'mesa' || $para === null || $para === $fx[0] || !self::cabeNaMesa($e, $para)) {
+                    return $e; // (com a mesa do atacado cheia, Aporium fica onde está)
                 }
                 $m = $e['lados'][$fx[0]]['mesa'][$fx[2]];
                 array_splice($e['lados'][$fx[0]]['mesa'], $fx[2], 1);
@@ -1324,6 +1330,14 @@ trait GladioRegras
     {
         $ef = $e['fila'][0];
         $c = !empty($p['copia']) ? ($ef['c'] ?? null) : null;
+        $sobra = max(0, self::MESA_MAX - count($e['lados'][$l]['mesa']));
+        if ($n > $sobra) { // mesa cheia: as fichas que não cabem não são criadas
+            self::log($e, "{$ef['fonte']}: a mesa de " . self::quem($e, $l) . ' chegou ao máximo de ' . self::MESA_MAX . ' Lendas' . ($sobra ? "; só $sobra ficha(s) couberam." : '.'));
+            $n = $sobra;
+        }
+        if ($n <= 0) {
+            return $e;
+        }
         for ($k = 0; $k < $n; $k++) {
             if ($c !== null) {
                 $m = ['ficha' => true] + self::novaLenda($e, $c, ++$e['seq']);
