@@ -810,3 +810,16 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .jg-playmat-previa--tem { border-style: solid; }
 .jg-playmat-previa--tem span { display: none; }
 .jg-playmat-escolher { cursor: pointer; }
+
+/* tela cheia / modo foco do Gladio: só a mesa, sem a aba de acontecimentos */
+.jg-tela-cheia { margin-left: auto; }
+.jg-partida-pagina.gl-foco { position: fixed; inset: 0; z-index: 1200; margin: 0; max-width: none; width: auto; overflow: auto; box-sizing: border-box;
+    padding: .5rem .8rem; background: var(--camp-fundo, #120c0c); }
+.jg-partida-pagina:fullscreen { background: var(--camp-fundo, #120c0c); }
+.gl-foco .camp-voltar { display: none; }
+.gl-foco .jg-topo--partida h1 { font-size: 1.1rem; }
+.gl-foco .gl { grid-template-columns: minmax(0, 1fr); --cw-campo: clamp(62px, 12vh, 128px); --cw-op: clamp(52px, 9.5vh, 100px); --cw-mao: clamp(74px, 14vh, 150px); }
+.gl-foco .gl-log { display: none; }
+.jg-partida-pagina .jg-topo--partida { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; column-gap: .8rem; row-gap: .2rem; }
+.jg-partida-pagina .jg-topo--partida .camp-voltar { flex-basis: 100%; }
+.jg-partida-pagina .jg-topo--partida .jg-status { flex: 1 1 320px; margin: 0; }

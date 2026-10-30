@@ -11,6 +11,9 @@
         <a href="{{ route('campanhas.jogos.index', $campanha) }}" class="camp-voltar">← Jogos da campanha</a>
         <h1>{{ $partida->jogo === 'gladio' ? '⚔️ Gladio' : '♛ Pela Dama' }}</h1>
         <p class="jg-status" id="jg-status">Carregando…</p>
+        @if ($partida->jogo === 'gladio')
+            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-tela-cheia" title="Só a mesa, sem a aba de acontecimentos (Esc sai)">⛶ Tela cheia</button>
+        @endif
     </header>
     <p class="jg-msg" id="jg-msg" hidden></p>
     <div id="jg-jogo" class="{{ $partida->jogo === 'gladio' ? 'gl' : 'pd' }}"></div>

@@ -11,6 +11,32 @@
     if (!dadosEl || !box) return;
 
     const C = JSON.parse(dadosEl.textContent);
+
+    // Tela cheia (Gladio): só a mesa, sem a aba de acontecimentos. Sem a tela cheia do navegador (iPhone), vira
+    // um modo foco que cobre a página do mesmo jeito.
+    const pagina = document.getElementById('jg-partida');
+    const botaoFoco = document.getElementById('jg-tela-cheia');
+    if (pagina && botaoFoco) {
+        const foco = ligado => {
+            pagina.classList.toggle('gl-foco', ligado);
+            botaoFoco.textContent = ligado ? '✕ Sair da tela cheia' : '⛶ Tela cheia';
+        };
+        botaoFoco.addEventListener('click', () => {
+            if (!pagina.classList.contains('gl-foco')) {
+                foco(true);
+                if (pagina.requestFullscreen) pagina.requestFullscreen().catch(() => {});
+            } else {
+                foco(false);
+                if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            }
+        });
+        document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) foco(false); });
+        document.addEventListener('keydown', ev => {
+            if (ev.key === 'Escape' && pagina.classList.contains('gl-foco') && !document.fullscreenElement && !box.querySelector('.gl-modal')) foco(false);
+        });
+    }
+    // o que flutua por cima da mesa vai para dentro da tela cheia (fora dela não aparece)
+    const camada = () => document.fullscreenElement || document.body;
     const { esc, post } = window.JG;
     const $ = (s, r = document) => r.querySelector(s);
     let D = C.dados;     // { v, jogo, status, aposta, lado, nomes, vencedor, estado }
@@ -667,7 +693,7 @@
                 fantasma = carta.cloneNode(true);
                 fantasma.classList.add('gl-fantasma');
                 fantasma.style.setProperty('--cw', getComputedStyle(carta).getPropertyValue('--cw'));
-                document.body.appendChild(fantasma);
+                camada().appendChild(fantasma);
                 carta.classList.add('gl-arrastando');
                 box.classList.add('gl-arrastando-carta');
             }
@@ -889,7 +915,7 @@
             g.style.setProperty('--dx', (a.left + a.width / 2 - (foto.r.left + foto.r.width / 2)) + 'px');
             g.style.setProperty('--dy', (a.top + a.height / 2 - (foto.r.top + foto.r.height / 2)) + 'px');
         }
-        document.body.appendChild(g);
+        camada().appendChild(g);
         setTimeout(() => g.remove(), 1100);
     }
     function marcar(el, classe) {
@@ -906,7 +932,7 @@
         s.className = 'gl-numero-anim ' + (n < 0 ? 'gl-numero--dano' : 'gl-numero--cura');
         s.textContent = (n > 0 ? '+' : '') + n;
         Object.assign(s.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 3) + 'px' });
-        document.body.appendChild(s);
+        camada().appendChild(s);
         setTimeout(() => s.remove(), 1300);
     }
     function animar(a, b, foto) {
