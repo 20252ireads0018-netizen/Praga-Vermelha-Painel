@@ -30,7 +30,7 @@
         el.textContent = t || '';
         el.hidden = !t;
         el.classList.toggle('jg-msg--erro', !!erro);
-        if (t && !erro) setTimeout(() => { if (el.textContent === t) el.hidden = true; }, 4000);
+        if (t) setTimeout(() => { if (el.textContent === t) el.hidden = true; }, erro ? 9000 : 4000); // flutua na tela: some sozinha (erro fica mais)
     }
     const falhou = e => msg(e.message, true);
 
@@ -277,7 +277,16 @@
         formDeck.nome.value = d ? d.nome : '';
         montando = {};
         comandante = d && d.comandante_id ? String(d.comandante_id) : null;
-        if (d) Object.keys(d.cartas).forEach(id => { if (cartas.some(c => String(c.id) === id)) montando[id] = +d.cartas[id]; });
+        // deck montado antes da banlist: as cópias além do limite saem e as cartas banidas ficam de fora
+        let ajustou = false;
+        if (d) Object.keys(d.cartas).forEach(id => {
+            const c = cartas.find(x => String(x.id) === id);
+            if (!c) return;
+            const q = Math.min(+d.cartas[id], maxDe(c));
+            if (q < +d.cartas[id]) ajustou = true;
+            if (q > 0) montando[id] = q;
+        });
+        if (ajustou) msg('A banlist do mestre mudou: cartas banidas saíram deste deck e as limitadas ficaram no máximo permitido. Confira e salve.');
         formDeck.hidden = false;
         renderMontagem();
         formDeck.nome.focus();

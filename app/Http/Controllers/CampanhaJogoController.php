@@ -246,13 +246,11 @@ class CampanhaJogoController extends Controller
         foreach ((array) json_decode($d['cartas'], true) as $id => $qtd) {
             $qtd = (int) $qtd;
             if ($qtd > 0 && isset($catalogo[(string) $id])) {
-                $pode = GladioDeck::copiasDe($catalogo[(string) $id]); // banlist do mestre
-                if ($qtd > $pode) {
-                    $nome = $catalogo[(string) $id]['nome'] ?? 'Uma carta';
-
-                    return $this->erro($pode === 0 ? "$nome está banida pelo mestre: tire-a do deck." : "$nome está limitada a $pode cópia" . ($pode > 1 ? 's' : '') . ' por deck.');
+                // banlist do mestre: as cópias além do limite saem (banida: a carta inteira sai) em vez de recusar o deck
+                $qtd = min($qtd, GladioDeck::copiasDe($catalogo[(string) $id]));
+                if ($qtd > 0) {
+                    $cartas[(string) $id] = $qtd;
                 }
-                $cartas[(string) $id] = $qtd;
             }
         }
         $total = array_sum($cartas);
