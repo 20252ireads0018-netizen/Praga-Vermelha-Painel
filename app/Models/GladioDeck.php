@@ -25,13 +25,22 @@ class GladioDeck extends Model
 
     protected $casts = ['cartas' => 'array'];
 
+    /** Cópias permitidas da carta num deck: o limite da banlist do mestre (0 = banida) ou COPIAS. */
+    public static function copiasDe(array $carta): int
+    {
+        $lim = $carta['limite'] ?? null;
+
+        return $lim === null || $lim === '' ? self::COPIAS : max(0, min(self::COPIAS, (int) $lim));
+    }
+
     /** Lista de ids (uma entrada por cópia), só com cartas que ainda existem no catálogo. */
     public function lista(array $catalogo): array
     {
         $ids = [];
         foreach ((array) $this->cartas as $id => $qtd) {
             if (isset($catalogo[(string) $id])) {
-                for ($n = 0; $n < (int) $qtd; $n++) {
+                // a banlist vale também para decks montados antes dela: banida sai, limitada fica no limite
+                for ($n = 0; $n < min((int) $qtd, self::copiasDe($catalogo[(string) $id])); $n++) {
                     $ids[] = (string) $id;
                 }
             }

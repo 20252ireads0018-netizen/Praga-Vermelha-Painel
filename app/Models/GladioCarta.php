@@ -9,7 +9,7 @@ class GladioCarta extends Model
 {
     protected $table = 'gladio_cartas';
 
-    protected $fillable = ['campanha_id', 'nome', 'tipo', 'custo', 'ataque', 'vida', 'efeito', 'valor', 'palavras', 'subtipos', 'descricao', 'imagem'];
+    protected $fillable = ['campanha_id', 'nome', 'tipo', 'custo', 'ataque', 'vida', 'efeito', 'valor', 'palavras', 'subtipos', 'limite', 'descricao', 'imagem'];
 
     protected $casts = ['custo' => 'integer', 'ataque' => 'integer', 'vida' => 'integer', 'valor' => 'integer'];
 
@@ -21,6 +21,7 @@ class GladioCarta extends Model
             'vida' => $this->vida, 'efeito' => $this->efeito, 'valor' => $this->valor, 'descricao' => (string) $this->descricao,
             'palavras' => (string) ($this->palavras ?? ''), // Sobrepujar, Ímpeto (separadas por vírgula)
             'subtipos' => (string) ($this->subtipos ?? ''), // hexomante, aluno, kuro… (separados por vírgula)
+            'limite'   => $this->limite === null ? null : (int) $this->limite, // banlist: cópias por deck (0 = banida, null = livre)
         ];
     }
 }

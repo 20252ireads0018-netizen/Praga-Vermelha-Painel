@@ -128,6 +128,15 @@
                                     <input type="text" name="subtipos" maxlength="120" list="jg-subtipos" placeholder="Ex.: hexomante, aluno">
                                     <datalist id="jg-subtipos"><option value="hexomante"><option value="fisiomante"><option value="hexomante, aluno"><option value="hexomante, diretor"><option value="kuro"><option value="forma hexomante"><option value="propriedade fisiomântica"></datalist>
                                 </label>
+                                <label title="Banlist da campanha: quantas cópias desta carta cabem num deck">Banlist
+                                    <select name="limite">
+                                        <option value="">Livre (até {{ \App\Models\GladioDeck::COPIAS }} cópias)</option>
+                                        <option value="3">Limitada a 3</option>
+                                        <option value="2">Limitada a 2</option>
+                                        <option value="1">Limitada a 1</option>
+                                        <option value="0">Banida</option>
+                                    </select>
+                                </label>
                                 <div class="jg-larga jg-img-linha">
                                     <button type="button" class="camp-btn camp-btn-pequeno" data-acao="galeria">Da galeria</button>
                                     <label class="camp-btn camp-btn-pequeno">Do computador<input type="file" accept="image/*,.heic,.heif,.tif,.tiff,.avif,.jfif,.bmp,.ico,.svg" hidden name="arquivo"></label>

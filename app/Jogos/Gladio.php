@@ -144,12 +144,17 @@ class Gladio
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
             $ids = array_values(array_filter(array_map('strval', $decks[$lado] ?? []), fn ($id) => isset($cartas[$id])));
             if (!$ids) { // sem deck: as cartas do mestre embaralhadas e repetidas até completar 20
-                while (count($ids) < self::BARALHO) {
-                    foreach ($embaralhar(array_keys($cartas)) as $id) {
-                        if (count($ids) < self::BARALHO) {
+                // banlist: banidas ficam de fora e limitadas entram no máximo o limite
+                $pode = array_filter(array_map(fn ($c) => isset($c['limite']) && $c['limite'] !== null ? (int) $c['limite'] : PHP_INT_MAX, $cartas), fn ($n) => $n > 0);
+                $conta = [];
+                while (count($ids) < self::BARALHO && $pode) {
+                    foreach ($embaralhar(array_keys($pode)) as $id) {
+                        if (count($ids) < self::BARALHO && ($conta[$id] ?? 0) < $pode[$id]) {
                             $ids[] = (string) $id;
+                            $conta[$id] = ($conta[$id] ?? 0) + 1;
                         }
                     }
+                    $pode = array_filter($pode, fn ($n, $id) => ($conta[$id] ?? 0) < $n, ARRAY_FILTER_USE_BOTH);
                 }
             }
             // comandante: sai do baralho e vai para a zona de comando

@@ -99,6 +99,18 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame(['principal', 'a', 19], [$e['fase'], $e['vez'], count($e['lados']['a']['baralho']) + count($e['lados']['a']['mao']) + 0]);
     }
 
+    public function test_banlist_no_deck_sorteado_e_na_lista_do_deck(): void
+    {
+        $cartas = self::BASE + ['aguinha' => ['nome' => 'Aguinha', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1, 'palavras' => '', 'descricao' => '', 'limite' => 1]];
+        $cartas['tiro']['limite'] = 0;
+        $e = Gladio::iniciar($cartas, 50, ['a' => null, 'b' => null], fn ($a) => $a);
+        $todas = array_merge(...array_values(array_map(fn ($l) => array_column(array_merge($l["baralho"], $l["mao"], $l["comando"]), "c"), $e["lados"])));
+        $this->assertNotContains('tiro', $todas, 'banida não entra no deck sorteado');
+        $this->assertSame(1, count(array_filter(array_column(array_merge($e['lados']['a']['baralho'], $e['lados']['a']['mao'], $e['lados']['a']['comando']), 'c'), fn ($c) => $c === 'aguinha')));
+        $deck = new \App\Models\GladioDeck(['cartas' => ['aguinha' => 3, 'x' => 2, 'tiro' => 2]]);
+        $this->assertSame(['aguinha', 'x', 'x'], $deck->lista($cartas), 'deck antigo: limitada fica em 1 e banida sai');
+    }
+
     public function test_aposta_multiplica_poder_e_vida_das_cartas(): void
     {
         $this->assertSame([1, 1, 2, 4, 6], array_map([Gladio::class, 'multiplicador'], [0, 99, 100, 250, 300]));

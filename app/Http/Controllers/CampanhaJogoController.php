@@ -118,6 +118,7 @@ class CampanhaJogoController extends Controller
             'palavras'  => ['nullable', 'array'],
             'palavras.*'=> [Rule::in(array_keys(Gladio::PALAVRAS))],
             'subtipos'  => ['nullable', 'string', 'max:120'], // hexomante, aluno, kuro, forma hexomante…
+            'limite'    => ['nullable', 'integer', 'min:0', 'max:' . GladioDeck::COPIAS], // banlist: vazio = livre, 0 = banida
         ]);
         if ($d['tipo'] === 'lenda' && (int) ($d['vida'] ?? 0) < 1) {
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
@@ -145,6 +146,9 @@ class CampanhaJogoController extends Controller
                 return response()->json(['ok' => false, 'erro' => 'Palavras-chave demais numa carta só: escolha menos.'], 422);
             }
             $carta->palavras = $palavras ?: null;
+        }
+        if (Schema::hasColumn('gladio_cartas', 'limite')) {
+            $carta->limite = isset($d['limite']) && $d['limite'] !== '' && (int) $d['limite'] < GladioDeck::COPIAS ? (int) $d['limite'] : null;
         }
         if (Schema::hasColumn('gladio_cartas', 'subtipos')) {
             $carta->subtipos = trim(preg_replace('/\s*,\s*/', ', ', (string) ($d['subtipos'] ?? '')), ' ,') ?: null;
@@ -228,7 +232,13 @@ class CampanhaJogoController extends Controller
         foreach ((array) json_decode($d['cartas'], true) as $id => $qtd) {
             $qtd = (int) $qtd;
             if ($qtd > 0 && isset($catalogo[(string) $id])) {
-                $cartas[(string) $id] = min($qtd, GladioDeck::COPIAS);
+                $pode = GladioDeck::copiasDe($catalogo[(string) $id]); // banlist do mestre
+                if ($qtd > $pode) {
+                    $nome = $catalogo[(string) $id]['nome'] ?? 'Uma carta';
+
+                    return $this->erro($pode === 0 ? "$nome está banida pelo mestre: tire-a do deck." : "$nome está limitada a $pode cópia" . ($pode > 1 ? 's' : '') . ' por deck.');
+                }
+                $cartas[(string) $id] = $qtd;
             }
         }
         $total = array_sum($cartas);
@@ -531,6 +541,13 @@ class CampanhaJogoController extends Controller
             $lado = Gladio::LADOS[$k];
             // cartas do deck que o mestre apagou nesse meio-tempo ficam de fora
             $deck = array_values(array_filter((array) ($cfg['decks'][(string) $quem] ?? []), fn ($id) => isset($cartas[(string) $id])));
+            // banlist: o que o mestre baniu ou limitou depois de o deck ser escolhido também vale
+            $conta = [];
+            $deck = array_values(array_filter($deck, function ($id) use (&$conta, $cartas) {
+                $conta[(string) $id] = ($conta[(string) $id] ?? 0) + 1;
+
+                return $conta[(string) $id] <= GladioDeck::copiasDe($cartas[(string) $id]);
+            }));
             $decks[$lado] = $deck ?: null;
             $comandantes[$lado] = $cfg['comandantes'][(string) $quem] ?? null;
             $nomes[$lado] = (string) (User::whereKey($quem)->value('name') ?? 'Jogador');

@@ -155,6 +155,10 @@
     /* ---------- decks (Gladio): cada membro monta os seus ---------- */
     let decks = D.decks || [];
     const R = D.deckRegra;
+    // banlist do mestre: cópias permitidas por deck (0 = banida)
+    const maxDe = c => (c.limite === 0 || c.limite ? Math.min(R.copias, +c.limite) : R.copias);
+    const selo = c => (c.limite === 0 ? ' <span class="jg-ban jg-ban--banida" title="Banida pelo mestre: não entra em decks">Banida</span>'
+        : (c.limite ? ` <span class="jg-ban" title="Limitada pelo mestre: no máximo ${c.limite} por deck">Limitada ${c.limite}</span>` : ''));
     const chaveDeck = 'jg-deck-' + D.campanha;
     const totalDeck = c => Object.values(c || {}).reduce((s, n) => s + (+n || 0), 0);
     function deckEscolhido() { const v = $('#jg-deck-escolhido').value; return v ? +v : null; }
@@ -220,11 +224,11 @@
             const ehCmd = comandante === String(c.id);
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
-                `<span class="jg-deck-nome">${esc(c.nome)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : esc(window.JG.TIPOS[c.tipo] || 'Feitiço')}</small></span>` +
+                `<span class="jg-deck-nome">${esc(c.nome)}${selo(c)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : esc(window.JG.TIPOS[c.tipo] || 'Feitiço')}</small></span>` +
                 (c.tipo === 'lenda' ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
                 `<b class="jg-deck-qtd">${q}</b>` +
-                `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= R.copias ? ' disabled' : ''}>+</button>` +
+                `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= maxDe(c) ? ' disabled' : ''}>+</button>` +
                 `</div>`;
         }).join('');
     }
@@ -273,7 +277,7 @@
         const b = e.target.closest('[data-qtd]');
         if (b) {
             const id = b.dataset.qtd;
-            montando[id] = Math.max(0, Math.min(R.copias, (montando[id] || 0) + +b.dataset.d));
+            montando[id] = Math.max(0, Math.min(maxDe(cartas.find(c => String(c.id) === String(id)) || {}), (montando[id] || 0) + +b.dataset.d));
             if (!montando[id]) delete montando[id];
             renderMontagem();
             return;
@@ -388,7 +392,7 @@
         barraFiltros.hidden = !cartas.length;
         renderPaginacao(todas.length);
         $('#jg-cartas').innerHTML = lista.length ? lista.map(c =>
-            `<div class="jg-carta-item">${window.JG.carta(c)}` +
+            `<div class="jg-carta-item">${window.JG.carta(c)}${selo(c) ? `<div class="jg-ban-linha">${selo(c)}</div>` : ''}` +
             (D.souMestre ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-carta="${c.id}">Editar</button>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-carta="${c.id}">Excluir</button></div>` : '') +
             `</div>`).join('')
@@ -418,6 +422,7 @@
             descricao: fc.descricao.value, imagem: semImagem ? null : (imagem || imagemAtual),
             palavras: $$('input[name=palavras]:checked', fc).map(x => x.value),
             subtipos: fc.subtipos ? fc.subtipos.value.trim() : '',
+            limite: fc.limite && fc.limite.value !== '' ? +fc.limite.value : null,
         });
         const previa = () => {
             const lenda = fc.tipo.value === 'lenda';
@@ -531,6 +536,7 @@
             fc.registro.value = c ? c.id : '';
             if (c) ['nome', 'tipo', 'custo', 'ataque', 'vida', 'descricao'].forEach(k => { fc[k].value = c[k] == null ? '' : c[k]; });
             if (fc.subtipos) fc.subtipos.value = c ? (c.subtipos || '') : '';
+            if (fc.limite) fc.limite.value = c && c.limite != null ? String(c.limite) : '';
             const pal = c ? String(c.palavras || '').split(',') : [];
             $$('input[name=palavras]', fc).forEach(x => { x.checked = pal.includes(x.value); });
             fc.hidden = false;
@@ -586,7 +592,8 @@
             const dados = { id: fc.registro.value || null, nome: fc.nome.value.trim(), tipo: c.tipo, custo: c.custo, ataque: c.ataque, vida: c.vida,
                             descricao: c.descricao,
                             palavras: c.palavras, // qualquer tipo de carta pode ter palavras-chave
-                            subtipos: c.subtipos }; // hexomante, aluno, kuro… (as cartas usam para "seus hexomantes", "cada Kuro")
+                            subtipos: c.subtipos, // hexomante, aluno, kuro… (as cartas usam para "seus hexomantes", "cada Kuro")
+                            limite: c.limite == null ? '' : c.limite }; // banlist: vazio = livre, 0 = banida
             // a imagem vai como arquivo: em texto (base64) o firewall da hospedagem às vezes barra o envio (erro 406)
             if (imagem) dados.imagem_arquivo = new File([await (await fetch(imagem)).blob()], 'arte.jpg', { type: 'image/jpeg' });
             if (semImagem) dados.sem_imagem = 1;
