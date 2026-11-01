@@ -179,8 +179,12 @@
         if (!s) return;
         const atual = s.value;
         const fmt = n => Number(n || 0).toLocaleString('pt-BR');
-        s.innerHTML = `<option value="">Carteira da campanha (💰 ${fmt(lobby.carteiras && lobby.carteiras[D.eu])})</option>` +
+        const html = `<option value="">Carteira da campanha (💰 ${fmt(lobby.carteiras && lobby.carteiras[D.eu])})</option>` +
             (lobby.fichas || []).map(f => `<option value="${f.id}">${esc(f.nome)} (💰 ${fmt(f.dinheiro)})</option>`).join('');
+        // o lobby atualiza a cada 3 s: refazer a lista sem mudança fecharia o seletor aberto e perderia a escolha
+        if (s.dataset.html === html) return;
+        s.dataset.html = html;
+        s.innerHTML = html;
         if ([...s.options].some(o => o.value === atual)) s.value = atual;
     }
     function renderSeletorDeck() {
