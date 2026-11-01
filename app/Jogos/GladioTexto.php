@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 7;
+    public const VERSAO = 8;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -681,7 +681,7 @@ class GladioTexto
             'dano'       => "$n de dano em " . self::lendaTexto($p),
             'destruir'   => 'destrói ' . self::lendaTexto($p),
             'devolver'   => 'devolve ' . self::lendaTexto($p) . ' para a mão do dono',
-            'recuperar'  => 'escolhe ' . (($p['filtro'] ?? null) === 'lenda' ? 'uma Lenda' : (($p['filtro'] ?? null) === 'feitico' ? 'um feitiço' : 'uma carta')) . ' do seu cemitério para ' . ($p['destino'] === 'mesa' ? 'a mesa' : 'a mão'),
+            'recuperar'  => 'escolhe ' . (($p['filtro'] ?? null) === 'lenda' ? 'uma Lenda' : (($p['filtro'] ?? null) === 'feitico' ? 'um feitiço, encantamento ou equipamento' : 'uma carta')) . ' do seu cemitério para ' . ($p['destino'] === 'mesa' ? 'a mesa' : 'a mão'),
             'buscar'     => 'busca ' . ($n > 1 ? "$n × " : '') . ($p['dica'] ?? 'uma carta') . ' no seu baralho e põe na mão',
             'ficha'      => "cria $n ficha" . ($n > 1 ? 's' : '') . (!empty($p['copia']) ? ' cópia desta carta' : ' ' . ($p['nome'] ?? 'Ficha')
                 . (isset($p['atk'], $p['vida']) && !is_string($p['atk']) ? " {$p['atk']}/{$p['vida']}" : '')) . ($pal !== '' ? " com $pal" : ''),

@@ -498,6 +498,33 @@ class GladioRoteiroTest extends TestCase
         $this->assertTrue($this->noCemiterio($e, 'a', $lixo));
     }
 
+    public function test_plautus_recupera_feitico_encantamento_ou_equipamento(): void
+    {
+        $c = fn ($n, $t, $d) => ['nome' => $n, 'tipo' => $t, 'custo' => 1, 'ataque' => 1, 'vida' => 1, 'palavras' => '', 'descricao' => $d];
+        $cartas = [
+            'x' => $c('Soldado', 'lenda', ''),
+            'pl' => $c('Diretor Plautus', 'lenda', 'Recupere um feitiço de seu cemitério para sua mão quando for invocado'),
+            'enc' => $c('Encanto', 'encanto', ''),
+            'eq' => $c('Espada', 'equipo', ''),
+            'fe' => $c('Bola', 'feitico', ''),
+        ];
+        $deck = array_fill(0, 20, 'x');
+        $e = Gladio::iniciar($cartas, 0, ['a' => $deck, 'b' => $deck], fn ($a) => $a, ['a' => 'Ana', 'b' => 'Bia'], ['a' => 'x', 'b' => 'x']);
+        foreach (['a', 'b'] as $l) {
+            if ($e['fase'] === 'mulligan') {
+                $e = Gladio::manter($e, $l, []);
+            }
+        }
+        $this->assertStringContainsString('encantamento ou equipamento', $e['cartas']['pl']['auto']);
+        $e['lados']['a']['energia'] = 10;
+        $e['lados']['a']['cemiterio'] = [['i' => 801, 'c' => 'enc'], ['i' => 802, 'c' => 'eq'], ['i' => 803, 'c' => 'fe'], ['i' => 804, 'c' => 'x']];
+        $e['lados']['a']['mao'][] = ['i' => 990, 'c' => 'pl'];
+        $e = Gladio::jogar($e, 'a', 990);
+        $this->assertSame([801, 802, 803], $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'a', '802');
+        $this->assertContains('eq', array_column($e['lados']['a']['mao'], 'c'));
+    }
+
     public function test_aporium_passa_para_o_atacado_e_cobra_no_fim_do_turno(): void
     {
         $e = $this->mesa(['apo' => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 3, 'palavras' => '',
