@@ -125,6 +125,62 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([[], 89], [array_column($e['lados']['a']['mesa'], 'c'), $e['lados']['b']['vida']]);
     }
 
+    public function test_corrente_de_negacoes(): void
+    {
+        $cartas = [
+            'vergonha' => $this->c('Vergonha de Dante', 'feitico', 'Negue a invocação da carta alvo'),
+            'tranca'   => $this->c('Tranca amaldiçoada', 'feitico', 'Negue a conjuração da carta alvo respondida.'),
+        ];
+        // a invoca, b nega com Vergonha, a nega a Vergonha com Tranca, b passa: a Lenda entra
+        $e = $this->mesa($cartas);
+        $e['lados']['b']['mao'][] = ['i' => 9301, 'c' => 'vergonha'];
+        $e['lados']['a']['mao'][] = ['i' => 9302, 'c' => 'tranca'];
+        $e = $this->joga($e, 'a', 'x');
+        $this->assertSame(['b', [9301]], [$e['escolha']['lado'], $e['escolha']['opcoes']]);
+        $e = Gladio::escolher($e, 'b', 9301);
+        $this->assertSame(['a', 'resposta', [9302]], [$e['escolha']['lado'], $e['escolha']['tipo'], $e['escolha']['opcoes']], 'a pode negar a negação');
+        $this->assertSame(['x'], array_column($e['lados']['a']['mesa'], 'c'), 'a Lenda espera a corrente resolver');
+        $e = Gladio::escolher($e, 'a', 9302);
+        $this->assertNull($e['escolha']);
+        $this->assertSame(['x'], array_column($e['lados']['a']['mesa'], 'c'), 'a Vergonha foi negada: a Lenda entrou');
+
+        // b ainda nega a Tranca com outra Tranca: a Vergonha volta a valer e a Lenda é negada
+        $e = $this->mesa($cartas);
+        $e['lados']['b']['mao'] = [['i' => 9311, 'c' => 'vergonha'], ['i' => 9313, 'c' => 'tranca']];
+        $e['lados']['a']['mao'][] = ['i' => 9312, 'c' => 'tranca'];
+        $e = $this->joga($e, 'a', 'x');
+        $e = Gladio::escolher($e, 'b', 9311);
+        $e = Gladio::escolher($e, 'a', 9312);
+        $this->assertSame(['b', [9313]], [$e['escolha']['lado'], $e['escolha']['opcoes']]);
+        $e = Gladio::escolher($e, 'b', 9313);
+        $this->assertNull($e['escolha']);
+        $this->assertSame([], $e['lados']['a']['mesa'], 'Tranca de b negou a Tranca de a: a Vergonha negou a Lenda');
+        $this->assertContains('x', array_column($e['lados']['a']['cemiterio'], 'c'));
+
+        // ninguém nega a negação: ela acontece como antes
+        $e = $this->mesa($cartas);
+        $e['lados']['b']['mao'][] = ['i' => 9321, 'c' => 'vergonha'];
+        $e = $this->joga($e, 'a', 'x');
+        $e = Gladio::escolher($e, 'b', 9321);
+        $this->assertSame([null, []], [$e['escolha'], $e['lados']['a']['mesa']]);
+    }
+
+    public function test_vassago_protege_do_selo_do_anticristo(): void
+    {
+        $e = $this->mesa([
+            'vas'  => $this->c('Vassago, O primeiro ascensionista', 'lenda', 'Seus encantamentos não podem sair de campo enquanto Vassago estiver vivo.'),
+            'enc'  => $this->c('Aura', 'encanto', ''),
+            'eq'   => $this->c('Espada', 'equipo', ''),
+            'selo' => $this->c('Selo do anticristo', 'feitico', 'Destrua um encantamento ou equipamento alvo'),
+        ]);
+        $e = $this->joga($e, 'a', 'enc');
+        $e = $this->joga($e, 'a', 'eq');
+        [$e] = $this->poe($e, 'a', 'vas');
+        [$enc, $eq] = array_column($e['lados']['a']['feiticos'], 'i');
+        $e = $this->joga($e, 'b', 'selo');
+        $this->assertSame([(string) $eq], array_map('strval', $e['escolha']['opcoes']), 'o encantamento protegido nem aparece');
+    }
+
     public function test_imbuir_deixa_escolher_as_proprias_cartas(): void
     {
         $e = $this->mesa([

@@ -910,6 +910,9 @@ trait GladioRegras
         if ($p['tipo'] === 'feitico') {
             return self::conjurado($e, $p['lado'], $p['c'], $p['i']);
         }
+        if ($p['tipo'] === 'contra') {
+            return self::aplicarResposta($e, $p);
+        }
 
         return $e;
     }
@@ -955,6 +958,34 @@ trait GladioRegras
             $tipo = $e['cartas'][$carta['c']]['resp'] ?? 'negar';
         }
         $quem = self::quem($e, $lado);
+        // corrente: antes de a resposta acontecer, os outros (inclusive quem jogou a carta respondida) podem negá-la
+        // com outra negação de feitiço (Tranca amaldiçoada, Painel de Kuros), e essa negação também pode ser negada
+        $alvoNome = $p['tipo'] === 'contra' ? $p['nome'] : self::nome($e, $p['c'] ?? '');
+        $c = $carta['c'] ?? ($fonteX['c'] ?? null);
+        $contra = ['tipo' => 'contra', 'lado' => $lado, 'c' => $c, 'i' => is_int($valor) ? $valor : null, 'nome' => $nome, 'rtipo' => $tipo,
+                   'alvo' => $p, 'resp' => ['negar_feitico'], 'campo' => 'painel',
+                   'quem' => self::respondentes($e, $lado, ['negar_feitico'], 'painel', $c),
+                   'texto' => "$quem respondeu a $alvoNome com $nome: você pode negar $nome"];
+        self::log($e, "$quem respondeu a $alvoNome com $nome.");
+        $e['pilha'] = $contra;
+
+        return self::pedirResposta($e);
+    }
+
+    /** Ninguém negou a resposta: ela acontece (e, se era a negação de outra resposta, o que ela negou volta a valer). */
+    private static function aplicarResposta(array $e, array $contra): array
+    {
+        $p = $contra['alvo'];
+        $lado = $contra['lado'];
+        $nome = $contra['nome'];
+        $tipo = $contra['rtipo'];
+        $quem = self::quem($e, $lado);
+        if ($p['tipo'] === 'contra') { // negou outra resposta: ela não acontece, e o que ela respondia segue o caminho dele
+            self::log($e, "$quem negou {$p['nome']} com $nome.");
+            $e['pilha'] = $p['alvo'];
+
+            return self::pedirResposta($e);
+        }
         if ($p['tipo'] === 'negar') { // a Lenda não chega a entrar: vai para o cemitério sem efeito nenhum
             $k = self::idx($e['lados'][$p['lado']]['mesa'], $p['i']);
             if ($k >= 0) {
@@ -1499,7 +1530,7 @@ trait GladioRegras
                 $ops = [];
                 foreach (self::vivos($e) as $l) {
                     foreach ($e['lados'][$l]['feiticos'] as $f) {
-                        if (in_array($e['cartas'][$f['c']]['tipo'] ?? '', ['encanto', 'equipo'], true)) {
+                        if (in_array($e['cartas'][$f['c']]['tipo'] ?? '', ['encanto', 'equipo'], true) && !self::encantoFixo($e, $l, $f)) {
                             $ops[(string) $f['i']] = self::nome($e, $f['c']) . ' (' . self::quem($e, $l) . ')';
                         }
                     }
@@ -1507,7 +1538,8 @@ trait GladioRegras
                 if ($esc === null) {
                     return self::pedirOpcao($e, $p, $dono, $ops, "$fonte: escolha o encantamento ou equipamento a destruir");
                 }
-                if ($o = self::emJogo($e, (int) $esc)) {
+                if (($o = self::emJogo($e, (int) $esc)) && $o[1] === 'feiticos'
+                    && !self::encantoFixo($e, $o[0], $e['lados'][$o[0]]['feiticos'][$o[2]])) {
                     $e = self::desequipar($e, $o[0], (int) $esc);
                     $f = $e['lados'][$o[0]]['feiticos'][$o[2]];
                     array_splice($e['lados'][$o[0]]['feiticos'], $o[2], 1);
@@ -1565,7 +1597,7 @@ trait GladioRegras
                     $ops = [];
                     foreach (self::vivos($e) as $l) {
                         foreach ($e['lados'][$l]['feiticos'] as $f) {
-                            if (self::temSub($e, $f['c'], ['forma', 'propriedade'])) {
+                            if (self::temSub($e, $f['c'], ['forma', 'propriedade']) && !self::encantoFixo($e, $l, $f)) {
                                 $ops[(string) $f['i']] = self::nome($e, $f['c']) . ' (' . self::quem($e, $l) . ')';
                             }
                         }
