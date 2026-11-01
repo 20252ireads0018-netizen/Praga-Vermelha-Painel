@@ -986,10 +986,17 @@ trait GladioRegras
 
             return $e;
         }
-        // Imbuir: quem respondeu escolhe o novo alvo entre os mesmos possíveis
+        // Imbuir: quem respondeu escolhe o novo alvo do ponto de vista dele: qualquer Lenda em campo (as próprias também,
+        // mesmo com Hexo-Imune) e, se o efeito mirava jogadores, qualquer jogador
         self::log($e, "$quem respondeu com $nome: vai trocar o alvo.");
         $passo = $p['original'] + ['imbuido' => true];
-        $e['escolha'] = ['lado' => $lado, 'tipo' => $p['esc_tipo'], 'opcoes' => $p['opcoes'], 'texto' => "$nome: escolha o novo alvo",
+        $jogadores = array_map(fn ($j) => 'j:' . $j, self::vivos($e));
+        $opcoes = match ($p['esc_tipo']) {
+            'jogador'  => $jogadores,
+            'qualquer' => array_merge(self::lendasEscolhiveis($e, $lado, 'qualquer'), $jogadores),
+            default    => self::lendasEscolhiveis($e, $lado, 'qualquer'),
+        };
+        $e['escolha'] = ['lado' => $lado, 'tipo' => $p['esc_tipo'], 'opcoes' => $opcoes ?: $p['opcoes'], 'texto' => "$nome: escolha o novo alvo",
                          'fonte' => $nome, 'obrig' => true, 'passo' => $passo];
 
         return $e;

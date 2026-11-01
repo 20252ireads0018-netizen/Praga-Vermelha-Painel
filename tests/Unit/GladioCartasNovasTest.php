@@ -18,7 +18,7 @@ class GladioCartasNovasTest extends TestCase
 
     private function c(string $nome, string $tipo, string $texto, array $extra = []): array
     {
-        return ['nome' => $nome, 'tipo' => $tipo, 'custo' => 1, 'ataque' => 2, 'vida' => 2, 'palavras' => '', 'descricao' => $texto] + $extra;
+        return $extra + ['nome' => $nome, 'tipo' => $tipo, 'custo' => 1, 'ataque' => 2, 'vida' => 2, 'palavras' => '', 'descricao' => $texto];
     }
 
     private function mesa(array $cartas): array
@@ -123,6 +123,27 @@ class GladioCartasNovasTest extends TestCase
         $op = array_values(array_filter($e['escolha']['opcoes'], fn ($o) => is_string($o) && str_starts_with($o, 'campo:')))[0];
         $e = Gladio::escolher($e, 'b', $op);
         $this->assertSame([[], 89], [array_column($e['lados']['a']['mesa'], 'c'), $e['lados']['b']['vida']]);
+    }
+
+    public function test_imbuir_deixa_escolher_as_proprias_cartas(): void
+    {
+        $e = $this->mesa([
+            'imbuir' => $this->c('Imbuir', 'feitico', 'Troque o alvo de um efeito ou ataque ocorrendo', ['subtipos' => 'forma hexomante']),
+            'hexo'   => $this->c('Guarda', 'lenda', '', ['palavras' => 'resistencia']),
+        ]);
+        [$e, $minha] = $this->poe($e, 'a', 'x');
+        [$e, $guarda] = $this->poe($e, 'b', 'hexo'); // Hexo-Imune: o Tiro de a não pode mirar nela
+        [$e, $outra] = $this->poe($e, 'b', 'x');
+        $e['lados']['b']['mao'][] = ['i' => 9200, 'c' => 'imbuir'];
+        $e = $this->joga($e, 'a', 'tiro');
+        $this->assertNotContains($guarda, $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'a', $minha);
+        $e = Gladio::escolher($e, 'b', 9200);
+        $this->assertSame('b', $e['escolha']['lado']);
+        $this->assertContains($guarda, $e['escolha']['opcoes'], 'quem usa o Imbuir pode escolher as próprias Lendas');
+        $this->assertContains($outra, $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'b', $guarda);
+        $this->assertNotNull(array_values(array_filter($e['lados']['a']['mesa'], fn ($m) => (int) $m['i'] === $minha))[0] ?? null, 'a Lenda de a foi poupada');
     }
 
     public function test_intoxicar_no_proprio_feitico(): void
