@@ -265,7 +265,7 @@ class CampanhaJogoController extends Controller
         if (GladioDeck::temComandante()) {
             // comandante: uma Lenda do próprio deck (sem escolha, uma Lenda do deck é sorteada quando a partida começa)
             $cmd = (string) ($d['comandante_id'] ?? '');
-            $deck->comandante_id = isset($cartas[$cmd]) && ($catalogo[$cmd]['tipo'] ?? '') === 'lenda' ? (int) $cmd : null;
+            $deck->comandante_id = isset($cartas[$cmd]) && Gladio::podeComandar($catalogo[$cmd] ?? []) ? (int) $cmd : null;
         }
         $deck->save();
 

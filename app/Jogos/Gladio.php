@@ -159,7 +159,7 @@ class Gladio
                 }
             }
             // comandante: sai do baralho e vai para a zona de comando
-            $lendas = array_values(array_filter($ids, fn ($id) => ($cartas[$id]['tipo'] ?? '') === 'lenda'));
+            $lendas = array_values(array_filter($ids, fn ($id) => self::podeComandar($cartas[$id] ?? [])));
             $cmd = isset($comandantes[$lado]) ? (string) $comandantes[$lado] : null;
             if ($cmd === null || !in_array($cmd, $lendas, true)) {
                 $sorteio = $lendas ? $embaralhar($lendas) : [];
@@ -192,6 +192,12 @@ class Gladio
         $e['iniciado'] = true; // daqui em diante compras e mortes disparam gatilhos
 
         return $e;
+    }
+
+    /** Pode ser comandante: uma Lenda ou uma carta com roteiro que permite (Fantasma das paredes, um encantamento). */
+    public static function podeComandar(array $carta): bool
+    {
+        return ($carta['tipo'] ?? '') === 'lenda' || !empty(GladioRoteiro::de($carta['descricao'] ?? '')['cmd']);
     }
 
     /** Multiplicador do poder e da vida base das cartas: x2 a cada 100$ apostados (100 = x2, 200 = x4, 300 = x6…). */
@@ -252,7 +258,7 @@ class Gladio
         $nomes = array_values(array_unique(array_map(fn ($c) => GladioTexto::normalizar((string) ($c['nome'] ?? '')), $cartas)));
         foreach ($cartas as $id => $c) {
             $cartas[$id]['sub'] = self::lerSubtipos($c['subtipos'] ?? '', (string) ($c['nome'] ?? ''));
-            foreach (['est', 'ativ', 'regen', 'sac', 'resp', 'mods'] as $campo) {
+            foreach (['est', 'ativ', 'regen', 'sac', 'resp', 'mods', 'cmd'] as $campo) {
                 unset($cartas[$id][$campo]);
             }
             // roteiro escrito para o texto da carta (GladioRoteiro): vale mais que o leitor
@@ -262,7 +268,7 @@ class Gladio
                 if (($c['tipo'] ?? '') === 'equipo') {
                     $hab[] = ['g' => 'conjurar', 'passos' => [['a' => 'equipar', 'alvo' => 'lenda', 'filtro' => $rot['mods']['alvo'] ?? 'meu', 'atk' => 0, 'vida' => 0, 'pal' => []]]];
                 }
-                $cartas[$id] = array_merge($cartas[$id], array_intersect_key($rot, array_flip(['est', 'ativ', 'regen', 'sac', 'resp', 'mods'])));
+                $cartas[$id] = array_merge($cartas[$id], array_intersect_key($rot, array_flip(['est', 'ativ', 'regen', 'sac', 'resp', 'mods', 'cmd'])));
                 $cartas[$id]['hab'] = $hab;
                 $cartas[$id]['parcial'] = false;
                 $cartas[$id]['auto'] = GladioTexto::resumo($hab);
@@ -528,7 +534,7 @@ class Gladio
                 if (!$m || ($m['vida'] > 0 && empty($m['morto']))) {
                     continue;
                 }
-                if (self::tem($m, 'indestrutivel')) {
+                if (self::tem($m, 'indestrutivel') && empty($m['forte'])) {
                     $e['lados'][$lado]['mesa'][$k]['vida'] = max(1, $m['vida']);
                     unset($e['lados'][$lado]['mesa'][$k]['morto']);
                     self::log($e, self::nomeLenda($e, $m) . ' é indestrutível e segue de pé.');
@@ -542,7 +548,7 @@ class Gladio
                     $vivas[] = $m;
                     continue;
                 }
-                unset($m['morto']);
+                unset($m['morto'], $m['forte']);
                 self::log($e, self::nomeLenda($e, $m) . ' caiu.');
                 $caidas[] = [$lado, $m];
             }
@@ -699,14 +705,27 @@ class Gladio
                                 'passos' => array_fill(0, $sac, ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true])];
             }
             // Vergonha de Dante: quem tem e pode pagar decide se nega a invocação
-            if ($podem = self::respondentes($e, $lado, 'negar')) {
-                $e['pilha'] = ['tipo' => 'negar', 'resp' => 'negar', 'lado' => $lado, 'i' => $inst, 'c' => $id, 'quem' => $podem,
+            if ($podem = self::respondentes($e, $lado, 'negar', 'marechal', $id)) {
+                $e['pilha'] = ['tipo' => 'negar', 'resp' => ['negar'], 'campo' => 'marechal', 'lado' => $lado, 'i' => $inst, 'c' => $id, 'quem' => $podem,
                                'texto' => "$quem invocou $nome: você pode negar a invocação"];
 
                 return self::seguir(self::pedirResposta($e));
             }
 
             return self::seguir(self::entrouLenda($e, $lado, $id, $inst));
+        }
+        $conj = ($e['lados'][$lado]['conj'][0] ?? null) === $e['turno'] ? (int) $e['lados'][$lado]['conj'][1] : 0;
+        if ($conj >= 1 && !empty($e['glob']['uma_conjuracao'])) {
+            $e['lados'][$lado][$zona][] = $naMao; // devolve: não chegou a ser conjurada
+            $e['lados'][$lado]['energia'] += $custo;
+            throw new \InvalidArgumentException('Quadro da fome: cada jogador só pode conjurar uma carta por turno.');
+        }
+        $e['lados'][$lado]['conj'] = [$e['turno'], $conj + 1];
+        if ($conj === 0 && !empty($e['glob']['basileu'])) { // "toda primeira carta conjurada por um jogador é negada"
+            self::cem($e, $lado, ['i' => $inst, 'c' => $id]);
+            self::log($e, "$quem conjurou $nome, mas O Basileu do Principado negou (é a primeira do turno).");
+
+            return self::seguir($e);
         }
         if ($custo === 2) { // Trinkt: "sempre que você gastar exatamente 2 em aura para um feitiço"
             self::sinal($e, 'gasto2', ['lado' => $lado, 'i' => $inst]);
@@ -742,10 +761,15 @@ class Gladio
                 self::cem($e, $lado, ['i' => $inst, 'c' => $id] + $banir);
             }
             self::log($e, "$quem " . self::verbo($carta['tipo']) . " $nome" . ($banir ? ' do cemitério (será banida)' : '') . '.');
-            $e = self::enfileirar($e, $lado, $id, $inst, 'conjurar');
+            if ($podem = self::respondentes($e, $lado, ['negar_feitico', 'ressonar', 'intoxicar'], 'painel', $id)) {
+                $e['pilha'] = ['tipo' => 'feitico', 'resp' => ['negar_feitico', 'ressonar', 'intoxicar'], 'campo' => 'painel', 'lado' => $lado,
+                               'i' => $inst, 'c' => $id, 'quem' => $podem, 'texto' => "$quem conjurou $nome: você pode responder"];
 
-            // "sempre que um feitiço for conjurado" das outras cartas em jogo
-            return self::seguir(self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst, 'c' => $id]));
+                return self::seguir(self::pedirResposta($e));
+            }
+
+            // os efeitos e o "sempre que um feitiço for conjurado" das outras cartas em jogo
+            return self::seguir(self::conjurado($e, $lado, $id, $inst));
         }
         // carta antiga sem texto: o código abaixo tira a carta da mão e paga de novo
         $e['lados'][$lado]['mao'][] = $naMao;
@@ -867,6 +891,9 @@ class Gladio
         if (!in_array($alvo, $inimigos, true)) {
             throw new \InvalidArgumentException('Escolha qual adversário atacar.');
         }
+        if (!empty($e['lados'][$lado]['intocavel']) || !empty($e['lados'][$alvo]['intocavel'])) {
+            throw new \InvalidArgumentException(!empty($e['lados'][$lado]['intocavel']) ? 'Sua Redoma de cidade não deixa você atacar agora.' : self::quem($e, $alvo) . ' está protegido pela Redoma de cidade.');
+        }
         $insts = array_values(array_unique(array_map('intval', $insts)));
         if (!$insts) {
             throw new \InvalidArgumentException('Escolha quem vai atacar.');
@@ -881,7 +908,7 @@ class Gladio
             if (self::tem($m, 'defensor')) {
                 throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' tem Defensor e não pode atacar.');
             }
-            if (!empty($m['preso']) || self::fl($m, 'silhueta')) {
+            if (!empty($m['preso']) || self::fl($m, 'silhueta') || self::fl($m, 'preso_eq')) {
                 throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' não pode atacar.');
             }
             if (!$m['pode']) {
@@ -914,6 +941,9 @@ class Gladio
             $e = self::enfileirar($e, $lado, $m['c'], $i, 'atacar', ['lado' => $alvo, 'i' => null], $m);
         }
         self::sinal($e, 'atacado', ['lado' => $alvo, 'i' => null]); // Copo encantado
+        foreach ($insts as $i) { // Isaque: "quando uma lenda aliada atacar"
+            self::sinal($e, 'ataca', ['lado' => $lado, 'i' => $i, 'c' => $e['lados'][$lado]['mesa'][self::idx($e['lados'][$lado]['mesa'], $i)]['c'] ?? null]);
+        }
 
         return self::seguir($e);
     }
@@ -980,6 +1010,27 @@ class Gladio
     {
         if ($quanto <= 0) {
             return;
+        }
+        if (self::naMesa($e, 'ganho_inverte')) { // "toda vez que um jogador fosse ganhar dinheiro, ao invés disso, ele a perde"
+            self::perdeVida($e, $lado, $quanto);
+            self::log($e, self::quem($e, $lado) . " ia ganhar $quanto, mas perdeu.");
+
+            return;
+        }
+        $feridas = 0;
+        foreach (self::vivos($e) as $l) {
+            $feridas += count(self::doJogador($e, $l, 'ganho_metade'));
+        }
+        if ($feridas >= 2) {
+            self::log($e, 'Feridas duradouras: ninguém consegue ganhar dinheiro.');
+
+            return;
+        }
+        if ($feridas === 1) {
+            $quanto = intdiv($quanto, 2);
+            if ($quanto <= 0) {
+                return;
+            }
         }
         $falta = max(0, $quanto - self::pote($e));
         $e['total'] += $falta;
@@ -1121,7 +1172,7 @@ class Gladio
                 // tudo do mesmo passo acontece junto (com as proteções de cada Lenda)
                 $causado = $danoNoJogador;
                 foreach ($danoNosBloq as $kb => $d) {
-                    $foi = self::danoLenda($e, $lado, $kb, $d, ['tipo' => 'combate', 'custo' => $custo($a)]);
+                    $foi = self::danoLenda($e, $lado, $kb, $d, ['tipo' => 'combate', 'custo' => $custo($a), 'quebra' => self::fl($a, 'quebra_indestrutivel')]);
                     $causado += $foi;
                     if ($foi > 0 && self::tem($a, 'toque')) {
                         $e['lados'][$lado]['mesa'][$kb]['morto'] = true;
@@ -1130,7 +1181,8 @@ class Gladio
                     $e['lados'][$at]['mesa'][$ka]['combateu'] = [$lado, (int) $e['lados'][$lado]['mesa'][$kb]['i']];
                 }
                 if ($danoNoJogador > 0) {
-                    self::perdeVida($e, $lado, $danoNoJogador);
+                    self::perdeVida($e, $lado, $danoNoJogador, true);
+                    $e = self::enfileirar($e, $at, $a['c'] ?? null, $ai, 'feriu_jogador', ['lado' => $lado, 'i' => null], $a);
                     if (!$bloq) {
                         self::log($e, "$nomeA passou sem bloqueio: $danoNoJogador de dano" . ($passo === 'primeiro' ? ' (Iniciativa).' : '.'));
                         if (empty($diretoFeito[$ai])) { // "quando atacar um jogador diretamente": o evento é o jogador atacado
@@ -1140,7 +1192,8 @@ class Gladio
                     }
                 }
                 if ($danoNoAtacante > 0) {
-                    $foi = self::danoLenda($e, $at, $ka, $danoNoAtacante, ['tipo' => 'combate', 'custo' => 0]);
+                    $foi = self::danoLenda($e, $at, $ka, $danoNoAtacante, ['tipo' => 'combate', 'custo' => min(array_map(fn ($kb) => $custo($e['lados'][$lado]['mesa'][$kb]), $bloq ?: [0]) ?: [0]),
+                        'quebra' => (bool) array_filter($bloq, fn ($kb) => self::fl($e['lados'][$lado]['mesa'][$kb], 'quebra_indestrutivel'))]);
                     if ($foi > 0 && $toqueNoAtacante) {
                         $e['lados'][$at]['mesa'][$ka]['morto'] = true;
                     }
@@ -1674,6 +1727,15 @@ class Gladio
             . ($novas ? ($b['atk'] || $b['vida'] ? ', ' : ' (') . implode(', ', array_map(fn ($p) => self::PALAVRAS[$p], $novas)) : '')
             . ($b['atk'] || $b['vida'] || $novas ? ')' : '');
         self::log($e, self::quem($e, $lado) . " equipou $nomeF em $nomeL$txt.");
+        if (!empty($mods['controla']) && $dl !== $lado && self::cabeNaMesa($e, $lado)) { // Propriedade: Controlado
+            $m = $e['lados'][$dl]['mesa'][$kl];
+            array_splice($e['lados'][$dl]['mesa'], $kl, 1);
+            $m['dono_original'] = $dl;
+            $m['pode'] = false;
+            $e['lados'][$lado]['mesa'][] = $m;
+            $e['lados'][$lado]['feiticos'][$kf]['bonus']['controla'] = true;
+            self::log($e, self::quem($e, $lado) . ' tomou o controle de ' . self::nomeLenda($e, $m) . '.');
+        }
         if (!empty($mods['quente']) && $dl !== $lado) { // em inimigo: 2 de dano
             self::danoLenda($e, $dl, $kl, 2, ['tipo' => 'feitico', 'custo' => (int) ($e['cartas'][$e['lados'][$lado]['feiticos'][$kf]['c']]['custo'] ?? 0), 'lado' => $lado]);
             self::log($e, "$nomeF: 2 de dano em $nomeL.");
@@ -1698,6 +1760,13 @@ class Gladio
             $m['vida'] = min($m['vida'] - (int) $b['vida'], $m['max']); // perder a vida extra pode derrubá-la
             $m['pal'] = array_values(array_diff($m['pal'] ?? [], (array) ($b['pal'] ?? [])));
             unset($m);
+            $m = $e['lados'][$onde[0]]['mesa'][$onde[1]];
+            if (!empty($b['controla']) && isset($m['dono_original']) && empty($e['lados'][$m['dono_original']]['fora'])) { // volta para o dono
+                array_splice($e['lados'][$onde[0]]['mesa'], $onde[1], 1);
+                $volta = $m['dono_original'];
+                unset($m['dono_original']);
+                $e['lados'][$volta]['mesa'][] = $m;
+            }
         }
         unset($e['lados'][$lado]['feiticos'][$kf]['em'], $e['lados'][$lado]['feiticos'][$kf]['bonus']);
 
@@ -1942,6 +2011,8 @@ class Gladio
             'gasto2'       => fn ($dono) => $meu($dono, 'gasto2'),
             'cemiterio'    => fn () => ['cemiterio'], 'scry' => fn () => ['scry'], 'perde' => fn () => ['perde'],
             'shot'         => fn () => ['shot'], 'dano_feitico' => fn () => ['dano_feitico'], 'atacado' => fn () => ['atacado'],
+            'ficha'        => fn () => ['ficha'], 'dano_jog' => fn () => ['dano_jog'], 'mill' => fn () => ['mill'],
+            'ataca'        => fn ($dono) => $meu($dono, 'ataca_minha'), 'ganhou_atk' => fn ($dono) => $meu($dono, 'ganhou_atk_meu'),
         ][$tipo] ?? fn () => [];
         // a carta do evento (com o subtipo dela para "sempre que um Kuro for invocado", "forma hexomante conjurada")
         $cEv = $ctx['c'] ?? ($ctx['m']['c'] ?? null);
@@ -1959,6 +2030,19 @@ class Gladio
                     $f = $h['f'] ?? [];
                     if (isset($f['sub']) && !self::temSub($e, $xEv ?? $cEv, $f['sub'])) {
                         continue;
+                    }
+                    $cDef = $cEv !== null ? ($e['cartas'][$cEv] ?? []) : [];
+                    if ((isset($f['custo_min']) && (int) ($cDef['custo'] ?? 0) < (int) $f['custo_min'])
+                        || (isset($f['tipo']) && ($cDef['tipo'] ?? '') !== $f['tipo'])
+                        || (!empty($f['nao_proprio']) && (int) ($ctx['fonte_i'] ?? 0) === (int) $x['i'])) {
+                        continue;
+                    }
+                    if (!empty($h['uma'])) { // "uma vez por turno"
+                        $o = self::emJogo($e, (int) $x['i']);
+                        if (!$o || ($e['lados'][$o[0]][$o[1]][$o[2]]['usou_hab'][$h['g']] ?? null) === $e['turno']) {
+                            continue;
+                        }
+                        $e['lados'][$o[0]][$o[1]][$o[2]]['usou_hab'][$h['g']] = $e['turno'];
                     }
                     if ((isset($f['min']) && (int) ($ctx['valor'] ?? 0) < (int) $f['min'])
                         || (!empty($f['fixo']) && ($x['jog'] ?? null) !== ($ctx['lado'] ?? null))
@@ -2020,6 +2104,10 @@ class Gladio
                     }
                 }
             }
+            $e = self::vitoriasDeCarta($e);
+            if ($e['fim']) {
+                break;
+            }
             if ($e['ev'] ?? []) { // eventos: disparam os gatilhos das cartas em jogo
                 $evs = $e['ev'];
                 $e['ev'] = [];
@@ -2052,6 +2140,9 @@ class Gladio
                 $e['fase'] = 'principal';
                 $antes = count($e['lados'][$vez]['mao']);
                 $e = self::comprarUma($e, $vez);
+                if (!empty($e['glob']['compra_dupla'])) {
+                    $e = self::comprarUma($e, $vez);
+                }
                 if (count($e['lados'][$vez]['mao']) > $antes) {
                     self::log($e, 'Turno ' . $e['turno'] . ' de ' . self::quem($e, $vez) . ': comprou uma carta.');
                 }
@@ -2238,6 +2329,14 @@ class Gladio
             $jogadores = [];
             if ($alvo === 'lenda') {
                 $ops = self::lendasEscolhiveis($e, $dono, $p['filtro'] ?? null);
+                if (isset($p['custo_max'])) { // Facada nas costas: só as de custo até N
+                    $ops = array_values(array_filter($ops, function ($i) use ($e, $p) {
+                        $o = self::acharLenda($e, $i);
+                        $c = $e['lados'][$o[0]]['mesa'][$o[1]]['c'];
+
+                        return $c === null || (int) ($e['cartas'][$c]['custo'] ?? 0) <= (int) $p['custo_max'];
+                    }));
+                }
                 if ($a === 'copia') { // Diego não copia a si mesmo
                     $ops = array_values(array_filter($ops, fn ($i) => $i !== (int) $ef['i']));
                 }
@@ -2309,7 +2408,7 @@ class Gladio
 
             if ($a === 'equipar') { // o feitiço que está resolvendo fica vinculado à Lenda escolhida
                 [$l, $k] = $lendas[0] ?? [null, null];
-                if ($l === $dono && $ef['i'] !== null && self::idx($e['lados'][$dono]['feiticos'], (int) $ef['i']) >= 0) {
+                if ($l !== null && $ef['i'] !== null && self::idx($e['lados'][$dono]['feiticos'], (int) $ef['i']) >= 0) { // em qualquer Lenda (Quente, Controlado, Frio)
                     $e = self::vincular($e, $dono, (int) $ef['i'], (int) $e['lados'][$l]['mesa'][$k]['i']);
                 }
 
@@ -2387,6 +2486,11 @@ class Gladio
                         break;
                     case 'buff':
                         // Amplificação: todo bônus que ela recebe de feitiços e efeitos vale +1/+1 a mais
+                        foreach (['atk', 'vida'] as $campo) { // "+X/+X, onde X é…"
+                            if (is_string($p[$campo] ?? null) && str_starts_with($p[$campo], '#')) {
+                                $p[$campo] = self::quantia($e, $ef, $p[$campo]);
+                            }
+                        }
                         $amp = self::fl($m, 'amplifica') ? [(int) $p['atk'] > 0 ? 1 : 0, (int) $p['vida'] > 0 ? 1 : 0] : [0, 0];
                         $da = (int) $p['atk'] + $amp[0];
                         $dv = (int) $p['vida'] + $amp[1];
@@ -2396,6 +2500,9 @@ class Gladio
                         if (!empty($p['temp'])) {
                             $m['tmp']['atk'] = ($m['tmp']['atk'] ?? 0) + $da;
                             $m['tmp']['vida'] = ($m['tmp']['vida'] ?? 0) + $dv;
+                        }
+                        if ($da > 0) { // Amplificar corrente: "toda vez que uma lenda em seu controle ganhar pontos de ataque"
+                            self::sinal($e, 'ganhou_atk', ['lado' => $l, 'i' => (int) $m['i'], 'valor' => $da]);
                         }
                         if (!empty($p['marca_por']) && $m['vida'] <= 0) { // Monolisco: morreu "dessa forma"
                             $m['por'] = (int) $ef['i'];
@@ -2452,7 +2559,7 @@ class Gladio
             }
             if ($a === 'dano') {
                 foreach ($jogadores as $l) {
-                    self::perdeVida($e, $l, $n);
+                    self::perdeVida($e, $l, $n, true);
                     self::log($e, "$fonte: $n de dano em " . self::quem($e, $l) . '.');
                     if (self::origemDe($e, $ef)['tipo'] === 'feitico' && $n > 0) {
                         self::sinal($e, 'dano_feitico', ['lado' => $dono, 'i' => null]);
@@ -2582,7 +2689,8 @@ class Gladio
                     break;
                 case 'moer':
                     unset($L);
-                    $foram = array_splice($e['lados'][$l]['baralho'], 0, $n);
+                    $foram = array_splice($e['lados'][$l]['baralho'], 0, !empty($e['glob']['mill_dobro']) ? $n * 2 : $n);
+                    self::sinal($e, 'mill', ['lado' => $l, 'i' => null]);
                     foreach ($foram as $c) {
                         self::cem($e, $l, $c);
                     }
@@ -2740,11 +2848,12 @@ class Gladio
             if ($valor === null || $valor === '') {
                 return self::seguir(self::pedirResposta($e));
             }
-            if (!in_array((int) $valor, $es['opcoes'], true)) {
+            $valor = is_numeric($valor) ? (int) $valor : (string) $valor;
+            if (!in_array($valor, $es['opcoes'], true)) {
                 throw new \InvalidArgumentException('Essa escolha não vale aqui.');
             }
 
-            return self::seguir(self::responder($e, $lado, (int) $valor));
+            return self::seguir(self::responder($e, $lado, $valor));
         }
         if ($valor === null || $valor === '') {
             if ($es['obrig']) {
@@ -2780,7 +2889,7 @@ class Gladio
         if (in_array($es['tipo'], ['lenda', 'qualquer', 'jogador'], true) && empty($p['imbuido'])
             && !in_array($p['a'], ['sacrificar', 'absorver1', 'serrar', 'organizar', 'fixar'], true)
             && ($podem = self::respondentes($e, $lado, 'imbuir'))) {
-            $e['pilha'] = ['tipo' => 'alvo', 'resp' => 'imbuir', 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
+            $e['pilha'] = ['tipo' => 'alvo', 'resp' => ['imbuir'], 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
                            'opcoes' => $es['opcoes'], 'esc_tipo' => $es['tipo'], 'lado' => $lado,
                            'texto' => self::quem($e, $lado) . " escolheu o alvo de {$es['fonte']}: você pode trocar o alvo"];
 

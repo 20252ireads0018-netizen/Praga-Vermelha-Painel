@@ -398,7 +398,9 @@
             if (M.esc.tipo === 'resposta') { // Vergonha de Dante / Imbuir: usar agora, fora do seu turno
                 const mao = Array.isArray(L[eu].mao) ? L[eu].mao : [];
                 return janela('Responder?', `<p class="gl-conjurar-texto">${esc(M.esc.texto)}</p><div class="gl-grade-cartas">${mao.filter(x => M.esc.opcoes.includes(x.i)).map(x =>
-                    `<div class="gl-slot">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}<span class="gl-cem-botoes"><button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-escolher="${x.i}">Usar</button></span></div>`).join('')}</div>`,
+                    `<div class="gl-slot">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}<span class="gl-cem-botoes"><button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-escolher="${x.i}">Usar</button></span></div>`).join('')}</div>` +
+                    // efeitos de cartas em jogo (Marechal Fonsceca, Painel de Kuros): pagar e negar
+                    M.esc.opcoes.filter(o => typeof o === 'string').map(o => `<button type="button" class="camp-btn camp-btn-primario" data-escolher="${esc(o)}">${esc((M.esc.rotulos || {})[o] || o)}</button>`).join(''),
                     `<button type="button" class="camp-btn" data-gl="pular">Não usar</button>`);
             }
             if (M.esc.tipo === 'confirmar') { // "você pode…": sim ou não

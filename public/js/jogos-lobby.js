@@ -156,6 +156,8 @@
     /* ---------- decks (Gladio): cada membro monta os seus ---------- */
     let decks = D.decks || [];
     const R = D.deckRegra;
+    // comandante: uma Lenda, ou uma carta cujo texto diga que pode ser comandante (Fantasma das paredes)
+    const podeComandar = c => c.tipo === 'lenda' || /pode ser (o )?seu comandante/i.test(String(c.descricao || ''));
     // banlist do mestre: cópias permitidas por deck (0 = banida)
     const maxDe = c => (c.limite === 0 || c.limite ? Math.min(R.copias, +c.limite) : R.copias);
     const selo = c => (c.limite === 0 ? ' <span class="jg-ban jg-ban--banida" title="Banida pelo mestre: não entra em decks">Banida</span>'
@@ -237,7 +239,7 @@
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
                 `<span class="jg-deck-nome">${esc(c.nome)}${selo(c)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : esc(window.JG.TIPOS[c.tipo] || 'Feitiço')}</small></span>` +
-                (c.tipo === 'lenda' ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
+                (podeComandar(c) ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
                 `<b class="jg-deck-qtd">${q}</b>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= maxDe(c) ? ' disabled' : ''}>+</button>` +

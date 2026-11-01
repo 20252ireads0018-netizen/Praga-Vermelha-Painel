@@ -271,6 +271,98 @@ class GladioRoteiro
             'Sempre que um feitiço for conjurado, busque uma forma hexomante e coloque em sua mão. Você pode conjurar formas do seu cemitério, banindo-as ao invés do comum' => [
                 'est' => [['j' => 'formas_cem']],
                 'hab' => [['g' => 'feitico', 'passos' => [['a' => 'buscar', 'alvo' => 'eu', 'n' => 1, 'sub' => 'forma', 'dica' => 'forma hexomante']]]]],
+
+            /* ---------------- cartas novas (lote 2) ---------------- */
+            'Sempre que um Kuro for invocado, roube 2$ ou faça uma Lenda alvo receber +1/+1' => ['hab' => [['g' => 'entra', 'f' => ['sub' => 'kuro'], 'passos' => [
+                ['a' => 'ou', 'ops' => [['Roubar 2$', [['a' => 'roubar', 'n' => 2, 'alvo' => 'jogador', 'filtro' => 'inimigo']]],
+                                        ['+1/+1 numa Lenda', [$buff(1, 1, $lenda())]]]]]]]],
+            'A Lenda alvo não pode mais atacar' => ['mods' => ['fl' => ['preso_eq'], 'alvo' => 'qualquer']],
+            'Responda ao feitiço alvo, ele tem como alvo todas as cartas do campo ao invés do comum' => ['resp' => 'intoxicar'],
+            'Todo ganho de dinheiro é reduzido pela metade. Se houverem duas cópias dessa carta no campo, torna-se impossível ganhar dinheiro'
+                => ['est' => [['j' => 'ganho_metade']]],
+            'Toda vez que um jogador fosse ganhar dinheiro, ao invés disso, ele a perde' => ['est' => [['j' => 'ganho_inverte']]],
+            'Todas as lendas de um jogador alvo sofrem X dano, onde X é o número de propriedade fisiomanticas no seu campo' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'alvo_jog', 'alvo' => 'jogador'], ['a' => 'dano', 'n' => '#props_meu', 'alvo' => 'lendas', 'filtro' => 'jog']]]]],
+            'Todas as cartas de um jogador alvo perdem Hexo-imune' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'alvo_jog', 'alvo' => 'jogador'], ['a' => 'tirapal_fixa', 'pal' => 'resistencia', 'alvo' => 'lendas', 'filtro' => 'jog']]]]],
+            'Toda vez que o jogador alvo invocar uma ficha, ele perde 3$' => ['hab' => [
+                ['g' => 'conjurar', 'passos' => [['a' => 'fixar', 'alvo' => 'jogador']]],
+                ['g' => 'ficha', 'f' => ['fixo' => true], 'passos' => [['a' => 'perder', 'n' => 3, 'alvo' => 'evento']]]]],
+            'Responda a um feitiço alvo, conjure-o de novo sem pagar os custos' => ['resp' => 'ressonar'],
+            'Negue a conjuração da carta alvo respondida' => ['resp' => 'negar_feitico'],
+            'Sempre que conjurar uma forma hexomante ou propriedade fisiomante, compre uma carta ou scry 2' => ['hab' => [['g' => 'feitico_meu', 'f' => ['sub' => ['forma', 'propriedade']], 'passos' => [
+                ['a' => 'ou', 'ops' => [['Comprar uma carta', [['a' => 'comprar', 'n' => 1, 'alvo' => 'eu']]], ['Scry 2', [['a' => 'scry', 'n' => 2, 'alvo' => 'eu']]]]]]]]],
+            'Toda vez que uma lenda em seu controle ganhar pontos de ataque, cause a mesma quantia de dano ao jogador ou lenda alvo' => ['hab' => [['g' => 'ganhou_atk_meu', 'passos' => [
+                ['a' => 'dano', 'n' => '#valor', 'alvo' => 'qualquer', 'filtro' => 'qualquer']]]]],
+            'Clone a Lenda alvo para o seu lado do campo' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'clonar'] + $lenda()]]]],
+            'Tome controle da lenda alvo' => ['mods' => ['controla' => true, 'alvo' => 'inimigo']],
+            'No início de seu turno, pague 5 em aura, caso contrário, perca essa carta. Toda vez que uma lenda sua atacar, ataque todas as lendas de todos os inimigos' => [
+                'est' => [['q' => 'meus', 'fl' => ['ataca_todas']]],
+                'hab' => [['g' => 'inicio_meu', 'passos' => [['a' => 'manter_pagando', 'energia' => 5]]]]],
+            'Transforme a propriedade fisiomante ou forma hexomante alvo em outra carta de mesmo tipo que estiver em sua mão' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'trocar_forma']]]]],
+            'Até o fim do seu próximo turno, você não pode atacar ou ser atacado' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'intocavel']]]]],
+            'Quando você juntar em campo 4 cartas com este mesmo nome, ganhe o jogo' => ['est' => [['j' => 'quatro_iguais']]],
+            'Todo início de turno, pague 3 ou perca essa carta. Sempre que um jogador conjurar uma carta, você pode pagar 2 para negá-la' => [
+                'est' => [['j' => 'painel_negar', 'energia' => 2]],
+                'hab' => [['g' => 'inicio_meu', 'passos' => [['a' => 'manter_pagando', 'energia' => 3]]]]],
+            'A Lenda alvo se torna algum Kuro do seu campo' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'demonizar'] + $lenda()]]]],
+            'Para cada lenda com 2 ou menos em defesa no seu campo, essa carta ganha 1 em ataque' => ['est' => [['q' => 'fonte', 'atk' => '#defesa2']]],
+            'Todo jogador, incluindo você, só pode conjurar uma carta por turno' => ['est' => [['g' => 'uma_conjuracao']]],
+            'Destrua um encantamento ou equipamento alvo' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'destruir_campo']]]]],
+            'Sempre que você conjurar um feitiço que custe 3 ou mais, receba 1 em aura atual' => ['hab' => [['g' => 'feitico_meu', 'f' => ['custo_min' => 3], 'passos' => [
+                ['a' => 'energia', 'n' => 1, 'alvo' => 'eu']]]]],
+            'Todo jogador compra duas cartas ao invés de uma na própria fase de compras' => ['est' => [['g' => 'compra_dupla']]],
+            'Todo início de turno, você pode sacrificar uma lenda e acumular um contador de sacrifício. Formas hexomantes e propriedades fisiomantes custam -1 pra cada dois contadores seus' => [
+                'est' => [['j' => 'custo', 'sub' => ['forma', 'propriedade'], 'd' => '#menos_meio:sacrificio']],
+                'hab' => [['g' => 'inicio_meu', 'passos' => [['a' => 'se', 'c' => 'outras>=1', 'passos' => [$sim(2), ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true],
+                    ['a' => 'cont', 'k' => 'sacrificio', 'd' => 1, 'onde' => 'fonte']]]]]]],
+            'destrua todas as cartas em campo, todo jogador embaralha a própria mão no próprio deck e compra 5 cartas' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'destruir', 'alvo' => 'tudo', 'filtro' => null], ['a' => 'reembaralhar', 'n' => 5]]]]],
+            'Todo início de turno em que você tiver 5 ou mais cartas na mão, roube 5$ de um jogador alvo' => ['hab' => [['g' => 'inicio', 'passos' => [
+                ['a' => 'se', 'c' => 'mao>=5', 'passos' => [['a' => 'roubar', 'n' => 5, 'alvo' => 'jogador', 'filtro' => 'inimigo']]]]]]],
+            'Ao ser invocado, você pode pagar 15$ para matar a Lenda alvo' => ['hab' => [['g' => 'entrar', 'passos' => [
+                $sim(2), ['a' => 'perder', 'n' => 15, 'alvo' => 'eu'], ['a' => 'destruir'] + $lenda()]]]],
+            'Toda vez que um jogador fosse invocar uma ficha, gire uma moeda, ele só invoca se sair cara' => ['est' => [['g' => 'ficha_moeda']]],
+            'Lucas pode destruir cartas indestrutíveis em combate' => ['est' => [['q' => 'fonte', 'fl' => ['quebra_indestrutivel']]]],
+            'Todo início de turno, invoque uma ficha de tranqueira 0/1. Toda carta com nome Amir ganha +1/+1 para cada ficha de tranqueira em campo' => [
+                'est' => [['q' => 'todos', 'nome' => 'amir', 'atk' => '#tranqueiras', 'vida' => '#tranqueiras']],
+                'hab' => [['g' => 'inicio', 'passos' => [self::ficha('Tranqueira', 0, 1)]]]],
+            'Se qualquer hexomante for invocado, maguila morre' => ['hab' => [['g' => 'entra', 'f' => ['sub' => 'hexomante'], 'passos' => [['a' => 'destruir'] + $fonte]]]],
+            'Quando uma carta morrer, ganhe 1$' => ['hab' => [['g' => 'morre', 'passos' => [['a' => 'ganhar', 'n' => 1, 'alvo' => 'eu']]]]],
+            'Se você tiver menos lendas do que o jogador alvo em campo, mate duas lendas alvo dele cujo custo seja 3 ou menos' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'alvo_jog', 'alvo' => 'jogador', 'filtro' => 'inimigo'],
+                ['a' => 'se', 'c' => 'menos_lendas_jog', 'passos' => array_fill(0, 2, ['a' => 'destruir', 'alvo' => 'lenda', 'filtro' => 'jog', 'custo_max' => 3])]]]]],
+            'Quando uma lenda aliada a isaque atacar, ela ganha +X/+X, onde X é o número de formas hexomantes nos cemitérios de todos os jogadores' => ['hab' => [['g' => 'ataca_minha', 'passos' => [
+                ['a' => 'buff', 'atk' => '#formas_cem', 'vida' => '#formas_cem', 'temp' => true, 'alvo' => 'evento', 'filtro' => null]]]]],
+            'Toda vez que uma lenda de custo 3 ou menos for invocada, você pode pagar 10$ para negar a invocação' => ['est' => [['j' => 'marechal_negar', 'vida' => 10, 'custo_max' => 3]]],
+            'Regenerar 1. Toda primeira carta conjurada por um jogador é negada' => ['regen' => 1, 'est' => [['g' => 'basileu']]],
+            'Sempre que Maldito morrer pelo ataque de uma lenda custo 3 ou menos ou pelo efeito de um feitiço de custo 3 ou menos, ele revive com +1/+1 acumulativo e +1 palavra chave' => ['hab' => [['g' => 'morrer', 'passos' => [
+                ['a' => 'se', 'c' => 'morte_barata', 'passos' => [['a' => 'reviver_maldito']]]]]]],
+            'Se você tiver o triplo da vida do jogador com mais vida na mesa, ou o triplo de cartas na mão diante do jogador com mais cartas, ganhe o jogo' => ['est' => [['j' => 'vassago_vitoria']]],
+            'Todo início de turno, sacrifique 10$, todo jogador sacrifica uma Lenda' => ['hab' => [['g' => 'inicio', 'passos' => [
+                ['a' => 'perder', 'n' => 10, 'alvo' => 'eu'], ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'todos', 'obrig' => true]]]]],
+            'Você pode re-invocar essa Lenda mesmo que ela esteja em campo, pagando 2 ao invés do preço comum' => ['ativ' => [
+                ['rot' => 'Pagar 2 de energia: invocar outra cópia', 'custo' => ['energia' => 2], 'vez' => 'meu', 'passos' => [['a' => 'ficha', 'n' => 1, 'alvo' => 'eu', 'copia' => true]]]]],
+            'Toda vez que uma lenda aliada morrer ou for descartada, Valete acumula +2/+2' => ['hab' => [
+                ['g' => 'morre_minha', 'passos' => [$buff(2, 2, $fonte)]], ['g' => 'descartar_meu', 'f' => ['tipo' => 'lenda'], 'passos' => [$buff(2, 2, $fonte)]]]],
+            'A cada duas fichas que um jogador invocar, invoque uma ficha de caveira 2/2 com toque mortífero' => ['hab' => [['g' => 'ficha', 'f' => ['nao_proprio' => true], 'passos' => [
+                ['a' => 'cont', 'k' => 'fichas', 'd' => 1, 'onde' => 'fonte_evento'],
+                ['a' => 'se', 'c' => 'par:fichas', 'passos' => [self::ficha('Caveira', 2, 2, ['toque'])]]]]]],
+            'Toda vez que causar dano a um jogador ou sofrer dano, crie uma ficha de aura' => ['hab' => [
+                ['g' => 'sofreu', 'passos' => [['a' => 'energia', 'n' => 1, 'alvo' => 'eu']]], ['g' => 'feriu_jogador', 'passos' => [['a' => 'energia', 'n' => 1, 'alvo' => 'eu']]]]],
+            'Toda vez que você conjurar um feitiço, acumule um contador nessa lenda. Você recebe fichas de aura equivalentes aos contadores dessa lenda, que resetam e que você pode gastar por turno' => ['hab' => [
+                ['g' => 'feitico_meu', 'passos' => [['a' => 'cont', 'k' => 'aura', 'd' => 1, 'onde' => 'fonte']]],
+                ['g' => 'inicio_meu', 'passos' => [['a' => 'energia', 'n' => '#cont:aura', 'alvo' => 'eu']]]]],
+            'Toda vez que um jogador sofrer dano, ele Mill aquela quantidade de cartas. Todo início de turno, todo jogador exceto você sofre X em dano, onde X é a quantidade de cartas em sua mão' => ['hab' => [
+                ['g' => 'dano_jog', 'passos' => [['a' => 'moer', 'n' => '#valor', 'alvo' => 'evento']]],
+                ['g' => 'inicio', 'passos' => [['a' => 'dano', 'n' => '#mao', 'alvo' => 'inimigos', 'filtro' => null]]]]],
+            'Toda vez que uma lenda for invocada, recupere 1$. Sempre que você recuperar vida, o jogador alvo mill uma carta' => ['hab' => [
+                ['g' => 'entra', 'passos' => [['a' => 'ganhar', 'n' => 1, 'alvo' => 'eu']]],
+                ['g' => 'ganha_meu', 'passos' => [['a' => 'moer', 'n' => 1, 'alvo' => 'jogador', 'filtro' => 'inimigo']]]]],
+            'Essa carta pode ser seu comandante, mesmo sendo um encantamento. Toda vez que um jogador Mill, ele mila o dobro de cartas. Sempre que um jogador Mill, uma vez por turno, compre uma carta' => ['cmd' => true,
+                'est' => [['g' => 'mill_dobro']],
+                'hab' => [['g' => 'mill', 'uma' => true, 'passos' => [['a' => 'comprar', 'n' => 1, 'alvo' => 'eu']]]]],
         ];
     }
 }
