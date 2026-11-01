@@ -987,6 +987,40 @@
         Object.keys(blB).forEach(i => { if (blA[i] == null) marcar(slot(i), 'gl-anim-bloqueia'); });
         // combate resolvido: os atacantes avançam de novo, como o golpe
         if (atA.length && !atB.length && a.vez === b.vez) atA.forEach(i => marcar(slot(i), a.vez === D.lado ? 'gl-anim-ataca' : 'gl-anim-ataca-baixo'));
+        // cartas conjuradas e efeitos que começaram: a carta brilha (ou aparece no meio da mesa, se já saiu do campo)
+        const visto = Math.max(0, ...(a.brilho || []).map(x => x.n));
+        const novos = (b.brilho || []).filter(x => x.n > visto);
+        // o efeito do feitiço que acabou de ser conjurado já aparece junto com ele
+        novos.filter(x => !(x.t === 'efeito' && novos.some(y => y.t === 'conjurou' && y.i === x.i)))
+            .slice(-6).forEach((x, k) => setTimeout(() => brilhar(x, slot(x.i)), k * 380));
+    }
+    function rotulo(el, texto, classe) {
+        const r = el.getBoundingClientRect();
+        const s = document.createElement('span');
+        s.className = 'gl-brilho-rotulo ' + (classe || '');
+        s.textContent = texto;
+        Object.assign(s.style, { left: (r.left + r.width / 2) + 'px', top: (r.top - 6) + 'px' });
+        camada().appendChild(s);
+        setTimeout(() => s.remove(), 1500);
+    }
+    function brilhar(x, el) {
+        const def = x.c != null ? cartaDef(x.c) : null;
+        if (x.t === 'efeito' && el) { // a carta em jogo brilha e mostra que o efeito dela ativou
+            marcar(el, 'gl-anim-efeito');
+            rotulo(el, '✦ efeito', '');
+            return;
+        }
+        if (!def) return;
+        // feitiço conjurado (ou efeito de quem já saiu do campo): a carta aparece um instante no meio da mesa
+        const mesa = box.querySelector('.gl-mesa');
+        if (!mesa) return;
+        const r = mesa.getBoundingClientRect();
+        const g = document.createElement('div');
+        g.className = 'gl-conjura-anim' + (x.t === 'efeito' ? ' gl-conjura-anim--efeito' : '');
+        g.innerHTML = window.JG.carta(def) + `<span>${x.t === 'efeito' ? '✦ efeito de' : '✦ conjurou'} · ${nomeDe(x.lado)}</span>`;
+        Object.assign(g.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px' });
+        camada().appendChild(g);
+        setTimeout(() => g.remove(), 1600);
     }
 
     /* ================================================================== */

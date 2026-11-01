@@ -827,3 +827,17 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .jg:not(.jg-partida-pagina) > .jg-msg { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 3000; margin: 0;
     width: max-content; max-width: min(560px, calc(100vw - 32px)); box-shadow: 0 10px 28px rgba(0, 0, 0, .6); background-color: var(--camp-fundo-card, #1c1414); }
 .jg:not(.jg-partida-pagina) > .jg-msg--erro { background-image: linear-gradient(rgba(178, 42, 47, .25), rgba(178, 42, 47, .25)); }
+
+/* efeito ativado / carta conjurada: brilho dourado na carta, rótulo e a carta aparecendo no meio da mesa */
+.gl-anim-efeito > .jg-carta { animation: gl-efeito 1s ease-out; }
+@keyframes gl-efeito { 0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, .95); filter: brightness(1.6); transform: scale(1.06); }
+    60% { box-shadow: 0 0 22px 8px rgba(250, 204, 21, .45); filter: brightness(1.15); } 100% { box-shadow: none; filter: none; transform: none; } }
+.gl-brilho-rotulo { position: fixed; z-index: 1950; transform: translate(-50%, -100%); pointer-events: none; font-size: .78rem; font-weight: 800; color: #fde68a;
+    text-shadow: 0 0 6px rgba(0, 0, 0, .9), 0 1px 2px #000; animation: gl-rotulo 1.5s ease-out forwards; white-space: nowrap; }
+@keyframes gl-rotulo { 0% { opacity: 0; transform: translate(-50%, -60%); } 20% { opacity: 1; transform: translate(-50%, -100%); } 100% { opacity: 0; transform: translate(-50%, -190%); } }
+.gl-conjura-anim { position: fixed; z-index: 1950; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: .3rem; --cw: clamp(90px, 14vh, 150px);
+    transform: translate(-50%, -50%); animation: gl-conjura 1.6s cubic-bezier(.2, 1.2, .4, 1) forwards; filter: drop-shadow(0 0 18px rgba(167, 139, 250, .75)); }
+.gl-conjura-anim--efeito { filter: drop-shadow(0 0 18px rgba(250, 204, 21, .7)); }
+.gl-conjura-anim > span { font-size: .8rem; font-weight: 800; color: #fff; background: rgba(20, 10, 30, .85); padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
+@keyframes gl-conjura { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.5) rotate(-6deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+    75% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -62%) scale(.9); } }

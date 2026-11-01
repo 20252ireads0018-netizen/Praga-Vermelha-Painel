@@ -727,6 +727,7 @@ class Gladio
 
             return self::seguir($e);
         }
+        self::brilho($e, 'conjurou', $lado, $id, $inst); // a tela mostra a carta conjurada
         if ($custo === 2) { // Trinkt: "sempre que você gastar exatamente 2 em aura para um feitiço"
             self::sinal($e, 'gasto2', ['lado' => $lado, 'i' => $inst]);
         }
@@ -2202,6 +2203,10 @@ class Gladio
             return $e;
         }
         $p = array_shift($ef['passos']);
+        if (empty($ef['visto']) && ($ef['c'] ?? null) !== null) { // a tela anima a carta cujo efeito começou agora
+            $ef['visto'] = true;
+            self::brilho($e, 'efeito', $ef['lado'], $ef['c'], $ef['i'] ?? null);
+        }
         $e['fila'][0] = $ef;
 
         return self::executar($e, $p);

@@ -155,6 +155,17 @@ trait GladioRegras
         }
     }
 
+    /**
+     * Momentos que a tela anima: 'conjurou' (feitiço, encantamento ou equipamento jogado) e 'efeito' (o texto de uma
+     * carta começou a acontecer). Lista curta e numerada: a tela anima os números que ainda não viu.
+     */
+    private static function brilho(array &$e, string $t, string $lado, ?string $c, ?int $i): void
+    {
+        $e['brilho_n'] = (int) ($e['brilho_n'] ?? 0) + 1;
+        $e['brilho'][] = ['n' => $e['brilho_n'], 't' => $t, 'lado' => $lado, 'c' => $c, 'i' => $i];
+        $e['brilho'] = array_slice($e['brilho'], -20);
+    }
+
     /** Põe uma carta no cemitério (o "toda vez que um hexomante entrar num cemitério" fica sabendo). */
     private static function cem(array &$e, string $lado, array $carta): void
     {
@@ -937,6 +948,7 @@ trait GladioRegras
             $e['lados'][$lado]['energia'] -= self::custoDe($e, $lado, $carta['c'], $carta);
             array_splice($e['lados'][$lado]['mao'], $k, 1);
             self::cem($e, $lado, $carta);
+            self::brilho($e, 'conjurou', $lado, $carta['c'], (int) $valor);
             self::sinal($e, 'feitico', ['lado' => $lado, 'i' => (int) $valor, 'c' => $carta['c']]);
             $nome = self::nome($e, $carta['c']);
             $tipo = $e['cartas'][$carta['c']]['resp'] ?? 'negar';
