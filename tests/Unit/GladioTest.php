@@ -223,12 +223,19 @@ class GladioTest extends TestCase
         $this->assertSame([], $e['lados']['a']['mesa']);
     }
 
-    public function test_fadiga_e_mao_cheia_vai_ao_cemiterio(): void
+    public function test_overdeck_perde_a_partida(): void
     {
         $e = $this->novo();
         $e['lados']['b']['baralho'] = [];
         $e = Gladio::passar($e, 'a');
-        $this->assertSame(9, $e['lados']['b']['vida']);
+        $this->assertTrue($e['lados']['b']['fora']);
+        $this->assertSame(['vencedor' => 'a', 'motivo' => 'overdeck'], $e['fim']);
+    }
+
+    public function test_mao_cheia_vai_ao_cemiterio(): void
+    {
+        $e = $this->novo();
+        $e = Gladio::passar($e, 'a');
         $e['lados']['a']['mao'] = array_fill(0, 10, ['i' => 999, 'c' => '1']);
         $e = Gladio::passar($e, 'b');
         $this->assertCount(10, $e['lados']['a']['mao']);

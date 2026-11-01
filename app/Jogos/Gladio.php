@@ -10,7 +10,7 @@ namespace App\Jogos;
  *   pote no centro da mesa (pote = total apostado − vida que ainda resta a quem está de pé).
  * - Cada um joga com o próprio deck (ou 20 cartas sorteadas do catálogo) e começa com 5 cartas na mão.
  * - Turno: a energia máxima de quem joga sobe 1 (até 10) e recarrega, as Lendas dele ficam prontas e ele compra 1
- *   (quem começa não compra no primeiro turno). Sem cartas para comprar: dano de fadiga (1, 2, 3…).
+ *   (quem começa não compra no primeiro turno). Overdeck: quem precisa comprar com o baralho vazio perde a partida.
  * - Lenda: entra na mesa e só ataca a partir do próximo turno de quem a controla (com Ímpeto, ataca já).
  * - Feitiço: o efeito é o da carta (feitiços antigos) ou o que quem jogou escolheu conforme a descrição. Depois de
  *   conjurado ele fica no campo até o dono mandá-lo para o cemitério.
@@ -403,10 +403,11 @@ class Gladio
     private static function comprarUma(array $e, string $lado): array
     {
         $l = &$e['lados'][$lado];
-        if (!$l['baralho']) {
-            $l['fadiga']++;
-            $l['vida'] -= $l['fadiga'];
-            self::log($e, self::quem($e, $lado) . " está sem cartas no baralho: fadiga de {$l['fadiga']}.");
+        if (!$l['baralho']) { // overdeck: sai da partida na próxima conferência (fora do meio do efeito)
+            if (empty($l['overdeck'])) {
+                $l['overdeck'] = true;
+                self::log($e, self::quem($e, $lado) . ' precisou comprar com o baralho vazio (overdeck).');
+            }
 
             return $e;
         }
@@ -460,7 +461,9 @@ class Gladio
         }
         $vivos = self::vivos($e);
         if (count($vivos) === 1) {
-            $e['fim'] = ['vencedor' => $vivos[0], 'motivo' => $motivo === 'desistência' ? 'desistencia' : ($motivo === '7 shots' ? 'shots' : 'vida')];
+            $e['fim'] = ['vencedor' => $vivos[0], 'motivo' => match ($motivo) {
+                'desistência' => 'desistencia', '7 shots' => 'shots', 'overdeck' => 'overdeck', default => 'vida',
+            }];
             $e['fase'] = 'principal';
             $e['ataque'] = null;
             $e['fila'] = [];
@@ -557,20 +560,23 @@ class Gladio
         foreach ($caidas as [$lado, $m]) {
             $e = self::saiDaMesa($e, $lado, $m);
         }
-        $mortos = array_values(array_filter(self::vivos($e), fn ($l) => $e['lados'][$l]['vida'] <= 0));
+        $mortos = array_values(array_filter(self::vivos($e),
+            fn ($l) => $e['lados'][$l]['vida'] <= 0 || !empty($e['lados'][$l]['overdeck'])));
+        $motivo = fn ($l) => $e['lados'][$l]['vida'] <= 0 ? 'sem vida' : 'overdeck';
         if ($mortos && count($mortos) === count(self::vivos($e))) {
-            // todos zeraram na mesma ação: vence quem agiu (se ainda estiver na partida)
+            // todos caíram na mesma ação: vence quem agiu (se ainda estiver na partida)
             $vencedor = in_array($quem, $mortos, true) ? $quem : $mortos[0];
+            unset($e['lados'][$vencedor]['overdeck']);
             foreach ($mortos as $l) {
                 if ($l !== $vencedor) {
-                    $e = self::eliminar($e, $l, 'sem vida');
+                    $e = self::eliminar($e, $l, $motivo($l));
                 }
             }
 
             return $e;
         }
         foreach ($mortos as $l) {
-            $e = self::eliminar($e, $l, 'sem vida');
+            $e = self::eliminar($e, $l, $motivo($l));
         }
 
         return $e;

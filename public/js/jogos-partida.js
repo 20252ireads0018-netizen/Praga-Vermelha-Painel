@@ -360,6 +360,7 @@
         else if (e.fim) {
             const ganhei = D.lado && e.fim.vencedor === D.lado;
             status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>` +
+                (e.fim.motivo === 'overdeck' ? ' (o adversário ficou sem cartas para comprar)' : '') +
                 (D.aposta ? ` · leva o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro` : ''));
         } else if (D.lado && L[D.lado].fora) status('Você está fora desta partida. Pode continuar assistindo.');
         else if (e.fase === 'mulligan') status(((e.mull || {})[D.lado] || {}).ok === false
