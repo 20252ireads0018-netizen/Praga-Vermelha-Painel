@@ -867,7 +867,8 @@ class Gladio
                 break;
         }
 
-        return self::seguir($e);
+        // também é um feitiço conjurado (Baguinho, Lunático Conjurador…)
+        return self::seguir(self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst, 'c' => $id]));
     }
 
     /* ================================================================== */
