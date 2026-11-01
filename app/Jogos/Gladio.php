@@ -2579,6 +2579,9 @@ class Gladio
         $lados = self::ladosDo($e, $alvo, $dono);
         if ($lados === null) {
             $ops = ($p['filtro'] ?? null) === 'inimigo' ? self::inimigos($e, $dono) : self::vivos($e);
+            if ($a === 'roubar') { // Luzinha, Carneiro…: o roubo sempre acontece (acabando o tempo, do primeiro adversário)
+                return self::pedir($e, ['obrig' => true] + $p, $dono, 'jogador', array_map(fn ($l) => 'j:' . $l, $ops), "$fonte: escolha de quem roubar $n\$");
+            }
 
             return self::pedir($e, $p, $dono, 'jogador', array_map(fn ($l) => 'j:' . $l, $ops), "$fonte: escolha o jogador");
         }
