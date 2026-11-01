@@ -71,6 +71,32 @@ class CampanhaJogosTest extends TestCase
     }
 
     /** Gladio começa no mulligan: quem está na partida mantém a mão inicial. */
+    public function test_mestre_pausa_e_retoma_o_gladio(): void
+    {
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p);
+        $acao = fn (User $u, string $a) => $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => $a]);
+
+        $acao($this->ana, 'pausar')->assertStatus(422); // jogador não pausa
+        $r = $acao($this->mestre, 'pausar')->assertOk();
+        $this->assertTrue($r->json('mestre'));
+        $this->assertNotEmpty($r->json('estado.pausa'));
+        $vez = $p->fresh()->estado['vez'] === 'a' ? $this->ana : $this->bia;
+        $acao($vez, 'passar')->assertStatus(422)->assertJsonFragment(['erro' => 'A partida está pausada pelo mestre.']);
+
+        $e = $p->fresh()->estado;
+        $e['pausa']['desde'] -= 50; // ficou 50 s pausada
+        $p->fresh()->forceFill(['estado' => $e])->save();
+        $desde = $e['desde'];
+        $r = $acao($this->mestre, 'retomar')->assertOk();
+        $this->assertNull($r->json('estado.pausa'));
+        $this->assertGreaterThanOrEqual($desde + 50, $p->fresh()->estado['desde'], 'o tempo pausado não conta no relógio');
+        $acao($vez, 'passar')->assertOk();
+    }
+
     private function manterTodos($p): void
     {
         foreach ([$this->mestre, $this->ana, $this->bia] as $u) {

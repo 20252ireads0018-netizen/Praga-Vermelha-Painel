@@ -35,6 +35,9 @@
             if (ev.key === 'Escape' && pagina.classList.contains('gl-foco') && !document.fullscreenElement && !box.querySelector('.gl-modal')) foco(false);
         });
     }
+    // mestre: pausa ou retoma o Gladio
+    const botaoPausa = document.getElementById('jg-pausar');
+    if (botaoPausa) botaoPausa.addEventListener('click', () => acao({ acao: botaoPausa.dataset.acao || 'pausar' }));
     // o que flutua por cima da mesa vai para dentro da tela cheia (fora dela não aparece)
     const camada = () => document.fullscreenElement || document.body;
     const { esc, post } = window.JG;
@@ -138,7 +141,7 @@
         const L = e.lados;
         const ordem = e.ordem || ['a', 'b'];
         const eu = D.lado || ordem[0]; // quem assiste vê a mesa pelo primeiro lugar
-        const ativo = D.status === 'andamento' && !e.fim;
+        const ativo = D.status === 'andamento' && !e.fim && !e.pausa; // pausada pelo mestre: ninguém age
         const jogo = !!(ativo && D.lado && !L[D.lado].fora); // posso agir (não estou fora)
         const ataque = e.ataque || { atacantes: [], bloqueios: {}, defensor: null };
         const esc = ativo ? e.escolha || null : null; // um efeito esperando alguém escolher alvo ou carta
@@ -352,11 +355,20 @@
                 centro +
                 `<div class="gl-meu-lado">${campo(eu)}${minhaBarra}${maoHtml}</div>` +
             `</div>` +
+            (e.pausa && D.status === 'andamento' ? `<div class="gl-pausa" role="status"><b>⏸ Partida pausada</b><span>O mestre pausou o jogo. O relógio parou e ninguém pode agir até ele retomar.</span></div>` : '') +
             `<aside class="gl-log"><h3>Acontecimentos</h3><ol>${e.log.slice().reverse().map(t => `<li>${esc(t)}</li>`).join('')}</ol></aside>` +
             renderModal(M);
 
         // status no topo
+        // botão do mestre: pausar / retomar
+        const bp = document.getElementById('jg-pausar');
+        if (bp) {
+            bp.hidden = !(D.mestre && D.status === 'andamento' && !e.fim);
+            bp.textContent = e.pausa ? '▶ Retomar' : '⏸ Pausar';
+            bp.dataset.acao = e.pausa ? 'retomar' : 'pausar';
+        }
         if (D.status === 'cancelada') status('Partida cancelada pelo mestre. As apostas voltaram.');
+        else if (e.pausa && !e.fim) status('⏸ <strong>Partida pausada pelo mestre.</strong> O relógio parou e ninguém age até ele retomar.');
         else if (e.fim) {
             const ganhei = D.lado && e.fim.vencedor === D.lado;
             status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>` +
@@ -856,6 +868,7 @@
         const el = box.querySelector('[data-relogio]');
         if (!el) return;
         const e = D.estado;
+        if (e.pausa) { el.classList.remove('gl-relogio--atencao', 'gl-relogio--urgente'); return; } // relógio parado
         // resposta fora do turno (Vergonha de Dante, Imbuir): janela curta, com o relógio dela
         const resp = e.escolha && e.escolha.tipo === 'resposta' && e.escolha.desde;
         const desde = resp ? e.escolha.desde : e.desde;

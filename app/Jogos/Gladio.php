@@ -1341,6 +1341,39 @@ class Gladio
         return $e;
     }
 
+    /**
+     * O mestre pausa (ou retoma) a partida. Pausada, ninguém age e o relógio da vez para; ao retomar, o tempo que já
+     * tinha corrido continua de onde parou.
+     */
+    public static function pausar(array $e, bool $pausar, ?int $agora = null): array
+    {
+        if ($e['fim']) {
+            throw new \InvalidArgumentException('A partida já acabou.');
+        }
+        $agora ??= time();
+        if ($pausar) {
+            if (empty($e['pausa'])) {
+                $e['pausa'] = ['desde' => $agora];
+                self::log($e, '⏸ O mestre pausou a partida.');
+            }
+
+            return $e;
+        }
+        if (!empty($e['pausa'])) {
+            $parado = max(0, $agora - (int) $e['pausa']['desde']);
+            if (isset($e['desde'])) {
+                $e['desde'] = (int) $e['desde'] + $parado;
+            }
+            if (isset($e['escolha']['desde'])) {
+                $e['escolha']['desde'] = (int) $e['escolha']['desde'] + $parado;
+            }
+            unset($e['pausa']);
+            self::log($e, '▶ O mestre retomou a partida.');
+        }
+
+        return $e;
+    }
+
     /** De quem a mesa está esperando agora: quem escolhe um efeito, quem defende ou quem tem a vez. */
     public static function esperando(array $e): string
     {

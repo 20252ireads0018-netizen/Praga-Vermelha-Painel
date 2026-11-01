@@ -12,6 +12,7 @@
         <h1>{{ $partida->jogo === 'gladio' ? '⚔️ Gladio' : '♛ Pela Dama' }}</h1>
         <p class="jg-status" id="jg-status">Carregando…</p>
         @if ($partida->jogo === 'gladio')
+            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-pausar" hidden title="Só o mestre vê: ninguém age e o relógio para enquanto estiver pausada">⏸ Pausar</button>
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-tela-cheia" title="Só a mesa, sem a aba de acontecimentos (Esc sai)">⛶ Tela cheia</button>
         @endif
     </header>

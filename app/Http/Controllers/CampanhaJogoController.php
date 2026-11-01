@@ -776,11 +776,24 @@ class CampanhaJogoController extends Controller
                     throw new \InvalidArgumentException('A partida não está em andamento.');
                 }
                 $lado = $p->ladoDe($uid);
+                $e = $p->estado;
+                $acao = $request->input('acao');
+                if ($p->jogo === 'gladio' && in_array($acao, ['pausar', 'retomar'], true)) { // só o mestre, jogando ou não
+                    if (!$campanha->ehMestre($uid)) {
+                        throw new \InvalidArgumentException('Só o mestre pode pausar a partida.');
+                    }
+                    $p->estado = Gladio::pausar(Gladio::completar($e), $acao === 'pausar');
+                    $p->versao = (int) $p->versao + 1;
+                    $p->save();
+
+                    return $p;
+                }
                 if (!$lado) {
                     throw new \InvalidArgumentException('Você está só assistindo esta partida.');
                 }
-                $e = $p->estado;
-                $acao = $request->input('acao');
+                if ($p->jogo === 'gladio' && !empty($e['pausa'])) {
+                    throw new \InvalidArgumentException('A partida está pausada pelo mestre.');
+                }
 
                 if ($p->jogo === 'gladio') {
                     $e = Gladio::completar($e);
@@ -1125,6 +1138,7 @@ class CampanhaJogoController extends Controller
             'status'    => $p->status,
             'aposta'    => (int) $p->aposta,
             'lado'      => $lado,
+            'mestre'    => $p->campanha_id ? (bool) \App\Models\Campanha::find($p->campanha_id)?->ehMestre($uid) : false, // pode pausar o Gladio
             'nomes'     => [
                 'j1' => (string) optional($p->jogador1)->name,
                 'j2' => (string) optional($p->jogador2)->name,

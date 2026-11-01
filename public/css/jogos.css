@@ -838,3 +838,10 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-conjura-anim > span { font-size: .8rem; font-weight: 800; color: #fff; background: rgba(20, 10, 30, .85); padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
 @keyframes gl-conjura { 0% { opacity: 0; transform: translate(-50%, -40%) scale(.5) rotate(-6deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
     75% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -62%) scale(.9); } }
+
+/* Gladio pausado pelo mestre: aviso por cima da mesa */
+.gl { position: relative; }
+.gl-pausa { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem;
+    background: rgba(10, 6, 16, .62); backdrop-filter: blur(2px); text-align: center; padding: 1rem; pointer-events: auto; border-radius: 12px; }
+.gl-pausa b { font-size: 1.6rem; color: #fde68a; }
+.gl-pausa span { max-width: 28rem; font-size: .9rem; opacity: .85; }
