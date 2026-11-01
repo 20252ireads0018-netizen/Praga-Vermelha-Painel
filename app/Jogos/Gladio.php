@@ -1637,11 +1637,16 @@ class Gladio
         if ($k < 0) {
             throw new \InvalidArgumentException('Esse feitiço não está no seu campo.');
         }
+        if (self::encantoFixo($e, $lado, $e['lados'][$lado]['feiticos'][$k])) {
+            throw new \InvalidArgumentException('Seus encantamentos não podem sair de campo enquanto Vassago estiver vivo.');
+        }
         $e = self::desequipar($e, $lado, $inst); // o bônus do equipamento sai da Lenda
         $f = $e['lados'][$lado]['feiticos'][$k];
         array_splice($e['lados'][$lado]['feiticos'], $k, 1);
+        if ((int) $f['i'] !== (int) ($e['lados'][$lado]['cmd'] ?? 0)) { // o comandante volta para a zona de comando (cem() avisa)
+            self::log($e, self::quem($e, $lado) . ' mandou ' . self::nome($e, $f['c']) . ' para o cemitério.');
+        }
         self::cem($e, $lado, $f);
-        self::log($e, self::quem($e, $lado) . ' mandou ' . self::nome($e, $f['c']) . ' para o cemitério.');
 
         return self::seguir($e);
     }
@@ -2303,10 +2308,15 @@ class Gladio
                 foreach ($e['lados'][$l]['mesa'] as $k => $m) {
                     $e['lados'][$l]['mesa'][$k]['morto'] = true;
                 }
+                $ficam = [];
                 foreach ($e['lados'][$l]['feiticos'] as $f) {
+                    if (self::encantoFixo($e, $l, $f)) { // Vassago segura os encantamentos do dono
+                        $ficam[] = $f;
+                        continue;
+                    }
                     $e['lados'][$l]['cemiterio'][] = ['i' => $f['i'], 'c' => $f['c']];
                 }
-                $e['lados'][$l]['feiticos'] = [];
+                $e['lados'][$l]['feiticos'] = $ficam;
             }
             self::log($e, "$fonte destruiu todas as cartas em campo.");
 

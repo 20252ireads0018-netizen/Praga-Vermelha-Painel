@@ -172,6 +172,14 @@ trait GladioRegras
         if (!empty($carta['banir'])) {
             return; // conjurada do cemitério (Cristian Fernandez): é banida em vez de voltar para lá
         }
+        if ((int) $carta['i'] === (int) ($e['lados'][$lado]['cmd'] ?? 0)
+            && !in_array((int) $carta['i'], array_map('intval', array_column($e['lados'][$lado]['comando'] ?? [], 'i')), true)) {
+            // comandante que não é Lenda (Fantasma das paredes): encerrado, destruído ou descartado, volta para a zona de comando
+            $e['lados'][$lado]['comando'][] = ['i' => $carta['i'], 'c' => $carta['c']];
+            self::log($e, self::nome($e, $carta['c']) . ' é o comandante de ' . self::quem($e, $lado) . ' e voltou para a zona de comando.');
+
+            return;
+        }
         $e['lados'][$lado]['cemiterio'][] = ['i' => $carta['i'], 'c' => $carta['c']];
         self::sinal($e, 'cemiterio', ['lado' => $lado, 'i' => (int) $carta['i'], 'c' => $carta['c']]);
     }
@@ -673,10 +681,13 @@ trait GladioRegras
         return self::seguir($e);
     }
 
-    /**
-     * Cartas que dão a vitória enquanto a condição valer: Vassago, o primeiro ascensionista (o triplo da vida ou das
-     * cartas na mão do maior adversário) e Lendas de Vassago (4 cartas com o mesmo nome no seu campo).
-     */
+    /** Vassago, o primeiro ascensionista: enquanto ele estiver na mesa, os encantamentos do dono não saem de campo. */
+    private static function encantoFixo(array $e, string $lado, array $f): bool
+    {
+        return ($e['cartas'][$f['c']]['tipo'] ?? '') === 'encanto' && self::doJogador($e, $lado, 'encantos_fixos');
+    }
+
+    /** Cartas que dão a vitória enquanto a condição valer: Lendas de Vassago (4 cartas com o mesmo nome no seu campo). */
     /** Confere as vitórias de carta a qualquer momento (o controlador chama depois de toda ação, mesmo as que não andam o jogo). */
     public static function conferirVitorias(array $e): array
     {
@@ -690,16 +701,6 @@ trait GladioRegras
         }
         foreach (self::vivos($e) as $l) {
             $ganha = null;
-            if (self::doJogador($e, $l, 'vassago_vitoria')) {
-                $outros = self::inimigos($e, $l);
-                $maxVida = max(array_map(fn ($o) => (int) $e['lados'][$o]['vida'], $outros) ?: [0]);
-                $maxMao = max(array_map(fn ($o) => count($e['lados'][$o]['mao']), $outros) ?: [0]);
-                // o triplo de 0 cartas também conta: com os outros sem mão, basta ter alguma carta
-                $mao = count($e['lados'][$l]['mao']);
-                if (($maxVida > 0 && $e['lados'][$l]['vida'] >= 3 * $maxVida) || ($mao > 0 && $mao >= 3 * $maxMao)) {
-                    $ganha = 'Vassago, o primeiro ascensionista';
-                }
-            }
             foreach (self::doJogador($e, $l, 'quatro_iguais') as $q) {
                 $nome = GladioTexto::normalizar(self::nome($e, $q['_x']['c']));
                 $iguais = count(array_filter(array_merge($e['lados'][$l]['feiticos'], $e['lados'][$l]['mesa']),

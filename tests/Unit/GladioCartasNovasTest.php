@@ -195,17 +195,31 @@ class GladioCartasNovasTest extends TestCase
         $e = $this->joga($e, 'a', 'lv2');
         $this->assertSame('a', $e['fim']['vencedor']);
 
-        $e = $this->mesa(['vas' => $this->c('Vassago, O primeiro ascensionista', 'lenda', 'Se você tiver o triplo da vida do jogador com mais vida na mesa, ou o triplo de cartas na mão diante do jogador com mais cartas, ganhe o jogo.')]);
-        $e['lados']['b']['mao'] = [['i' => 1, 'c' => 'x']];
-        $e['lados']['a']['mao'] = [['i' => 2, 'c' => 'x'], ['i' => 3, 'c' => 'x']];
-        [$e] = $this->poe($e, 'a', 'vas');
-        $this->assertNull($e['fim']);
-        $e['lados']['a']['mao'][] = ['i' => 4, 'c' => 'x'];
-        $this->assertSame('a', Gladio::conferirVitorias($e)['fim']['vencedor'] ?? null, 'vale a qualquer momento, sem esperar a vez');
-        // com o adversário sem cartas na mão, basta ter alguma (o triplo de 0)
-        $e['lados']['a']['mao'] = [['i' => 2, 'c' => 'x']];
-        $e['lados']['b']['mao'] = [];
-        $this->assertSame('a', Gladio::conferirVitorias($e)['fim']['vencedor'] ?? null);
+    }
+
+    public function test_vassago_segura_os_encantamentos_em_campo(): void
+    {
+        $e = $this->mesa([
+            'vas' => $this->c('Vassago, O primeiro ascensionista', 'lenda', 'Seus encantamentos não podem sair de campo enquanto Vassago estiver vivo.'),
+            'enc' => $this->c('Aura', 'encanto', ''),
+            'eq'  => $this->c('Espada', 'equipo', ''),
+        ]);
+        $e = $this->joga($e, 'a', 'enc');
+        $e = $this->joga($e, 'a', 'eq');
+        [$e, $vas] = $this->poe($e, 'a', 'vas');
+        [$enc, $eq] = array_column($e['lados']['a']['feiticos'], 'i');
+        try {
+            Gladio::encerrarFeitico($e, 'a', $enc);
+            $this->fail('o encantamento não sai enquanto Vassago vive');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertStringContainsString('Vassago', $x->getMessage());
+        }
+        $sem = Gladio::encerrarFeitico($e, 'a', $eq); // equipamento não é encantamento
+        $this->assertSame([$enc], array_column($sem['lados']['a']['feiticos'], 'i'));
+        // Vassago fora da mesa: o encantamento já pode sair
+        $e['lados']['a']['mesa'] = array_values(array_filter($e['lados']['a']['mesa'], fn ($m) => $m['i'] !== $vas));
+        $e = Gladio::encerrarFeitico($e, 'a', $enc);
+        $this->assertSame([$eq], array_column($e['lados']['a']['feiticos'], 'i'));
     }
 
     public function test_kaique_moeda_lucas_quebra_e_amir_tranqueiras(): void

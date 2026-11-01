@@ -339,7 +339,7 @@ class GladioRoteiro
             'Regenerar 1. Toda primeira carta conjurada por um jogador é negada' => ['regen' => 1, 'est' => [['g' => 'basileu']]],
             'Sempre que Maldito morrer pelo ataque de uma lenda custo 3 ou menos ou pelo efeito de um feitiço de custo 3 ou menos, ele revive com +1/+1 acumulativo e +1 palavra chave' => ['hab' => [['g' => 'morrer', 'passos' => [
                 ['a' => 'se', 'c' => 'morte_barata', 'passos' => [['a' => 'reviver_maldito']]]]]]],
-            'Se você tiver o triplo da vida do jogador com mais vida na mesa, ou o triplo de cartas na mão diante do jogador com mais cartas, ganhe o jogo' => ['est' => [['j' => 'vassago_vitoria']]],
+            'Seus encantamentos não podem sair de campo enquanto Vassago estiver vivo' => ['est' => [['j' => 'encantos_fixos']]],
             'Todo início de turno, sacrifique 10$, todo jogador sacrifica uma Lenda' => ['hab' => [['g' => 'inicio', 'passos' => [
                 ['a' => 'perder', 'n' => 10, 'alvo' => 'eu'], ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'todos', 'obrig' => true]]]]],
             'Você pode re-invocar essa Lenda mesmo que ela esteja em campo, pagando 2 ao invés do preço comum' => ['ativ' => [

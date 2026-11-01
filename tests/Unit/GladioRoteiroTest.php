@@ -525,6 +525,30 @@ class GladioRoteiroTest extends TestCase
         $this->assertContains('eq', array_column($e['lados']['a']['mao'], 'c'));
     }
 
+    public function test_comandante_encantamento_volta_para_a_zona_de_comando(): void
+    {
+        $c = fn ($n, $t, $d, $custo = 1) => ['nome' => $n, 'tipo' => $t, 'custo' => $custo, 'ataque' => 0, 'vida' => 0, 'palavras' => '', 'descricao' => $d];
+        $cartas = [
+            'x' => $c('Soldado', 'lenda', ''),
+            'fa' => $c('Fantasma das paredes', 'encanto', 'Essa carta pode ser seu comandante, mesmo sendo um encantamento. Toda vez que um jogador Mill, ele mila o dobro de cartas. Sempre que um jogador Mill, uma vez por turno, compre uma carta.', 3),
+        ];
+        $e = Gladio::iniciar($cartas, 0, ['a' => array_merge(['fa'], array_fill(0, 19, 'x')), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a,
+            ['a' => 'Ana', 'b' => 'Bia'], ['a' => 'fa', 'b' => 'x']);
+        foreach (['a', 'b'] as $l) {
+            if ($e['fase'] === 'mulligan') {
+                $e = Gladio::manter($e, $l, []);
+            }
+        }
+        $e['lados']['a']['energia'] = 10;
+        $i = $e['lados']['a']['comando'][0]['i'];
+        $e = Gladio::comandar($e, 'a');
+        $this->assertSame([$i], array_column($e['lados']['a']['feiticos'], 'i'));
+        $e = Gladio::encerrarFeitico($e, 'a', $i);
+        $this->assertSame([$i], array_column($e['lados']['a']['comando'], 'i'));
+        $this->assertSame([], $e['lados']['a']['cemiterio']);
+        $this->assertSame(5, Gladio::custoComandante($e, 'a'));
+    }
+
     public function test_aporium_passa_para_o_atacado_e_cobra_no_fim_do_turno(): void
     {
         $e = $this->mesa(['apo' => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 3, 'palavras' => '',
