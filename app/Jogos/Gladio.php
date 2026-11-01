@@ -761,7 +761,11 @@ class Gladio
                 self::cem($e, $lado, ['i' => $inst, 'c' => $id] + $banir);
             }
             self::log($e, "$quem " . self::verbo($carta['tipo']) . " $nome" . ($banir ? ' do cemitério (será banida)' : '') . '.');
-            if ($podem = self::respondentes($e, $lado, ['negar_feitico', 'ressonar', 'intoxicar'], 'painel', $id)) {
+            $podem = self::respondentes($e, $lado, ['negar_feitico', 'ressonar', 'intoxicar'], 'painel', $id);
+            if (self::opcoesResposta($e, $lado, ['intoxicar'], null, $id)) { // Intoxicar também serve no próprio feitiço (depois dos outros)
+                $podem[] = $lado;
+            }
+            if ($podem) {
                 $e['pilha'] = ['tipo' => 'feitico', 'resp' => ['negar_feitico', 'ressonar', 'intoxicar'], 'campo' => 'painel', 'lado' => $lado,
                                'i' => $inst, 'c' => $id, 'quem' => $podem, 'texto' => "$quem conjurou $nome: você pode responder"];
 

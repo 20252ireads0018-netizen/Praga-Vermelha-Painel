@@ -869,13 +869,14 @@ trait GladioRegras
         $p = $e['pilha'];
         while ($p['quem']) {
             $l = array_shift($p['quem']);
-            $ops = self::opcoesResposta($e, $l, (array) $p['resp'], $p['campo'] ?? null, $p['c'] ?? null);
+            $proprio = $l === ($p['lado'] ?? null); // quem conjurou só pode Intoxicar o próprio feitiço
+            $ops = self::opcoesResposta($e, $l, $proprio ? ['intoxicar'] : (array) $p['resp'], $proprio ? null : ($p['campo'] ?? null), $p['c'] ?? null);
             if (!$ops) {
                 continue;
             }
             $e['pilha'] = $p;
             $e['escolha'] = ['lado' => $l, 'tipo' => 'resposta', 'opcoes' => array_map(fn ($k) => is_numeric($k) ? (int) $k : (string) $k, array_keys($ops)),
-                             'rotulos' => array_map('strval', $ops), 'texto' => $p['texto'], 'fonte' => 'Resposta', 'obrig' => false,
+                             'rotulos' => array_map('strval', $ops), 'texto' => $proprio ? 'Você pode Intoxicar o seu próprio feitiço (ele passa a mirar todas as Lendas do campo)' : $p['texto'], 'fonte' => 'Resposta', 'obrig' => false,
                              'passo' => ['a' => 'resposta'], 'desde' => time()];
 
             return $e;

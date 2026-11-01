@@ -125,6 +125,19 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([[], 89], [array_column($e['lados']['a']['mesa'], 'c'), $e['lados']['b']['vida']]);
     }
 
+    public function test_intoxicar_no_proprio_feitico(): void
+    {
+        $e = $this->mesa(['intox' => $this->c('Intoxicar', 'feitico', 'Responda ao feitiço alvo, ele tem como alvo todas as cartas do campo ao invés do comum.', ['subtipos' => 'forma hexomante'])]);
+        [$e, $minha] = $this->poe($e, 'a', 'x');
+        [$e, $d1] = $this->poe($e, 'b', 'x');
+        [$e, $d2] = $this->poe($e, 'b', 'x');
+        $e['lados']['a']['mao'][] = ['i' => 9100, 'c' => 'intox'];
+        $e = $this->joga($e, 'a', 'tiro');
+        $this->assertSame(['a', 'resposta', [9100]], [$e['escolha']['lado'], $e['escolha']['tipo'], $e['escolha']['opcoes']], 'quem conjurou pode Intoxicar');
+        $e = Gladio::escolher($e, 'a', 9100);
+        $this->assertSame([[], []], [$e['lados']['a']['mesa'], $e['lados']['b']['mesa']], 'o Tiro atingiu todas as Lendas');
+    }
+
     public function test_calamidade_clonagem_controlado_e_homem_sino(): void
     {
         $e = $this->mesa([
