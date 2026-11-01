@@ -795,6 +795,7 @@ class CampanhaJogoController extends Controller
                         'tempo'      => Gladio::tempo($e, $lado), // acabou o tempo da vez: a mesa segue sozinha
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
+                    $e = Gladio::conferirVitorias($e); // Vassago e afins valem assim que a condição se cumpre, em qualquer ação
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;
                 } else {
                     if ($acao === 'desistir') {

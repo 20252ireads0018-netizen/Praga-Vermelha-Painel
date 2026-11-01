@@ -167,8 +167,11 @@ class GladioCartasNovasTest extends TestCase
         [$e] = $this->poe($e, 'a', 'vas');
         $this->assertNull($e['fim']);
         $e['lados']['a']['mao'][] = ['i' => 4, 'c' => 'x'];
-        $e = Gladio::passar($e, 'a');
-        $this->assertSame('a', $e['fim']['vencedor'] ?? null);
+        $this->assertSame('a', Gladio::conferirVitorias($e)['fim']['vencedor'] ?? null, 'vale a qualquer momento, sem esperar a vez');
+        // com o adversário sem cartas na mão, basta ter alguma (o triplo de 0)
+        $e['lados']['a']['mao'] = [['i' => 2, 'c' => 'x']];
+        $e['lados']['b']['mao'] = [];
+        $this->assertSame('a', Gladio::conferirVitorias($e)['fim']['vencedor'] ?? null);
     }
 
     public function test_kaique_moeda_lucas_quebra_e_amir_tranqueiras(): void

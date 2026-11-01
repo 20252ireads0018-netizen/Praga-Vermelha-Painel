@@ -666,6 +666,12 @@ trait GladioRegras
      * Cartas que dão a vitória enquanto a condição valer: Vassago, o primeiro ascensionista (o triplo da vida ou das
      * cartas na mão do maior adversário) e Lendas de Vassago (4 cartas com o mesmo nome no seu campo).
      */
+    /** Confere as vitórias de carta a qualquer momento (o controlador chama depois de toda ação, mesmo as que não andam o jogo). */
+    public static function conferirVitorias(array $e): array
+    {
+        return $e['fim'] ? $e : self::vitoriasDeCarta($e);
+    }
+
     private static function vitoriasDeCarta(array $e): array
     {
         if ($e['fase'] === 'mulligan') {
@@ -677,7 +683,9 @@ trait GladioRegras
                 $outros = self::inimigos($e, $l);
                 $maxVida = max(array_map(fn ($o) => (int) $e['lados'][$o]['vida'], $outros) ?: [0]);
                 $maxMao = max(array_map(fn ($o) => count($e['lados'][$o]['mao']), $outros) ?: [0]);
-                if (($maxVida > 0 && $e['lados'][$l]['vida'] >= 3 * $maxVida) || ($maxMao > 0 && count($e['lados'][$l]['mao']) >= 3 * $maxMao)) {
+                // o triplo de 0 cartas também conta: com os outros sem mão, basta ter alguma carta
+                $mao = count($e['lados'][$l]['mao']);
+                if (($maxVida > 0 && $e['lados'][$l]['vida'] >= 3 * $maxVida) || ($mao > 0 && $mao >= 3 * $maxMao)) {
                     $ganha = 'Vassago, o primeiro ascensionista';
                 }
             }
