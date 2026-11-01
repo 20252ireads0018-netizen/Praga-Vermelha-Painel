@@ -707,6 +707,28 @@ class CampanhaJogoController extends Controller
         return response()->json(['ok' => true] + $this->dadosLobby($campanha));
     }
 
+    /** Limpa de uma vez as partidas terminadas ou canceladas de um jogo: o mestre apaga para todos; o jogador tira do próprio histórico. */
+    public function limparPartidas(Request $request, Campanha $campanha): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $d = $request->validate(['jogo' => ['required', Rule::in(self::JOGOS)]]);
+        $uid = (int) auth()->id();
+        $mestre = $campanha->ehMestre($uid);
+        $q = JogoPartida::where('campanha_id', $campanha->id)->where('jogo', $d['jogo'])->whereIn('status', ['fim', 'cancelada']);
+        if ($mestre) {
+            $q->delete();
+        } else {
+            foreach ($q->get() as $p) {
+                $cfg = (array) ($p->config ?? []);
+                $cfg['ocultos'] = array_values(array_unique(array_merge(array_map('intval', (array) ($cfg['ocultos'] ?? [])), [$uid])));
+                $p->config = $cfg;
+                $p->save();
+            }
+        }
+
+        return response()->json(['ok' => true] + $this->dadosLobby($campanha));
+    }
+
     public function estado(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
     {
         $this->exigirMembro($campanha);

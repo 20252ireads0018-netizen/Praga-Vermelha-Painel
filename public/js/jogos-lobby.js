@@ -61,6 +61,8 @@
     function renderPartidas() {
         $$('[data-lista]').forEach(box => {
             const lista = lobby.partidas.filter(p => p.jogo === box.dataset.lista);
+            const limpar = $(`[data-limpar-partidas="${box.dataset.lista}"]`); // só aparece com partidas terminadas
+            if (limpar) limpar.hidden = !lista.some(p => p.status === 'fim' || p.status === 'cancelada');
             box.innerHTML = lista.length ? lista.map(p => {
                 const nomes = (p.jogadores && p.jogadores.length ? p.jogadores : [p.j1, p.j2].filter(Boolean)).map(esc).join(' × ');
                 const aposta = p.jogo === 'gladio' ? (p.aposta ? ` · aposta ${p.aposta}` : ' · amistoso') : '';
@@ -122,6 +124,11 @@
                 if (!confirm(aviso)) return;
                 lobby = await post(urlPartida(b.dataset.cancelar, 'cancelar'), {}, D.csrf);
                 renderPartidas();
+            } else if (b.dataset.limparPartidas) {
+                if (!confirm(D.souMestre ? 'Apagar do histórico de todos as partidas terminadas e canceladas?' : 'Tirar do seu histórico todas as partidas terminadas e canceladas?')) return;
+                lobby = await post(D.url.limpar, { jogo: b.dataset.limparPartidas }, D.csrf);
+                renderPartidas();
+                msg('Histórico limpo.');
             } else if (b.dataset.apagar) {
                 if (!confirm(D.souMestre ? 'Apagar esta partida do histórico de todos?' : 'Tirar esta partida do seu histórico?')) return;
                 lobby = await post(urlPartida(b.dataset.apagar), {}, D.csrf, 'DELETE');

@@ -333,6 +333,25 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame(0, $this->dinheiro($this->ana), 'a carteira da campanha não mudou');
     }
 
+    public function test_limpar_partidas_terminadas(): void
+    {
+        $nova = fn ($status) => JogoPartida::create(['campanha_id' => $this->camp->id, 'jogo' => 'gladio', 'jogador1_id' => $this->ana->id,
+            'jogador2_id' => $this->bia->id, 'aposta' => 0, 'status' => $status, 'config' => []]);
+        $fim = $nova('fim');
+        $cancelada = $nova('cancelada');
+        $aberta = $nova('aberta');
+        // jogador: some só do histórico dele
+        $r = $this->actingAs($this->ana)->postJson($this->url('/limpar-partidas'), ['jogo' => 'gladio'])->assertOk();
+        $this->assertSame([$aberta->id], array_column($r->json('partidas'), 'id'));
+        $this->assertSame(3, JogoPartida::count());
+        $r = $this->actingAs($this->bia)->getJson($this->url('/lobby'))->assertOk();
+        $this->assertCount(3, $r->json('partidas'), 'para a Bia continuam lá');
+        // mestre: apaga para todos (a aberta fica)
+        $this->actingAs($this->mestre)->postJson($this->url('/limpar-partidas'), ['jogo' => 'gladio'])->assertOk();
+        $this->assertSame([$aberta->id], JogoPartida::pluck('id')->all());
+        $this->assertNull(JogoPartida::find($fim->id) ?? JogoPartida::find($cancelada->id));
+    }
+
     public function test_playmat_do_jogador_enviar_ver_e_tirar(): void
     {
         Storage::fake('local');

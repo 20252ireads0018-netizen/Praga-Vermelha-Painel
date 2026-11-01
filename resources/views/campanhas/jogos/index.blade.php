@@ -52,7 +52,7 @@
                 </section>
 
                 <section class="camp-card">
-                    <div class="camp-card-cab"><h2>Partidas de Gladio</h2></div>
+                    <div class="camp-card-cab"><h2>Partidas de Gladio</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="gladio" hidden>🧹 Limpar terminadas</button></div>
                     <div class="jg-partidas" data-lista="gladio"></div>
                 </section>
 
@@ -243,7 +243,7 @@
                 </section>
 
                 <section class="camp-card">
-                    <div class="camp-card-cab"><h2>Partidas de Pela Dama</h2></div>
+                    <div class="camp-card-cab"><h2>Partidas de Pela Dama</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="pela_dama" hidden>🧹 Limpar terminadas</button></div>
                     <div class="jg-partidas" data-lista="pela_dama"></div>
                 </section>
 
@@ -331,6 +331,7 @@
         'cartas'   => route('campanhas.jogos.cartas.salvar', $campanha),
         'pecas'    => route('campanhas.jogos.pecas.salvar', $campanha),
         'imagens'  => route('campanhas.jogos.imagens.enviar', $campanha),
+        'limpar'   => route('campanhas.jogos.partidas.limpar', $campanha),
         'playmat'  => route('campanhas.jogos.playmat.salvar', $campanha),
         'decks'    => route('campanhas.jogos.decks.salvar', $campanha),
         'partidas' => route('campanhas.jogos.partidas.criar', $campanha),
