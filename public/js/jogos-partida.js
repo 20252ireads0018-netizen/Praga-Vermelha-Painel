@@ -583,7 +583,6 @@
             else if (g === 'atacar') { const lista = atacantes.slice(); atacantes = []; acao({ acao: 'atacar', insts: lista, alvo: b.dataset.alvo }); }
             else if (g === 'defender') { bloqueador = null; acao({ acao: 'defender' }); }
             else if (g === 'passar') { alvo = null; atacantes = []; acao({ acao: 'passar' }); }
-            else if (g === 'apressar') acao({ acao: 'apressar' });
             else if (g === 'manter') { const lista = paraFundo.slice(); paraFundo = []; acao({ acao: 'manter', insts: lista }); }
             else if (g === 'mulligan') { paraFundo = []; acao({ acao: 'mulligan' }); }
             else if (g === 'desistir' && confirm('Desistir da partida?' + (D.aposta ? ' Você perde a aposta.' : ''))) acao({ acao: 'desistir' });
@@ -841,19 +840,16 @@
     /* ================================================================== */
     /*  Gladio: cronômetro da vez                                          */
     /* ================================================================== */
-    const APRESSAR_APOS = 30; // Gladio::APRESSAR_APOS: depois disso os outros podem apressar
     const TEMPO_VEZ = 90;     // Gladio::TEMPO_VEZ: acabou, a mesa segue sozinha
     const TEMPO_RESPOSTA = 20; // Gladio::TEMPO_RESPOSTA: quem pode responder fora do turno decide nesse tempo
     let difRelogio = 0;       // relógio do servidor − relógio do navegador (s)
-    let ultimoApressado = null;
     let tempoPedido = null;   // "desde" da vez cujo fim de tempo já foi pedido ao servidor
     const agoraServidor = () => Date.now() / 1000 + difRelogio;
     const esperandoDe = e => (e.escolha && e.escolha.lado) || (e.fase === 'defesa' && e.ataque ? e.ataque.defensor : e.vez);
 
     function relogio(M) {
         if (!M.ativo || !M.e.desde) return '';
-        return `<span class="gl-relogio" data-relogio title="Tempo que resta nesta vez (${TEMPO_VEZ} s). Acabou, o turno passa sozinho (ou a defesa/escolha segue como está)">⏱ <b>1:30</b></span>` +
-            `<button type="button" class="camp-btn camp-btn-pequeno gl-apressar" data-gl="apressar" hidden title="Avisar quem está demorando">⏳ Apressar</button>`;
+        return `<span class="gl-relogio" data-relogio title="Tempo que resta nesta vez (${TEMPO_VEZ} s). Acabou, o turno passa sozinho (ou a defesa/escolha segue como está)">⏱ <b>1:30</b></span>`;
     }
     function tique() {
         if (D.jogo !== 'gladio' || !D.estado) return;
@@ -870,8 +866,6 @@
         el.classList.toggle('gl-relogio--atencao', resta <= 30 && resta > 10);
         el.classList.toggle('gl-relogio--urgente', resta <= 10);
         el.classList.toggle('gl-relogio--meu', quem === D.lado);
-        const bt = box.querySelector('[data-gl="apressar"]');
-        if (bt) bt.hidden = !(momento().jogo && quem !== D.lado && seg >= APRESSAR_APOS);
         // tempo esgotado: quem estiver na mesa avisa o servidor (uma vez por vez), e a partida segue
         if (resta === 0 && momento().jogo && tempoPedido !== desde && !enviando) {
             tempoPedido = desde;
@@ -879,18 +873,6 @@
         }
     }
     setInterval(tique, 1000);
-    function avisarApressado() {
-        const ap = D.estado && D.estado.apressado;
-        if (!ap || ap.em === ultimoApressado) return;
-        const novo = ultimoApressado !== null;
-        ultimoApressado = ap.em;
-        if (!novo || ap.alvo !== D.lado) return;
-        msg(`⏳ ${(D.estado.nomes || {})[ap.por] || 'Alguém'} está apressando você!`, true);
-        box.classList.remove('gl-apressado');
-        void box.offsetWidth;
-        box.classList.add('gl-apressado');
-        setTimeout(() => box.classList.remove('gl-apressado'), 2600);
-    }
 
     /* ================================================================== */
     /*  Gladio: animações (comparando o estado anterior com o novo)        */
@@ -1037,7 +1019,6 @@
         renderGladio();
         if (foto) animar(estadoAnterior, D.estado, foto);
         estadoAnterior = D.estado;
-        avisarApressado();
         tique();
     }
     box.addEventListener('click', ev => (D.jogo === 'gladio' ? cliqueGladio(ev) : cliquePelaDama(ev)));

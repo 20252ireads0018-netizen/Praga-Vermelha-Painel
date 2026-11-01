@@ -139,7 +139,7 @@ class Gladio
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
               'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
               'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n,
-              'atacou' => false, 'desde' => time(), 'apressado' => null, 'ev' => [], 'atrasos' => [], 'pilha' => null, 'mult' => $mult];
+              'atacou' => false, 'desde' => time(), 'ev' => [], 'atrasos' => [], 'pilha' => null, 'mult' => $mult];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -215,7 +215,6 @@ class Gladio
         $e['escolha'] ??= null;
         $e['atacou'] ??= false;
         $e['desde'] ??= time();
-        $e['apressado'] ??= null;
         $e['iniciado'] ??= true;
         $e['ev'] ??= [];
         $e['atrasos'] ??= [];
@@ -1262,7 +1261,6 @@ class Gladio
         $e['ataque'] = null;
         $e['atacou'] = false;
         $e['desde'] = time(); // cronômetro da vez
-        $e['apressado'] = null;
         $l = &$e['lados'][$lado];
         if ($l['energiaMax'] < self::ENERGIA_MAX) { // energia máxima ajustada à mão acima de 10 não cai
             $l['energiaMax']++;
@@ -1307,8 +1305,6 @@ class Gladio
         return $e['fase'] === 'mulligan' ? self::fimMulligan($e) : self::seguir($e);
     }
 
-    /** Segundos de vez antes de os outros poderem apressar quem está demorando. */
-    public const APRESSAR_APOS = 30;
     /** Tempo de cada vez (turno, defesa ou escolha): acabou, a mesa segue sozinha (ver tempo()). */
     public const TEMPO_VEZ = 90;
 
@@ -1357,27 +1353,6 @@ class Gladio
         }
 
         return $e['escolha']['lado'] ??($e['fase'] === 'defesa' ? ($e['ataque']['defensor'] ?? $e['vez']) : $e['vez']);
-    }
-
-    /** Outro jogador apressa quem está demorando (depois de APRESSAR_APOS segundos; de novo só a cada 20 s). */
-    public static function apressar(array $e, string $lado, ?int $agora = null): array
-    {
-        self::exigirAtivo($e, $lado);
-        $agora ??= time();
-        $alvo = self::esperando($e);
-        if ($alvo === $lado) {
-            throw new \InvalidArgumentException('A mesa está esperando você.');
-        }
-        if ($agora - (int) ($e['desde'] ?? $agora) < self::APRESSAR_APOS) {
-            throw new \InvalidArgumentException('Ainda está no tempo: dá para apressar depois de ' . self::APRESSAR_APOS . ' segundos.');
-        }
-        if (!empty($e['apressado']) && $agora - (int) $e['apressado']['em'] < 20) {
-            throw new \InvalidArgumentException(self::quem($e, $alvo) . ' acabou de ser apressado.');
-        }
-        $e['apressado'] = ['por' => $lado, 'alvo' => $alvo, 'em' => $agora];
-        self::log($e, self::quem($e, $lado) . ' está apressando ' . self::quem($e, $alvo) . ': ⏳ anda logo!');
-
-        return $e;
     }
 
     /** Toma (ou devolve, com $quanto negativo) shots, a qualquer momento. No 7º shot o jogador está fora. */

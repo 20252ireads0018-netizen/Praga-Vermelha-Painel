@@ -813,7 +813,6 @@ class CampanhaJogoController extends Controller
                         'escolher'   => Gladio::escolher($e, $lado, $request->filled('alvo') ? (string) $request->input('alvo') : null),
                         'mulligan'   => Gladio::mulligan($e, $lado), // troca a mão inicial
                         'manter'     => Gladio::manter($e, $lado, (array) $request->input('insts', [])), // insts: cartas para o fundo
-                        'apressar'   => Gladio::apressar($e, $lado), // cronômetro: apressa quem a mesa está esperando
                         'tempo'      => Gladio::tempo($e, $lado), // acabou o tempo da vez: a mesa segue sozinha
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };

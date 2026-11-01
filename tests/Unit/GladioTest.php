@@ -916,24 +916,6 @@ class GladioTest extends TestCase
         $this->assertSame(['espada', 'espada', '1'], array_slice(array_column($e['lados']['a']['cemiterio'], 'c'), -3));
     }
 
-    public function test_apressar_quem_demora(): void
-    {
-        $e = $this->novo();
-        try {
-            Gladio::apressar($e, 'b', $e['desde'] + 10);
-            $this->fail('ainda no tempo');
-        } catch (\InvalidArgumentException) {
-        }
-        try {
-            Gladio::apressar($e, 'a', $e['desde'] + 100);
-            $this->fail('quem tem a vez não se apressa');
-        } catch (\InvalidArgumentException) {
-        }
-        $e = Gladio::apressar($e, 'b', $e['desde'] + 100);
-        $this->assertSame(['b', 'a'], [$e['apressado']['por'], $e['apressado']['alvo']]);
-        $this->assertStringContainsString('apressando', end($e['log']));
-    }
-
     private function comTextos(array $a, array $b = [], int $aposta = 99): array
     {
         $a = array_merge($a, array_fill(0, 20 - count($a), '1'));

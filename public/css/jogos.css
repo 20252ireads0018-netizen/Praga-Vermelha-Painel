@@ -723,9 +723,6 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-relogio { font-size: .78rem; padding: .1rem .55rem; border-radius: 999px; background: rgba(0, 0, 0, .35); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .gl-relogio--atencao { color: #fde68a; background: rgba(120, 53, 15, .6); }
 .gl-relogio--urgente { color: #fecaca; background: rgba(127, 29, 29, .8); animation: gl-pulsar 1s ease-in-out infinite; }
-.gl-apressar { white-space: nowrap; }
-.gl-apressar[hidden] { display: none; }
-.gl-apressado .gl-eu-barra { animation: gl-tremer .5s ease-in-out 3; box-shadow: 0 0 0 3px #f59e0b inset; }
 @keyframes gl-pulsar { 50% { transform: scale(1.08); } }
 @keyframes gl-tremer { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 
@@ -764,7 +761,7 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 @keyframes gl-numero { 0% { opacity: 0; transform: translate(-50%, 6px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
     100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-    .gl-relogio--urgente, .gl-apressado .gl-eu-barra { animation: none; }
+    .gl-relogio--urgente { animation: none; }
 }
 
 /* montagem de deck: o contador fica numa linha própria (não vaza da caixa) e os filtros quebram linha */
