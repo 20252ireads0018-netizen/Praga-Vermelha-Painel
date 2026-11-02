@@ -20,7 +20,8 @@ namespace App\Jogos;
  * - Shots: qualquer jogador toma shots a qualquer momento (quando uma carta mandar); no 7º está fora.
  * - Quem fica sem vida, toma o 7º shot ou desiste sai da partida (as cartas dele na mesa vão para o cemitério).
  * - Palavras-chave (PALAVRAS e as dicas da tela): Sobrepujar, Ímpeto, Voar, Alcance, Toque mortal, Vínculo com a vida,
- *   Iniciativa, Golpe duplo, Vigilância, Defensor, Ameaça, Indestrutível e Hexo-Imune. Como aqui o dano nas Lendas
+ *   Iniciativa, Golpe duplo, Vigilância, Defensor, Ameaça, Indestrutível, Hexo-Imune, Pressa (o antigo Ímpeto),
+ *   Desafiador, Imbloqueável, Sombra, Furtividade, Flanquear, Exaltado, Bravura, Grito de guerra, Bushido, Persistir e Imortal. Como aqui o dano nas Lendas
  *   não some no fim do turno, Indestrutível segura a vida em 1.
  * - Ferramentas manuais (efeitos escritos nas cartas), todas no registro da partida:
  *   no próprio turno: jogar sem pagar; a qualquer momento: comprar, embaralhar, reordenar o baralho, recuperar do
@@ -71,7 +72,7 @@ class Gladio
     /** Palavras-chave (chave curta => nome). As dicas com o efeito de cada uma ficam em public/js/jogos-comum.js. */
     public const PALAVRAS = [
         'sobrepujar'    => 'Sobrepujar',
-        'impeto'        => 'Ímpeto',
+        'impeto'        => 'Pressa', // a chave antiga continua: as cartas que tinham Ímpeto agora têm Pressa
         'voar'          => 'Voar',
         'alcance'       => 'Alcance',
         'toque'         => 'Toque mortal',
@@ -83,6 +84,17 @@ class Gladio
         'ameaca'        => 'Ameaça',
         'indestrutivel' => 'Indestrutível',
         'resistencia'   => 'Hexo-Imune',
+        'desafiador'    => 'Desafiador',
+        'imbloqueavel'  => 'Imbloqueável',
+        'sombra'        => 'Sombra',
+        'furtividade'   => 'Furtividade',
+        'flanquear'     => 'Flanquear',
+        'exaltado'      => 'Exaltado',
+        'bravura'       => 'Bravura',
+        'grito'         => 'Grito de guerra',
+        'bushido'       => 'Bushido',
+        'persistir'     => 'Persistir',
+        'imortal'       => 'Imortal',
     ];
     public const LADOS = ['a', 'b', 'c', 'd', 'e', 'f'];
     public const MAX_JOGADORES = 6;
@@ -733,6 +745,7 @@ class Gladio
             return self::seguir($e);
         }
         self::brilho($e, 'conjurou', $lado, $id, $inst); // a tela mostra a carta conjurada
+        self::bravura($e, $lado);
         if ($custo === 2) { // Trinkt: "sempre que você gastar exatamente 2 em aura para um feitiço"
             self::sinal($e, 'gasto2', ['lado' => $lado, 'i' => $inst]);
         }
@@ -947,6 +960,7 @@ class Gladio
         $e['desde'] = time(); // o cronômetro passa a contar a defesa
         $e['ataque'] = ['atacantes' => $insts, 'defensor' => $alvo, 'bloqueios' => (object) []];
         self::log($e, self::quem($e, $lado) . ' atacou ' . self::quem($e, $alvo) . ' com ' . implode(', ', $nomes) . '.');
+        $e = self::palavrasDoAtaque($e, $lado, $insts);
         foreach ($insts as $i) { // "quando atacar" (o evento é o jogador atacado)
             $m = $e['lados'][$lado]['mesa'][self::idx($e['lados'][$lado]['mesa'], $i)];
             $e = self::enfileirar($e, $lado, $m['c'], $i, 'atacar', ['lado' => $alvo, 'i' => null], $m);
@@ -987,10 +1001,14 @@ class Gladio
             }
             $ka = self::idx($e['lados'][$e['vez']]['mesa'], $atacante);
             $a = $ka >= 0 ? $e['lados'][$e['vez']]['mesa'][$ka] : null;
-            if ($a && self::tem($a, 'voar') && !self::tem($b, 'voar') && !self::tem($b, 'alcance')) {
-                throw new \InvalidArgumentException(self::nomeLenda($e, $a) . ' tem Voar: só Lendas com Voar ou Alcance podem bloqueá-la.');
+            if ($a && ($erro = self::naoBloqueia($e, $a, $b))) {
+                throw new \InvalidArgumentException($erro);
             }
             $bloqueios[$bloqueador] = $atacante;
+        }
+        $forcado = ((array) ($e['ataque']['forcados'] ?? []))[$bloqueador] ?? null;
+        if ($forcado !== null && (int) ($bloqueios[$bloqueador] ?? 0) !== (int) $forcado) { // Desafiador
+            throw new \InvalidArgumentException(self::nomeLenda($e, $b) . ' foi desafiada e tem de bloquear quem a desafiou.');
         }
         $e['ataque']['bloqueios'] = (object) $bloqueios;
 
@@ -1090,6 +1108,7 @@ class Gladio
         // antes do dano: "quando bloquear" e o Organizador do torneio escolhendo em quem soma o ataque
         if (empty($e['ataque']['pre'])) {
             $e['ataque']['pre'] = true;
+            $e = self::palavrasDoBloqueio($e, $at, $lado, $pares);
             foreach ($pares as $ai => $bs) {
                 $nomeA = self::nomeLenda($e, $e['lados'][$at]['mesa'][self::idx($e['lados'][$at]['mesa'], $ai)]);
                 if ($bs) {
@@ -1550,7 +1569,7 @@ class Gladio
         $tinha = in_array($pal, $m['pal'] ?? [], true);
         $m['pal'] = $tinha ? array_values(array_diff($m['pal'], [$pal])) : array_merge($m['pal'] ?? [], [$pal]);
         if (!$tinha && $pal === 'impeto' && $dono === $e['vez'] && empty($m['virada'])) {
-            $m['pode'] = true; // Ímpeto recebido no turno: já pode atacar
+            $m['pode'] = true; // Pressa recebida no turno: já pode atacar
         }
         $nome = self::nomeLenda($e, $m) . ($dono === $lado ? '' : ' de ' . self::quem($e, $dono));
         unset($m);
@@ -2924,7 +2943,7 @@ class Gladio
         }
         // Imbuir: com o alvo escolhido, quem tem a carta pode trocá-lo antes de o efeito acontecer
         if (in_array($es['tipo'], ['lenda', 'qualquer', 'jogador'], true) && empty($p['imbuido'])
-            && !in_array($p['a'], ['sacrificar', 'absorver1', 'serrar', 'organizar', 'fixar'], true)
+            && !in_array($p['a'], ['sacrificar', 'absorver1', 'serrar', 'organizar', 'fixar', 'desafiar'], true)
             && ($podem = self::respondentes($e, $lado, 'imbuir'))) {
             $e['pilha'] = ['tipo' => 'alvo', 'resp' => ['imbuir'], 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
                            'opcoes' => $es['opcoes'], 'esc_tipo' => $es['tipo'], 'lado' => $lado,

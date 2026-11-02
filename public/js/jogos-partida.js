@@ -177,7 +177,11 @@
             if (defendo && bloqueador != null) {
                 if (tipo !== 'lenda' || lado !== e.vez || !atacando.includes(x.i)) return false;
                 const b = L[eu].mesa.find(m => m.i === bloqueador);
-                return !tem(x, 'voar') || (b && (tem(b, 'voar') || tem(b, 'alcance')));
+                if (!b) return false;
+                // mesmas regras de Gladio::naoBloqueia: Imbloqueável, Voar, Sombra e Furtividade
+                if (tem(x, 'imbloqueavel') || (tem(x, 'sombra') !== tem(b, 'sombra'))) return false;
+                if (tem(x, 'furtividade') && (+b.atk || 0) > (+x.atk || 0)) return false;
+                return !tem(x, 'voar') || tem(b, 'voar') || tem(b, 'alcance');
             }
             if (!alvo || L[lado].fora) return false;
             if (alvo.tipo === 'copiar') return tipo === 'lenda' && lado === eu && x.i !== alvo.inst;

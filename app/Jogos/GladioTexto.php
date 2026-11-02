@@ -44,6 +44,9 @@ class GladioTexto
         'alcance' => 'alcance', 'toque mortal' => 'toque', 'toque mortifero' => 'toque', 'toque da morte' => 'toque',
         'vinculo com a vida' => 'vinculo', 'iniciativa' => 'iniciativa', 'primeiro ataque' => 'iniciativa', 'golpe duplo' => 'duplo',
         'vigilancia' => 'vigilancia', 'defensor' => 'defensor', 'ameaca' => 'ameaca', 'indestrutivel' => 'indestrutivel',
+        'pressa' => 'impeto', 'desafiador' => 'desafiador', 'imbloqueavel' => 'imbloqueavel', 'sombra' => 'sombra',
+        'furtividade' => 'furtividade', 'flanquear' => 'flanquear', 'exaltado' => 'exaltado', 'bravura' => 'bravura',
+        'grito de guerra' => 'grito', 'bushido' => 'bushido', 'persistir' => 'persistir', 'imortal' => 'imortal',
     ];
     // verbos na 3ª pessoa: a ação é do sujeito da frase (no imperativo é de quem controla a carta)
     private const TERCEIRA = '/^(compra|compram|comprar|perde|perdem|perder|vira|viram|virar|toma|tomam|tomar|bebe|bebem|beber|ganha|ganham|ganhar|'

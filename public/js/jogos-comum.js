@@ -54,7 +54,7 @@ window.JG = (function () {
     // Palavras-chave das Lendas (mesmas chaves de App\Jogos\Gladio::PALAVRAS): nome e o efeito mostrado ao passar o mouse
     const PALAVRA = {
         sobrepujar:    { nome: 'Sobrepujar', desc: 'Se for bloqueada, o dano que passar do necessário para derrubar quem bloqueou vai para o jogador.' },
-        impeto:        { nome: 'Ímpeto', desc: 'Pode atacar no mesmo turno em que entra na mesa.' },
+        impeto:        { nome: 'Pressa', desc: 'Não fica cansada ao ser invocada: pode atacar no mesmo turno em que entra na mesa.' },
         voar:          { nome: 'Voar', desc: 'Só pode ser bloqueada por Lendas com Voar ou Alcance.' },
         alcance:       { nome: 'Alcance', desc: 'Pode bloquear Lendas com Voar.' },
         toque:         { nome: 'Toque mortal', desc: 'Qualquer dano que ela causar a uma Lenda a derruba (basta 1 de dano).' },
@@ -66,6 +66,17 @@ window.JG = (function () {
         ameaca:        { nome: 'Ameaça', desc: 'Só pode ser bloqueada por duas ou mais Lendas.' },
         indestrutivel: { nome: 'Indestrutível', desc: 'Não cai por dano nem por Toque mortal: a vida não baixa de 1. Ainda pode ser sacrificada.' },
         resistencia:   { nome: 'Hexo-Imune', desc: 'Não pode ser alvo de feitiços do adversário.' },
+        desafiador:    { nome: 'Desafiador', desc: 'Ao atacar, chama uma Lenda do atacado para o combate: ela é obrigada a bloqueá-la.' },
+        imbloqueavel:  { nome: 'Imbloqueável', desc: 'Não pode ser bloqueada.' },
+        sombra:        { nome: 'Sombra', desc: 'Só pode ser bloqueada por Lendas com Sombra, e só bloqueia Lendas com Sombra.' },
+        furtividade:   { nome: 'Furtividade', desc: 'Não pode ser bloqueada por Lendas com mais poder (ataque) que ela.' },
+        flanquear:     { nome: 'Flanquear', desc: 'Toda Lenda sem Flanquear que a bloquear fica com -1/-1 até o fim do turno.' },
+        exaltado:      { nome: 'Exaltado', desc: 'Quando uma Lenda sua ataca sozinha, ela ganha +1/+1 até o fim do turno para cada Lenda sua com Exaltado.' },
+        bravura:       { nome: 'Bravura', desc: 'Sempre que você conjurar uma carta que não seja Lenda, ela ganha +1/+1 até o fim do turno.' },
+        grito:         { nome: 'Grito de guerra', desc: 'Quando ataca, as outras Lendas que atacam junto ganham +1/+0 até o fim do turno.' },
+        bushido:       { nome: 'Bushido', desc: 'Quando bloqueia ou é bloqueada, ganha +1/+1 até o fim do turno.' },
+        persistir:     { nome: 'Persistir', desc: 'A primeira vez que cair, volta para a mesa com -1/-1.' },
+        imortal:       { nome: 'Imortal', desc: 'A primeira vez que cair, volta para a mesa com +1/+1.' },
     };
     /** Tipos de carta (Gladio::NOMES_TIPOS). */
     const TIPOS = { lenda: 'Lenda', feitico: 'Feitiço', encanto: 'Encantamento', equipo: 'Equipamento' };

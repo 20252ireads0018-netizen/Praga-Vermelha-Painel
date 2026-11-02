@@ -166,6 +166,128 @@ trait GladioRegras
         $e['brilho'] = array_slice($e['brilho'], -20);
     }
 
+    /* ================================================================== */
+    /*  Palavras-chave do Magic                                            */
+    /* ================================================================== */
+
+    /** Por que $b não pode bloquear $a (Voar, Imbloqueável, Sombra, Furtividade) ou null se pode. */
+    private static function naoBloqueia(array $e, array $a, array $b): ?string
+    {
+        $na = self::nomeLenda($e, $a);
+        if (self::tem($a, 'imbloqueavel')) {
+            return "$na é Imbloqueável.";
+        }
+        if (self::tem($a, 'voar') && !self::tem($b, 'voar') && !self::tem($b, 'alcance')) {
+            return "$na tem Voar: só Lendas com Voar ou Alcance podem bloqueá-la.";
+        }
+        if (self::tem($a, 'sombra') && !self::tem($b, 'sombra')) {
+            return "$na tem Sombra: só Lendas com Sombra podem bloqueá-la.";
+        }
+        if (!self::tem($a, 'sombra') && self::tem($b, 'sombra')) {
+            return self::nomeLenda($e, $b) . ' tem Sombra: só bloqueia Lendas com Sombra.';
+        }
+        if (self::tem($a, 'furtividade') && (int) $b['atk'] > (int) $a['atk']) {
+            return "$na tem Furtividade: Lendas com mais poder que ela não podem bloqueá-la.";
+        }
+
+        return null;
+    }
+
+    /** Muda ataque/vida da Lenda só até o fim do turno (a limpeza desfaz). */
+    private static function ateOFim(array &$e, string $l, int $k, int $atk, int $vida): void
+    {
+        $m = &$e['lados'][$l]['mesa'][$k];
+        $novo = max(0, $m['atk'] + $atk);
+        $m['tmp']['atk'] = (int) ($m['tmp']['atk'] ?? 0) + ($novo - $m['atk']);
+        $m['atk'] = $novo;
+        $m['max'] += $vida;
+        $m['vida'] += $vida;
+        $m['tmp']['vida'] = (int) ($m['tmp']['vida'] ?? 0) + $vida;
+        unset($m);
+    }
+
+    /** Ao declarar o ataque: Exaltado (atacou sozinha), Grito de guerra (as outras atacantes) e Desafiador. */
+    private static function palavrasDoAtaque(array $e, string $lado, array $insts): array
+    {
+        if (count($insts) === 1) {
+            $n = count(array_filter($e['lados'][$lado]['mesa'], fn ($m) => self::tem($m, 'exaltado')));
+            $k = self::idx($e['lados'][$lado]['mesa'], $insts[0]);
+            if ($n > 0 && $k >= 0) {
+                self::ateOFim($e, $lado, $k, $n, $n);
+                self::log($e, 'Exaltado: ' . self::nomeLenda($e, $e['lados'][$lado]['mesa'][$k]) . " atacou sozinha e ganhou +$n/+$n até o fim do turno.");
+            }
+        }
+        foreach ($insts as $i) {
+            $k = self::idx($e['lados'][$lado]['mesa'], $i);
+            if ($k < 0 || !self::tem($e['lados'][$lado]['mesa'][$k], 'grito')) {
+                continue;
+            }
+            $outras = array_filter($insts, fn ($o) => $o !== $i);
+            foreach ($outras as $o) {
+                self::ateOFim($e, $lado, self::idx($e['lados'][$lado]['mesa'], $o), 1, 0);
+            }
+            if ($outras) {
+                self::log($e, 'Grito de guerra de ' . self::nomeLenda($e, $e['lados'][$lado]['mesa'][$k]) . ': as outras atacantes ganham +1/+0 até o fim do turno.');
+            }
+        }
+        foreach ($insts as $i) {
+            $m = $e['lados'][$lado]['mesa'][self::idx($e['lados'][$lado]['mesa'], $i)];
+            if (self::tem($m, 'desafiador')) {
+                $e['fila'][] = ['lado' => $lado, 'fonte' => self::nomeLenda($e, $m), 'i' => $i, 'c' => $m['c'], 'jog' => null, 'ctx' => null, 'ult' => null,
+                                'passos' => [['a' => 'desafiar', 'atk' => $i, 'alvo' => 'par']]];
+            }
+        }
+
+        return $e;
+    }
+
+    /** Bloqueios confirmados, antes do dano: Bushido (+1/+1 ao bloquear ou ser bloqueada) e Flanquear (-1/-1 em quem bloqueia). */
+    private static function palavrasDoBloqueio(array $e, string $at, string $df, array $pares): array
+    {
+        foreach ($pares as $ai => $bs) {
+            $ka = self::idx($e['lados'][$at]['mesa'], (int) $ai);
+            if ($ka < 0 || !$bs) {
+                continue;
+            }
+            $a = $e['lados'][$at]['mesa'][$ka];
+            if (self::tem($a, 'bushido')) {
+                self::ateOFim($e, $at, $ka, 1, 1);
+                self::log($e, 'Bushido: ' . self::nomeLenda($e, $a) . ' ganhou +1/+1 até o fim do turno.');
+            }
+            foreach ($bs as $bi) {
+                $kb = self::idx($e['lados'][$df]['mesa'], (int) $bi);
+                if ($kb < 0) {
+                    continue;
+                }
+                $b = $e['lados'][$df]['mesa'][$kb];
+                if (self::tem($b, 'bushido')) {
+                    self::ateOFim($e, $df, $kb, 1, 1);
+                    self::log($e, 'Bushido: ' . self::nomeLenda($e, $b) . ' ganhou +1/+1 até o fim do turno.');
+                }
+                if (self::tem($a, 'flanquear') && !self::tem($b, 'flanquear')) {
+                    self::ateOFim($e, $df, $kb, -1, -1);
+                    self::log($e, 'Flanquear: ' . self::nomeLenda($e, $b) . ' bloqueou ' . self::nomeLenda($e, $a) . ' e ficou com -1/-1 até o fim do turno.');
+                    if ($e['lados'][$df]['mesa'][$kb]['vida'] <= 0) {
+                        $e['lados'][$df]['mesa'][$kb]['morto'] = true;
+                    }
+                }
+            }
+        }
+
+        return $e;
+    }
+
+    /** Bravura: toda carta que não é Lenda conjurada por $lado dá +1/+1 até o fim do turno às Lendas dele com Bravura. */
+    private static function bravura(array &$e, string $lado): void
+    {
+        foreach ($e['lados'][$lado]['mesa'] as $k => $m) {
+            if (self::tem($m, 'bravura')) {
+                self::ateOFim($e, $lado, $k, 1, 1);
+                self::log($e, 'Bravura: ' . self::nomeLenda($e, $m) . ' ganhou +1/+1 até o fim do turno.');
+            }
+        }
+    }
+
     /** Põe uma carta no cemitério (o "toda vez que um hexomante entrar num cemitério" fica sabendo). */
     private static function cem(array &$e, string $lado, array $carta): void
     {
@@ -558,6 +680,22 @@ trait GladioRegras
             $e['lados'][$l]['mesa'][$k]['vida'] = $e['lados'][$l]['mesa'][$k]['max'];
             unset($e['lados'][$l]['mesa'][$k]['morto']);
         };
+        // Persistir (-1/-1) e Imortal (+1/+1): volta uma vez, como uma Lenda que acabou de entrar
+        foreach (['persistir' => [-1, 'persistiu'], 'imortal' => [1, 'imortalizou']] as $pal => [$d, $marca]) {
+            if (self::tem($m, $pal) && empty($m[$marca])) {
+                $x = &$e['lados'][$l]['mesa'][$k];
+                $x[$marca] = true;
+                $x['atk'] = max(0, $x['atk'] + $d);
+                $x['max'] = max(1, $x['max'] + $d);
+                $x['pode'] = self::tem($x, 'impeto');
+                $x['virada'] = false;
+                unset($x['tmp'], $x);
+                $de($e);
+                self::log($e, "$nome " . ($d < 0 ? 'persistiu e voltou com -1/-1' : 'é imortal e voltou com +1/+1') . '.');
+
+                return true;
+            }
+        }
         if ((int) ($m['regen'] ?? 0) > 0) {
             $e['lados'][$l]['mesa'][$k]['regen']--;
             $e['lados'][$l]['mesa'][$k]['virada'] = true;
@@ -953,6 +1091,7 @@ trait GladioRegras
             array_splice($e['lados'][$lado]['mao'], $k, 1);
             self::cem($e, $lado, $carta);
             self::brilho($e, 'conjurou', $lado, $carta['c'], (int) $valor);
+            self::bravura($e, $lado);
             self::sinal($e, 'feitico', ['lado' => $lado, 'i' => (int) $valor, 'c' => $carta['c']]);
             $nome = self::nome($e, $carta['c']);
             $tipo = $e['cartas'][$carta['c']]['resp'] ?? 'negar';
@@ -1671,6 +1810,40 @@ trait GladioRegras
                 $vezes = (int) ($e['lados'][$dono]['mk'][$chave] ?? 0) + 1;
                 $e['lados'][$dono]['mk'][$chave] = $vezes;
                 self::antes($e, [['a' => 'voltar', 'atk' => $vezes, 'vida' => $vezes], ['a' => 'palavra', 'pal' => '?', 'temp' => false, 'alvo' => 'fonte', 'filtro' => null]]);
+
+                return $e;
+            case 'desafiar': // Desafiador: quem ataca escolhe uma Lenda do atacado, que é obrigada a bloqueá-la
+                if (($e['fase'] ?? null) !== 'defesa' || !$e['ataque']) {
+                    return $e;
+                }
+                $defensor = $e['ataque']['defensor'];
+                $ka = self::idx($e['lados'][$dono]['mesa'], (int) $p['atk']);
+                if ($ka < 0) {
+                    return $e;
+                }
+                $a = $e['lados'][$dono]['mesa'][$ka];
+                $forcados = (array) ($e['ataque']['forcados'] ?? []);
+                if (!str_starts_with((string) $p['alvo'], 'inst:')) {
+                    $ops = [];
+                    foreach ($e['lados'][$defensor]['mesa'] as $b) {
+                        if (empty($b['virada']) && !isset($forcados[(int) $b['i']]) && !self::naoBloqueia($e, $a, $b)) {
+                            $ops[] = (int) $b['i'];
+                        }
+                    }
+
+                    return self::pedir($e, $p, $dono, 'lenda', $ops, "$fonte (Desafiador): escolha a Lenda de " . self::quem($e, $defensor) . ' que é obrigada a bloqueá-la');
+                }
+                $bi = (int) substr($p['alvo'], 5);
+                $kb = self::idx($e['lados'][$defensor]['mesa'], $bi);
+                if ($kb < 0) {
+                    return $e;
+                }
+                $bloqueios = (array) $e['ataque']['bloqueios'];
+                $bloqueios[$bi] = (int) $p['atk'];
+                $forcados[$bi] = (int) $p['atk'];
+                $e['ataque']['bloqueios'] = (object) $bloqueios;
+                $e['ataque']['forcados'] = (object) $forcados;
+                self::log($e, "$fonte desafiou " . self::nomeLenda($e, $e['lados'][$defensor]['mesa'][$kb]) . ', que é obrigada a bloqueá-la.');
 
                 return $e;
             case 'organizar': // Organizador do torneio: soma o ataque dele a uma das duas Lendas da batalha
