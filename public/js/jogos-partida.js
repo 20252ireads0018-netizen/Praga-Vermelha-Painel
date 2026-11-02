@@ -35,6 +35,26 @@
             if (ev.key === 'Escape' && pagina.classList.contains('gl-foco') && !document.fullscreenElement && !box.querySelector('.gl-modal')) foco(false);
         });
     }
+    // Gladio: sair da mesa leva a partida para a miniatura do site (public/js/jogos-mini.js), que segue nas outras páginas.
+    // "← Jogos da campanha" a deixa recolhida; "⇲ Miniatura" volta para a página de antes com a mesa já expandida nela.
+    const idPartida = +((String(C.url.acao).match(/\/partidas\/(\d+)/) || [])[1] || 0);
+    const paraMiniatura = aberta => {
+        try {
+            const st = JSON.parse(localStorage.getItem('jg-mini') || '{}');
+            st.fechada = st.fechada === idPartida ? null : st.fechada;
+            st.aberta = aberta ? idPartida : (st.aberta === idPartida ? null : st.aberta);
+            localStorage.setItem('jg-mini', JSON.stringify(st));
+        } catch (_) { /* sem armazenamento: a miniatura aparece recolhida */ }
+    };
+    const jogandoAqui = () => D.jogo === 'gladio' && D.lado && D.status === 'andamento' && !(D.estado && D.estado.fim);
+    const voltar = document.querySelector('#jg-partida .camp-voltar');
+    if (voltar) voltar.addEventListener('click', () => { if (jogandoAqui()) paraMiniatura(false); });
+    const botaoMini = document.getElementById('jg-miniatura');
+    if (botaoMini) botaoMini.addEventListener('click', () => {
+        paraMiniatura(true);
+        const antes = document.referrer && document.referrer.startsWith(location.origin) && !document.referrer.includes('/partidas/' + idPartida) ? document.referrer : C.url.lobby;
+        location.href = antes;
+    });
     // mestre: pausa ou retoma o Gladio
     const botaoPausa = document.getElementById('jg-pausar');
     if (botaoPausa) botaoPausa.addEventListener('click', () => acao({ acao: botaoPausa.dataset.acao || 'pausar' }));
@@ -366,6 +386,8 @@
             renderModal(M);
 
         // status no topo
+        const bm = document.getElementById('jg-miniatura');
+        if (bm) bm.hidden = !jogandoAqui();
         // botão do mestre: pausar / retomar
         const bp = document.getElementById('jg-pausar');
         if (bp) {

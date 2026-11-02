@@ -851,3 +851,4 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .pv-mini .pv-main { padding: 0; margin: 0; }
 .gl-mini-mesa #jg-tela-cheia { display: none; }
 .gl-mini-mesa .jg-topo--partida h1 { font-size: .95rem; }
+.gl-mini-mesa #jg-miniatura { display: none; }
