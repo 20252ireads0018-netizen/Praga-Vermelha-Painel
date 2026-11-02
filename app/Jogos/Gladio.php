@@ -2751,6 +2751,11 @@ class Gladio
                         self::log($e, "$fonte: $quem perdeu $n de energia.");
                         break;
                     }
+                    if ($n <= 0) { // "X, onde X é…" deu 0 (Robertinho sozinho na mesa)
+                        unset($L);
+                        self::log($e, "$fonte: $quem não ganhou energia (X = 0).");
+                        break;
+                    }
                     $L['energia'] = min(self::ENERGIA_LIMITE, $L['energia'] + $n);
                     if (!empty($p['max'])) { // "ganhe 1 aura total": a máxima também sobe
                         $L['energiaMax'] = min(self::ENERGIA_LIMITE, $L['energiaMax'] + $n);
