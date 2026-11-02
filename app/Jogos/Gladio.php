@@ -712,6 +712,9 @@ class Gladio
         array_splice($e['lados'][$lado][$zona], $k, 1);
         $e['lados'][$lado]['energia'] -= $custo;
         $inst = (int) $naMao['i'];
+        if (self::olhosCancelam($e, $lado, $inst, $id)) {
+            return self::seguir($e);
+        }
 
         if ($carta['tipo'] === 'lenda') {
             $e['lados'][$lado]['mesa'][] = self::novaLenda($e, $id, $inst);
@@ -748,22 +751,6 @@ class Gladio
         self::bravura($e, $lado);
         if ($custo === 2) { // Trinkt: "sempre que você gastar exatamente 2 em aura para um feitiço"
             self::sinal($e, 'gasto2', ['lado' => $lado, 'i' => $inst]);
-        }
-        // Olhos de Rarakoara: as próximas cartas conjuradas pelo jogador marcado são canceladas
-        foreach (self::vivos($e) as $l) {
-            foreach ($e['lados'][$l]['feiticos'] as $kf => $f) {
-                if (($f['jog'] ?? null) === $lado && (int) ($f['mk']['cancela'] ?? 0) > 0) {
-                    $e['lados'][$l]['feiticos'][$kf]['mk']['cancela']--;
-                    self::cem($e, $lado, ['i' => $inst, 'c' => $id]);
-                    self::log($e, "$quem conjurou $nome, mas " . self::nome($e, $f['c']) . ' cancelou.');
-                    if ($e['lados'][$l]['feiticos'][$kf]['mk']['cancela'] <= 0) {
-                        array_splice($e['lados'][$l]['feiticos'], $kf, 1);
-                        self::cem($e, $l, $f);
-                    }
-
-                    return self::seguir($e);
-                }
-            }
         }
         $banir = $zona === 'cemiterio' ? ['banir' => true] : [];
 

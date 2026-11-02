@@ -377,6 +377,18 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame([], $e['lados']['a']['feiticos'], 'Olhos vão para o cemitério depois das duas');
         $e = $this->joga($e, 'b', 'tiro');
         $this->assertSame('qualquer', $e['escolha']['tipo']);
+
+        // Lendas também são canceladas
+        $e = $this->mesa(['olhos' => ['nome' => 'Olhos de Rarakoara', 'tipo' => 'encanto', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                        'descricao' => 'As próximas duas cartas conjuradas pelo jogador alvo são canceladas.']]);
+        $e = $this->joga($e, 'a', 'olhos');
+        $e = Gladio::escolher($e, 'a', 'j:b');
+        $e = Gladio::passar($e, 'a');
+        $e['lados']['b']['energia'] = 20;
+        $e = $this->joga($e, 'b', 'x');
+        $this->assertSame([], $e['lados']['b']['mesa'], 'a Lenda foi cancelada');
+        $this->assertSame(['x'], array_column($e['lados']['b']['cemiterio'], 'c'));
+        $this->assertSame(1, $e['lados']['a']['feiticos'][0]['mk']['cancela'], 'falta cancelar uma');
     }
 
     public function test_caveirao_pede_sacrificio_e_amir_vence_em_3_ataques_diretos(): void

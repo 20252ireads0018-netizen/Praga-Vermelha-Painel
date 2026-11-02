@@ -1072,6 +1072,33 @@ trait GladioRegras
         return self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst, 'c' => $c]);
     }
 
+    /**
+     * Olhos de Rarakoara: a carta que o jogador marcado jogou (Lenda, feitiço, encantamento, equipamento ou resposta) é
+     * cancelada e vai para o cemitério sem efeito. Depois de cancelar as duas, os Olhos vão para o cemitério.
+     */
+    private static function olhosCancelam(array &$e, string $lado, int $inst, string $id): bool
+    {
+        foreach (self::vivos($e) as $l) {
+            foreach ($e['lados'][$l]['feiticos'] as $kf => $f) {
+                if (($f['jog'] ?? null) !== $lado || (int) ($f['mk']['cancela'] ?? 0) <= 0) {
+                    continue;
+                }
+                $e['lados'][$l]['feiticos'][$kf]['mk']['cancela']--;
+                self::cem($e, $lado, ['i' => $inst, 'c' => $id]);
+                self::brilho($e, 'efeito', $l, $f['c'], (int) $f['i']);
+                self::log($e, self::quem($e, $lado) . ' jogou ' . self::nome($e, $id) . ', mas ' . self::nome($e, $f['c']) . ' cancelou.');
+                if ($e['lados'][$l]['feiticos'][$kf]['mk']['cancela'] <= 0) {
+                    array_splice($e['lados'][$l]['feiticos'], $kf, 1);
+                    self::cem($e, $l, $f);
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** A Lenda está protegida neste turno (Aporium: "não pode sofrer dano este turno"): não sofre dano nem é destruída. */
     private static function protegida(array $e, array $m): bool
     {
@@ -1150,6 +1177,11 @@ trait GladioRegras
             $carta = $e['lados'][$lado]['mao'][$k];
             $e['lados'][$lado]['energia'] -= self::custoDe($e, $lado, $carta['c'], $carta);
             array_splice($e['lados'][$lado]['mao'], $k, 1);
+            if (self::olhosCancelam($e, $lado, (int) $carta['i'], $carta['c'])) {
+                $e['pilha'] = $p; // a resposta não acontece: os outros ainda podem responder
+
+                return self::pedirResposta($e);
+            }
             self::cem($e, $lado, $carta);
             self::brilho($e, 'conjurou', $lado, $carta['c'], (int) $valor);
             self::bravura($e, $lado);
