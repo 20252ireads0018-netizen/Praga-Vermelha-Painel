@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 /** Cartas do lote 2 (ids 156–208 de produção): cada uma aplica o próprio texto. */
 class GladioCartasNovasTest extends TestCase
 {
+    use GladioVidaDaAposta;
+
     private int $seq = 7000;
 
     private const BASE = [
@@ -24,7 +26,7 @@ class GladioCartasNovasTest extends TestCase
     private function mesa(array $cartas): array
     {
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar(self::BASE + $cartas, 99, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
+        $e = $this->iniciar(self::BASE + $cartas, 99, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
         foreach (['a', 'b'] as $l) {
             $e['lados'][$l]['mao'] = [];
             $e['lados'][$l]['energia'] = 20;

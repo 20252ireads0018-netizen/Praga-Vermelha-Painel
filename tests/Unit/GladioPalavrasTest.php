@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 /** Pressa, Desafiador e as palavras-chave do Magic (Imbloqueável, Sombra, Furtividade, Flanquear, Exaltado…). */
 class GladioPalavrasTest extends TestCase
 {
+    use GladioVidaDaAposta;
+
     private int $seq = 5000;
 
     private const CARTAS = [
@@ -17,7 +19,7 @@ class GladioPalavrasTest extends TestCase
 
     private function novo(): array
     {
-        $e = Gladio::iniciar(self::CARTAS, 99, ['a' => array_fill(0, 20, 'x'), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a);
+        $e = $this->iniciar(self::CARTAS, 99, ['a' => array_fill(0, 20, 'x'), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a);
         foreach (['a', 'b'] as $l) {
             $e['lados'][$l]['mesa'] = [];
             $e['lados'][$l]['energia'] = 10;
@@ -61,7 +63,7 @@ class GladioPalavrasTest extends TestCase
     {
         $this->assertSame('Pressa', Gladio::PALAVRAS['impeto']);
         $cartas = self::CARTAS + ['p' => ['nome' => 'Veloz', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1, 'palavras' => 'impeto', 'descricao' => '']];
-        $e = Gladio::iniciar($cartas, 0, ['a' => array_fill(0, 20, 'x'), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a);
+        $e = $this->iniciar($cartas, 0, ['a' => array_fill(0, 20, 'x'), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a);
         $e['lados']['a']['mao'][] = ['i' => 990, 'c' => 'p'];
         $e = Gladio::jogar($e, 'a', 990);
         $this->assertTrue(end($e['lados']['a']['mesa'])['pode'], 'com Pressa ataca no turno em que entra');

@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 /** As cartas de produção com roteiro (GladioRoteiro): cada uma aplica no tabuleiro o que o texto diz. */
 class GladioRoteiroTest extends TestCase
 {
+    use GladioVidaDaAposta;
+
     private int $seq = 5000;
 
     private const BASE = [
@@ -18,7 +20,7 @@ class GladioRoteiroTest extends TestCase
     private function mesa(array $cartas): array
     {
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar(self::BASE + $cartas, 99, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
+        $e = $this->iniciar(self::BASE + $cartas, 99, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
         foreach (['a', 'b'] as $l) {
             $e['lados'][$l]['mao'] = [];
             $e['lados'][$l]['energia'] = 20;
@@ -77,7 +79,7 @@ class GladioRoteiroTest extends TestCase
     public function test_mulligan_troca_a_mao_e_poe_cartas_no_fundo_antes_de_comecar(): void
     {
         $deck = array_merge(array_fill(0, 10, 'x'), array_fill(0, 10, 'tiro'));
-        $e = Gladio::abrirMulligan(Gladio::iniciar(self::BASE, 50, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']));
+        $e = Gladio::abrirMulligan($this->iniciar(self::BASE, 50, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']));
         $this->assertSame('mulligan', $e['fase']);
         try {
             Gladio::passar($e, 'a');
@@ -103,7 +105,7 @@ class GladioRoteiroTest extends TestCase
     {
         $cartas = self::BASE + ['aguinha' => ['nome' => 'Aguinha', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1, 'palavras' => '', 'descricao' => '', 'limite' => 1]];
         $cartas['tiro']['limite'] = 0;
-        $e = Gladio::iniciar($cartas, 50, ['a' => null, 'b' => null], fn ($a) => $a);
+        $e = $this->iniciar($cartas, 50, ['a' => null, 'b' => null], fn ($a) => $a);
         $todas = array_merge(...array_values(array_map(fn ($l) => array_column(array_merge($l["baralho"], $l["mao"], $l["comando"]), "c"), $e["lados"])));
         $this->assertNotContains('tiro', $todas, 'banida não entra no deck sorteado');
         $this->assertSame(1, count(array_filter(array_column(array_merge($e['lados']['a']['baralho'], $e['lados']['a']['mao'], $e['lados']['a']['comando']), 'c'), fn ($c) => $c === 'aguinha')));
@@ -125,13 +127,14 @@ class GladioRoteiroTest extends TestCase
         $this->joga($e, 'a', 'x');
     }
 
-    public function test_aposta_multiplica_poder_e_vida_das_cartas(): void
+    public function test_vida_padrao_de_40_e_aposta_nao_muda_as_cartas(): void
     {
-        $this->assertSame([1, 1, 2, 4, 6], array_map([Gladio::class, 'multiplicador'], [0, 99, 100, 250, 300]));
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar(self::BASE, 200, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
-        $this->assertSame([4, 4, 0], [$e['cartas']['x']['ataque'], $e['cartas']['x']['vida'], $e['cartas']['tiro']['ataque']]);
-        $this->assertSame(200, $e['lados']['a']['vida'], 'a vida do jogador continua sendo a aposta');
+        foreach ([0, 50, 300] as $aposta) {
+            $e = Gladio::iniciar(self::BASE, $aposta, ['a' => $deck, 'b' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x']);
+            $this->assertSame([40, 40, 40, 80], [$e['lados']['a']['vida'], $e['lados']['a']['max'], $e['lados']['b']['vida'], $e['total']], "aposta $aposta");
+            $this->assertSame([1, 1], [$e['cartas']['x']['ataque'], $e['cartas']['x']['vida']], 'sem multiplicador de aposta');
+        }
     }
 
     public function test_lesma_da_vida_pela_mao_e_bob_da_toque_aos_hexomantes(): void
@@ -521,7 +524,7 @@ class GladioRoteiroTest extends TestCase
             'fe' => $c('Bola', 'feitico', ''),
         ];
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar($cartas, 0, ['a' => $deck, 'b' => $deck], fn ($a) => $a, ['a' => 'Ana', 'b' => 'Bia'], ['a' => 'x', 'b' => 'x']);
+        $e = $this->iniciar($cartas, 0, ['a' => $deck, 'b' => $deck], fn ($a) => $a, ['a' => 'Ana', 'b' => 'Bia'], ['a' => 'x', 'b' => 'x']);
         foreach (['a', 'b'] as $l) {
             if ($e['fase'] === 'mulligan') {
                 $e = Gladio::manter($e, $l, []);
@@ -544,7 +547,7 @@ class GladioRoteiroTest extends TestCase
             'x' => $c('Soldado', 'lenda', ''),
             'fa' => $c('Fantasma das paredes', 'encanto', 'Essa carta pode ser seu comandante, mesmo sendo um encantamento. Toda vez que um jogador Mill, ele mila o dobro de cartas. Sempre que um jogador Mill, uma vez por turno, compre uma carta.', 3),
         ];
-        $e = Gladio::iniciar($cartas, 0, ['a' => array_merge(['fa'], array_fill(0, 19, 'x')), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a,
+        $e = $this->iniciar($cartas, 0, ['a' => array_merge(['fa'], array_fill(0, 19, 'x')), 'b' => array_fill(0, 20, 'x')], fn ($a) => $a,
             ['a' => 'Ana', 'b' => 'Bia'], ['a' => 'fa', 'b' => 'x']);
         foreach (['a', 'b'] as $l) {
             if ($e['fase'] === 'mulligan') {
@@ -602,7 +605,7 @@ class GladioRoteiroTest extends TestCase
                 'descricao' => 'No início de seu turno, pague 5 em aura, caso contrário, perca essa carta. Toda vez que uma lenda sua atacar, ataque todas as lendas de todos os inimigos'],
         ];
         $deck = array_fill(0, 20, 'x');
-        $e = Gladio::iniciar($cartas, 0, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x', 'c' => 'x']);
+        $e = $this->iniciar($cartas, 0, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x', 'c' => 'x']);
         $e['lados']['a']['energia'] = 20;
         $e = $this->joga($e, 'a', 'mundo');
         [$e, $big] = $this->poe($e, 'a', 'big');
@@ -616,7 +619,7 @@ class GladioRoteiroTest extends TestCase
         $e = Gladio::defender($e, 'b');
         $this->assertSame([[], []], [$e['lados']['b']['mesa'], $e['lados']['c']['mesa']], 'as do atacado e as do outro inimigo caíram');
         $this->assertSame(5, $this->m($e, 'a', $big)['vida'], 'e as cinco revidaram');
-        $this->assertSame([30, 30], [$e['lados']['b']['vida'], $e['lados']['c']['vida']], 'com Lendas para atacar, ninguém leva dano direto');
+        $this->assertSame([Gladio::VIDA, Gladio::VIDA], [$e['lados']['b']['vida'], $e['lados']['c']['vida']], 'com Lendas para atacar, ninguém leva dano direto');
     }
 
     public function test_aporium_passa_para_o_atacado_e_cobra_no_fim_do_turno(): void

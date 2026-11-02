@@ -221,7 +221,7 @@
         const vida = lado => {
             const l = L[lado];
             const pct = Math.max(0, Math.min(100, (l.vida / (l.max || 1)) * 100));
-            return `<div class="gl-vida" title="Vida${D.aposta ? ' (Dinheiro apostado)' : ''}"><span style="width:${pct}%"></span><b>${D.aposta ? '💰 ' : '❤ '}${Math.max(0, l.vida)} / ${l.max}</b></div>`;
+            return `<div class="gl-vida" title="Pontos de vida"><span style="width:${pct}%"></span><b>❤ ${Math.max(0, l.vida)} / ${l.max}</b></div>`;
         };
         const comandoBotao = lado => {
             const x = (L[lado].comando || [])[0];
@@ -339,9 +339,9 @@
         }
         const pote = e.pote || 0;
         const centro = `<div class="gl-centro">` +
-            `<div class="gl-pote" title="${D.aposta ? 'Todo Dinheiro perdido até agora: o vencedor leva o pote inteiro' : 'Pontos de vida perdidos até agora (amistoso)'}">` +
+            `<div class="gl-pote" title="${D.aposta ? 'Aposta de todos: o vencedor leva o pote inteiro. As moedas mostram a vida já perdida na mesa' : 'Pontos de vida perdidos até agora (amistoso)'}">` +
                 `<span class="gl-moedas" aria-hidden="true">${'<i></i>'.repeat(Math.min(6, 1 + Math.floor(pote / Math.max(1, (e.total || 30) / 6))))}</span>` +
-                `<span><small>Pote</small><b>${D.aposta ? '💰 ' : ''}${pote.toLocaleString('pt-BR')}</b></span></div>` +
+                `<span><small>Pote</small><b>${D.aposta ? '💰 ' + (D.aposta * ordem.length).toLocaleString('pt-BR') : '❤ ' + pote.toLocaleString('pt-BR')}</b></span></div>` +
             `<div class="gl-centro-acoes"><span class="gl-turno">Turno ${e.turno}</span>${fases(e, ativo)}${relogio(M)}${acoes}</div>` +
             `</div>`;
 

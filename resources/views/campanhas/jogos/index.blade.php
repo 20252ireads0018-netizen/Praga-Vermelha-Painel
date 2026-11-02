@@ -25,7 +25,7 @@
             <div class="jg-col">
                 <section class="camp-card">
                     <div class="camp-card-cab"><h2>Desafiar no Gladio</h2></div>
-                    <p class="camp-dica">De 2 a 6 jogadores, todos contra todos. A aposta vira a vida de cada um e sai do Dinheiro de todos quando a partida começa; toda vida perdida vai para o pote no centro da mesa e o último de pé leva tudo. Aposta 0 é amistoso (30 de vida, sem Dinheiro).</p>
+                    <p class="camp-dica">De 2 a 6 jogadores, todos contra todos. Todos começam com 40 de vida. A aposta sai do Dinheiro de todos quando a partida começa e o último de pé leva tudo. Aposta 0 é amistoso (sem Dinheiro).</p>
                     <form class="camp-form jg-desafio" data-jogo="gladio">
                         <label>Oponente
                             <select name="convidado_id" class="jg-oponente"></select>

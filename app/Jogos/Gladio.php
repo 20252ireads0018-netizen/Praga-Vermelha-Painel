@@ -6,8 +6,9 @@ namespace App\Jogos;
  * Gladio: duelo de cartas criadas pelo mestre, com regras parecidas com Magic: The Gathering e apostas.
  * De 2 a 6 jogadores, todos contra todos, em roda; o último de pé vence e leva o pote.
  *
- * - A vida de cada jogador é o Dinheiro apostado (amistoso, sem aposta: 30 de vida). Toda vida perdida vai para o
- *   pote no centro da mesa (pote = total apostado − vida que ainda resta a quem está de pé).
+ * - Todos começam com VIDA (40) pontos de vida, com ou sem aposta. A aposta é só o prêmio: sai do Dinheiro de cada um
+ *   quando a partida começa e o vencedor leva tudo. Toda vida perdida vai para o pote de vida no centro da mesa
+ *   (pote = vida inicial de todos − vida que ainda resta a quem está de pé).
  * - Cada um joga com o próprio deck (ou 20 cartas sorteadas do catálogo) e começa com 5 cartas na mão.
  * - Turno: a energia máxima de quem joga sobe 1 (até 10) e recarrega, as Lendas dele ficam prontas e ele compra 1
  *   (quem começa não compra no primeiro turno). Overdeck: quem precisa comprar com o baralho vazio perde a partida.
@@ -104,7 +105,8 @@ class Gladio
     public const MAO_MAX = 10;      // comprando com a mão cheia, a carta vai para o cemitério
     public const MAO_FIM = 7;       // no fim do turno, quem joga descarta até ficar com isso
     public const ENERGIA_MAX = 10;
-    public const VIDA_AMISTOSO = 30;
+    public const VIDA = 40;          // pontos de vida de cada jogador, apostando ou não
+    public const VIDA_AMISTOSO = self::VIDA;
     public const TAXA_COMANDANTE = 2; // custo extra por vez que o comandante já saiu da zona de comando
     public const ENERGIA_LIMITE = 99; // teto da energia ajustada à mão
     public const MESA_MAX = 100;      // Lendas (criaturas e fichas) na mesa de cada jogador
@@ -137,21 +139,13 @@ class Gladio
 
             return $a;
         };
-        // aposta alta, cartas mais fortes: poder e vida base de Lendas e Equipamentos x2 a cada 100$ apostados
-        $mult = self::multiplicador($aposta);
-        foreach ($cartas as $id => $c) {
-            if (in_array($c['tipo'] ?? '', ['lenda', 'equipo'], true)) {
-                $cartas[$id]['ataque'] = (int) ($c['ataque'] ?? 0) * $mult;
-                $cartas[$id]['vida'] = (int) ($c['vida'] ?? 0) * $mult;
-            }
-        }
         $n = max(2, min(self::MAX_JOGADORES, count($decks)));
         $ordem = array_slice(self::LADOS, 0, $n);
-        $vida = $aposta > 0 ? $aposta : self::VIDA_AMISTOSO;
+        $vida = self::VIDA;
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
               'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
               'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n,
-              'atacou' => false, 'desde' => time(), 'ev' => [], 'atrasos' => [], 'pilha' => null, 'mult' => $mult];
+              'atacou' => false, 'desde' => time(), 'ev' => [], 'atrasos' => [], 'pilha' => null];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -200,7 +194,7 @@ class Gladio
         $e['lados']['a']['energiaMax'] = 1;
         $e['lados']['a']['energia'] = 1;
         $e['log'] = [];
-        self::log($e, 'A partida começou com ' . $n . ' jogadores.' . ($mult > 1 ? " Aposta de $aposta: poder e vida das cartas x$mult." : ''));
+        self::log($e, 'A partida começou com ' . $n . ' jogadores.' . ($aposta > 0 ? " Aposta de $aposta de cada um: o vencedor leva tudo." : ''));
         $e['iniciado'] = true; // daqui em diante compras e mortes disparam gatilhos
 
         return $e;
@@ -210,12 +204,6 @@ class Gladio
     public static function podeComandar(array $carta): bool
     {
         return ($carta['tipo'] ?? '') === 'lenda' || !empty(GladioRoteiro::de($carta['descricao'] ?? '')['cmd']);
-    }
-
-    /** Multiplicador do poder e da vida base das cartas: x2 a cada 100$ apostados (100 = x2, 200 = x4, 300 = x6…). */
-    public static function multiplicador(int $aposta): int
-    {
-        return max(1, 2 * intdiv(max(0, $aposta), 100));
     }
 
     /** Estado salvo por uma versão antiga do jogo (2 jogadores, sem shots nem feitiços no campo): completa o que falta. */

@@ -7,6 +7,8 @@ use PHPUnit\Framework\TestCase;
 
 class GladioTest extends TestCase
 {
+    use GladioVidaDaAposta;
+
     private const CARTAS = [
         '1' => ['nome' => 'Gladiador', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 2, 'efeito' => null, 'valor' => 0, 'palavras' => ''],
         '2' => ['nome' => 'Bola de fogo', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => 'dano', 'valor' => 4, 'palavras' => ''],
@@ -20,7 +22,7 @@ class GladioTest extends TestCase
     {
         $decks += ['a' => array_fill(0, 20, '1'), 'b' => array_fill(0, 20, '1')];
 
-        return Gladio::iniciar(self::CARTAS, $aposta, $decks, fn ($a) => $a);
+        return $this->iniciar(self::CARTAS, $aposta, $decks, fn ($a) => $a);
     }
 
     private function primeira(array $e, string $lado, string $carta): int
@@ -55,7 +57,7 @@ class GladioTest extends TestCase
         $this->assertSame([1, 0], [$e['lados']['a']['energia'], $e['lados']['b']['energiaMax']]);
         $this->assertSame(Gladio::VIDA_AMISTOSO, $this->novo(0)['lados']['b']['vida']);
         // sem deck: 20 cartas sorteadas do catálogo
-        $s = Gladio::iniciar(self::CARTAS, 0, [], fn ($a) => $a);
+        $s = $this->iniciar(self::CARTAS, 0, [], fn ($a) => $a);
         $this->assertCount(14, $s['lados']['b']['baralho']);
     }
 
@@ -410,7 +412,7 @@ class GladioTest extends TestCase
             'sopro' => ['nome' => 'Sopro', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'efeito' => null, 'valor' => 0,
                         'palavras' => '', 'descricao' => 'Algo que o jogo não entende'],
         ];
-        $e = Gladio::iniciar($cartas, 10, ['a' => array_merge(['mascara', 'sopro'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '1', 'b' => '1']);
+        $e = $this->iniciar($cartas, 10, ['a' => array_merge(['mascara', 'sopro'], array_fill(0, 18, '1')), 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '1', 'b' => '1']);
         $e['lados']['a']['energia'] = 5;
         $e = Gladio::jogar($e, 'a', $this->primeira($e, 'a', 'mascara'));
         $this->assertSame([['Constructo', 2, 2], ['Constructo', 2, 2]],
@@ -429,7 +431,7 @@ class GladioTest extends TestCase
     {
         $deck = array_fill(0, 20, '1');
 
-        return Gladio::iniciar(self::CARTAS, $aposta, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($x) => $x, ['a' => 'Ana', 'b' => 'Bia', 'c' => 'Caio']);
+        return $this->iniciar(self::CARTAS, $aposta, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($x) => $x, ['a' => 'Ana', 'b' => 'Bia', 'c' => 'Caio']);
     }
 
     public function test_tres_jogadores_em_roda_e_ataque_escolhe_o_alvo(): void
@@ -549,7 +551,7 @@ class GladioTest extends TestCase
     public function test_comandante_escolhido_fica_no_comando_e_paga_taxa(): void
     {
         $deck = array_merge(['4'], array_fill(0, 19, '1'));
-        $e = Gladio::iniciar(self::CARTAS, 10, ['a' => $deck, 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '4']);
+        $e = $this->iniciar(self::CARTAS, 10, ['a' => $deck, 'b' => array_fill(0, 20, '1')], fn ($a) => $a, [], ['a' => '4']);
         $a = $e['lados']['a'];
         $this->assertSame(['4'], array_column($a['comando'], 'c'), 'o comandante começa na zona de comando');
         $this->assertNotContains('4', array_column(array_merge($a['mao'], $a['baralho']), 'c'), 'e sai do baralho');
@@ -921,7 +923,7 @@ class GladioTest extends TestCase
         $a = array_merge($a, array_fill(0, 20 - count($a), '1'));
         $b = array_merge($b, array_fill(0, 20 - count($b), '1'));
 
-        return Gladio::iniciar(self::TEXTOS, $aposta, ['a' => $a, 'b' => $b], fn ($x) => $x, [], ['a' => '1', 'b' => '1']);
+        return $this->iniciar(self::TEXTOS, $aposta, ['a' => $a, 'b' => $b], fn ($x) => $x, [], ['a' => '1', 'b' => '1']);
     }
 
     public function test_fases_compra_automatica_limite_de_mao_e_limpeza(): void
