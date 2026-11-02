@@ -116,6 +116,43 @@ class CampanhaJogosTest extends TestCase
         $acao($vez, 'passar')->assertOk();
     }
 
+    public function test_gladio_em_equipes_2v2_divide_o_pote(): void
+    {
+        $caio = User::create(['name' => 'Caio', 'email' => 'caio@t.test', 'password' => 'x']);
+        $this->camp->participantes()->create(['user_id' => $caio->id, 'status' => 'ativo']);
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        foreach ([$this->mestre, $this->ana, $this->bia, $caio] as $u) {
+            JogoCarteira::create(['campanha_id' => $this->camp->id, 'user_id' => $u->id, 'dinheiro' => 10]);
+        }
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 10, 'vagas' => 4, 'equipes' => 3])->assertStatus(422);
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio', 'aposta' => 10, 'vagas' => 4, 'equipes' => 2, 'equipe' => 0])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $entrar = fn (User $u, ?int $eq) => $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/aceitar"), $eq === null ? [] : ['equipe' => $eq]);
+        $entrar($this->bia, null)->assertStatus(422); // precisa escolher a equipe
+        $entrar($this->bia, 1)->assertOk();
+        $r = $entrar($caio, 0)->assertOk();
+        $this->assertSame([['A', ['Ana', 'Caio'], false], ['B', ['Bia'], true]],
+            array_map(fn ($q) => [$q['letra'], $q['nomes'], $q['vaga']], $r->json('partidas.0.equipes')));
+        $entrar($this->mestre, 0)->assertStatus(422); // a A já está completa
+        $entrar($this->mestre, 1)->assertOk(); // lotou: começa
+
+        $p = $p->fresh();
+        $this->assertSame('andamento', $p->status);
+        $this->assertSame([$this->ana->id, $this->bia->id, $caio->id, $this->mestre->id], $p->jogadores(), 'a roda alterna as equipes');
+        $this->assertSame(['a' => 'A', 'b' => 'B', 'c' => 'A', 'd' => 'B'], $p->estado['equipes']);
+        $this->assertSame([40, 40], [$p->estado['lados']['a']['vida'], $p->estado['lados']['d']['vida']]);
+        foreach ([$this->mestre, $this->ana, $this->bia, $caio] as $u) {
+            $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'manter']);
+        }
+        // a equipe B desiste inteira: a A vence e divide o pote de 40
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
+        $this->assertSame('andamento', $p->fresh()->status, 'ainda resta alguém da B');
+        $this->actingAs($this->mestre)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
+        $p = $p->fresh();
+        $this->assertSame(['fim', 'A'], [$p->status, $p->estado['fim']['equipe']]);
+        $this->assertSame([20, 20, 0, 0], [$this->dinheiro($this->ana), $this->dinheiro($caio), $this->dinheiro($this->bia), $this->dinheiro($this->mestre)]);
+    }
+
     private function manterTodos($p): void
     {
         foreach ([$this->mestre, $this->ana, $this->bia] as $u) {

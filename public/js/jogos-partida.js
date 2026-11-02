@@ -145,6 +145,9 @@
     const ver = (c, inst, dono) => ` data-ver="${c == null ? '' : esc(c)}"${inst != null ? ` data-ver-inst="${inst}"` : ''}${dono ? ` data-ver-dono="${dono}"` : ''}`;
     const custoCmd = l => { const x = (l.comando || [])[0]; return x ? (+cartaDef(x.c).custo || 0) + 2 * (l.taxa || 0) : null; };
     const inicialDe = lado => Array.from(nomeDe(lado).replace(/&[^;]+;/g, '').trim())[0] || '?';
+    // partida em equipes: a letra da equipe ao lado do nome (aliados não se atacam)
+    const equipeDe = lado => ((D.estado && D.estado.equipes) || {})[lado] || null;
+    const selo = lado => equipeDe(lado) ? ` <span class="gl-equipe gl-equipe--${equipeDe(lado)}" title="Equipe ${equipeDe(lado)}">${equipeDe(lado)}</span>` : '';
     // custo de uma carta da mão agora: o servidor manda já com os descontos das cartas em jogo
     const custoAgora = (l, x, c) => { const m = (l.extras && l.extras.custos) || {}; return m[x.i] != null ? +m[x.i] : +c.custo; };
     // habilidades de uma carta sua (na mesa ou no cemitério), escritas nela: Josael, Flavinho, Aporium, Silhueta…
@@ -173,7 +176,7 @@
             esperoDefesa: jogo && e.fase === 'defesa' && e.vez === D.lado,
             atacando: ataque.atacantes || [],
             bloqueios: ataque.bloqueios || {},
-            inimigos: ordem.filter(l => l !== eu && !L[l].fora),
+            inimigos: ordem.filter(l => l !== eu && !L[l].fora && !(equipeDe(l) && equipeDe(l) === equipeDe(eu))),
         };
     }
     const tem = (x, p) => (x.pal || []).includes(p);
@@ -288,7 +291,7 @@
             return `<section class="gl-assento${e.vez === lado && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === lado ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}">` +
                 `<div class="gl-assento-cab${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
                     `<span class="gl-avatar">${inicialDe(lado)}</span>` +
-                    `<div class="gl-assento-info"><strong>${nomeDe(lado)}</strong>${vida(lado)}</div>` +
+                    `<div class="gl-assento-info"><strong>${nomeDe(lado)}${selo(lado)}</strong>${vida(lado)}</div>` +
                     `<div class="gl-assento-numeros"><span class="gl-energia" title="Energia">⚡ ${l.energia}/${l.energiaMax}</span>` +
                         `<span title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>${cemiterioBotao(lado)}${comandoBotao(lado)}</div>` +
                     `<div class="gl-assento-shots">${shots(lado, false)}</div>` +
@@ -363,7 +366,7 @@
             : `<div class="gl-mao-op">${'<span class="gl-verso"></span>'.repeat(qtd(l.mao))}</div>`;
         const minhaBarra = `<div class="gl-eu-barra${e.vez === eu && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === eu ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}${alvoOk(eu, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${eu}">` +
             `<span class="gl-avatar">${inicialDe(eu)}</span>` +
-            `<div class="gl-assento-info"><strong>${nomeDe(eu)}${D.lado ? ' <small>(você)</small>' : ''}</strong>${vida(eu)}</div>` +
+            `<div class="gl-assento-info"><strong>${nomeDe(eu)}${selo(eu)}${D.lado ? ' <small>(você)</small>' : ''}</strong>${vida(eu)}</div>` +
             `<span class="gl-energia gl-energia--grande" title="Energia: sobe 1 a cada turno seu">⚡ ${l.energia}/${l.energiaMax}</span>` +
             `<div class="gl-assento-shots">${shots(eu, eu === D.lado)}</div>` +
             `<span class="gl-zona" title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>` +
@@ -398,10 +401,11 @@
         if (D.status === 'cancelada') status('Partida cancelada pelo mestre. As apostas voltaram.');
         else if (e.pausa && !e.fim) status('⏸ <strong>Partida pausada pelo mestre.</strong> O relógio parou e ninguém age até ele retomar.');
         else if (e.fim) {
-            const ganhei = D.lado && e.fim.vencedor === D.lado;
-            status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>` +
+            const time = e.fim.equipe || null;
+            const ganhei = D.lado && (time ? equipeDe(D.lado) === time : e.fim.vencedor === D.lado);
+            status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} ${time ? `Venceu a <strong>equipe ${time}</strong> (${ordem.filter(l => equipeDe(l) === time).map(nomeDe).join(', ')})` : `Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>`}` +
                 (e.fim.motivo === 'overdeck' ? ' (o adversário ficou sem cartas para comprar)' : '') +
-                (D.aposta ? ` · leva o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro` : ''));
+                (D.aposta ? (time ? ` · a equipe divide o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro` : ` · leva o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro`) : ''));
         } else if (D.lado && L[D.lado].fora) status('Você está fora desta partida. Pode continuar assistindo.');
         else if (e.fase === 'mulligan') status(((e.mull || {})[D.lado] || {}).ok === false
             ? '<strong>Mão inicial.</strong> Mantenha ou faça mulligan antes de a partida começar.' : 'Esperando todos decidirem o mulligan.');

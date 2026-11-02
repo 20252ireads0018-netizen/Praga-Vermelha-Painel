@@ -852,3 +852,11 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-mini-mesa #jg-tela-cheia { display: none; }
 .gl-mini-mesa .jg-topo--partida h1 { font-size: .95rem; }
 .gl-mini-mesa #jg-miniatura { display: none; }
+
+/* Gladio em equipes: a letra da equipe ao lado do nome */
+.gl-equipe { display: inline-flex; align-items: center; justify-content: center; min-width: 1.2em; height: 1.2em; padding: 0 .2em; margin-left: .3em;
+    border-radius: 4px; font-size: .72em; font-weight: 800; color: #111; vertical-align: middle; }
+.gl-equipe--A { background: #60a5fa; }
+.gl-equipe--B { background: #f87171; }
+.gl-equipe--C { background: #4ade80; }
+.jg-equipes-mesa { display: flex; flex-wrap: wrap; gap: .25rem .8rem; }

@@ -434,6 +434,28 @@ class GladioTest extends TestCase
         return $this->iniciar(self::CARTAS, $aposta, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($x) => $x, ['a' => 'Ana', 'b' => 'Bia', 'c' => 'Caio']);
     }
 
+    public function test_equipes_aliado_nao_e_alvo_e_vence_a_equipe_que_sobra(): void
+    {
+        $deck = array_fill(0, 20, '1');
+        $e = Gladio::iniciar(self::CARTAS, 0, ['a' => $deck, 'b' => $deck, 'c' => $deck, 'd' => $deck], fn ($x) => $x, [], [],
+            ['a' => 'A', 'b' => 'B', 'c' => 'A', 'd' => 'B']);
+        $e = $this->lendaPronta($e, 'a', '1');
+        $i = end($e['lados']['a']['mesa'])['i'];
+        try {
+            Gladio::atacar($e, 'a', [$i], 'c');
+            $this->fail('não ataca o aliado');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertStringContainsString('adversário', $x->getMessage());
+        }
+        $e = Gladio::atacar($e, 'a', [$i], 'b');
+        $e = Gladio::defender($e, 'b');
+        $e = Gladio::desistir($e, 'b');
+        $this->assertNull($e['fim'], 'a equipe B ainda tem o d');
+        $e = Gladio::desistir($e, 'd');
+        $this->assertSame('A', $e['fim']['equipe']);
+        $this->assertContains($e['fim']['vencedor'], ['a', 'c']);
+    }
+
     public function test_tres_jogadores_em_roda_e_ataque_escolhe_o_alvo(): void
     {
         $e = $this->tres();

@@ -4,7 +4,8 @@ namespace App\Jogos;
 
 /**
  * Gladio: duelo de cartas criadas pelo mestre, com regras parecidas com Magic: The Gathering e apostas.
- * De 2 a 6 jogadores, todos contra todos, em roda; o último de pé vence e leva o pote.
+ * De 2 a 6 jogadores, todos contra todos, em roda; o último de pé vence e leva o pote. Em equipes (2v2, 3v3, 2v2v2),
+ * aliados não se atacam e vence a equipe que sobrar (equipes: lado => 'A' | 'B' | 'C').
  *
  * - Todos começam com VIDA (40) pontos de vida, com ou sem aposta. A aposta é só o prêmio: sai do Dinheiro de cada um
  *   quando a partida começa e o vencedor leva tudo. Toda vida perdida vai para o pote de vida no centro da mesa
@@ -129,7 +130,7 @@ class Gladio
      * $comandantes: [lado => id da carta]; sem escolha (ou se ela não for uma Lenda do deck), uma Lenda do deck sorteada.
      */
     public static function iniciar(array $cartas, int $aposta, array $decks = [], ?callable $embaralhar = null, array $nomes = [],
-                                   array $comandantes = []): array
+                                   array $comandantes = [], array $equipes = []): array
     {
         if (!$cartas) {
             throw new \InvalidArgumentException('O mestre ainda não criou nenhuma carta de Gladio.');
@@ -145,7 +146,8 @@ class Gladio
         $e = ['lados' => [], 'ordem' => $ordem, 'nomes' => [], 'vez' => 'a', 'turno' => 1, 'fase' => 'principal', 'ataque' => null,
               'cartas' => self::lerTextos($cartas), 'hv' => GladioTexto::VERSAO, 'fila' => [], 'escolha' => null,
               'seq' => 0, 'log' => [], 'fim' => null, 'total' => $vida * $n,
-              'atacou' => false, 'desde' => time(), 'ev' => [], 'atrasos' => [], 'pilha' => null];
+              'atacou' => false, 'desde' => time(), 'ev' => [], 'atrasos' => [], 'pilha' => null,
+              'equipes' => $equipes ? array_intersect_key($equipes, array_flip($ordem)) : null];
 
         foreach ($ordem as $lado) {
             $e['nomes'][$lado] = (string) ($nomes[$lado] ?? strtoupper($lado));
@@ -307,7 +309,15 @@ class Gladio
 
     private static function inimigos(array $e, string $lado): array
     {
-        return array_values(array_filter(self::vivos($e), fn ($l) => $l !== $lado));
+        return array_values(array_filter(self::vivos($e), fn ($l) => $l !== $lado && !self::aliados($e, $l, $lado)));
+    }
+
+    /** Mesma equipe (partida em equipes). */
+    private static function aliados(array $e, string $a, string $b): bool
+    {
+        $eq = $e['equipes'] ?? null;
+
+        return $eq && isset($eq[$a], $eq[$b]) && $eq[$a] === $eq[$b];
     }
 
     /** Próximo lado vivo depois de $lado, na roda. */
@@ -459,15 +469,17 @@ class Gladio
             $e['fase'] = 'principal';
         }
         $vivos = self::vivos($e);
-        if (count($vivos) === 1) {
+        // em equipes, acaba quando todos os que sobraram são da mesma equipe
+        $equipe = !empty($e['equipes']) ? array_values(array_unique(array_map(fn ($l) => $e['equipes'][$l] ?? $l, $vivos))) : null;
+        if (count($vivos) === 1 || ($equipe && count($equipe) === 1)) {
             $e['fim'] = ['vencedor' => $vivos[0], 'motivo' => match ($motivo) {
                 'desistência' => 'desistencia', '7 shots' => 'shots', 'overdeck' => 'overdeck', default => 'vida',
-            }];
+            }] + ($equipe ? ['equipe' => $equipe[0]] : []);
             $e['fase'] = 'principal';
             $e['ataque'] = null;
             $e['fila'] = [];
             $e['escolha'] = null;
-            self::log($e, self::quem($e, $vivos[0]) . ' venceu a partida.');
+            self::log($e, $equipe ? 'A equipe ' . $equipe[0] . ' venceu a partida.' : self::quem($e, $vivos[0]) . ' venceu a partida.');
         } elseif ($e['vez'] === $lado) {
             $e = self::comecarTurno($e, self::proximo($e, $lado));
         }

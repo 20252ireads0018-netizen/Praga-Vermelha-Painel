@@ -40,6 +40,20 @@
                                 @endfor
                             </select>
                         </label>
+                        <label title="Em equipes, aliados não se atacam e vence a equipe que sobrar; o pote é dividido igualmente entre ela">Formato
+                            <select name="equipes">
+                                <option value="0">Todos contra todos</option>
+                                <option value="2">2 equipes (2v2, 3v3)</option>
+                                <option value="3">3 equipes (2v2v2)</option>
+                            </select>
+                        </label>
+                        <label class="jg-sua-equipe" hidden>Sua equipe
+                            <select name="equipe">
+                                <option value="0">Equipe A</option>
+                                <option value="1">Equipe B</option>
+                                <option value="2">Equipe C</option>
+                            </select>
+                        </label>
                         <label>Seu deck (também ao aceitar)
                             <select name="deck_id" id="jg-deck-escolhido"></select>
                         </label>

@@ -29,6 +29,9 @@ use Illuminate\View\View;
  */
 class CampanhaJogoController extends Controller
 {
+    /** Letras das equipes do Gladio (índice da equipe => letra). */
+    private const LETRAS = ['A', 'B', 'C'];
+
     public const JOGOS = ['gladio', 'pela_dama'];
 
     /* ================================================================== */
@@ -421,6 +424,8 @@ class CampanhaJogoController extends Controller
             'deck_id'      => ['nullable', 'integer'],
             'vagas'        => ['nullable', 'integer', 'min:2', 'max:' . Gladio::MAX_JOGADORES], // Gladio: jogadores na mesa
             'ficha_id'     => ['nullable', 'integer'], // Gladio: apostar o Dinheiro de um personagem (vazio: carteira da campanha)
+            'equipes'      => ['nullable', 'integer', 'in:0,2,3'], // Gladio: 0 todos contra todos; 2 ou 3 equipes do mesmo tamanho
+            'equipe'       => ['nullable', 'integer', 'min:0', 'max:2'], // a equipe de quem cria a mesa
         ]);
         $convidado = !empty($d['convidado_id']) ? (int) $d['convidado_id'] : null;
         if ($convidado !== null && ($convidado === $uid || !$campanha->temMembro($convidado))) {
@@ -444,13 +449,18 @@ class CampanhaJogoController extends Controller
                 return $this->erro($e->getMessage());
             }
             $vagas = (int) ($d['vagas'] ?? 2);
+            $equipes = (int) ($d['equipes'] ?? 0);
+            if ($equipes && ($vagas % $equipes !== 0 || intdiv($vagas, $equipes) < 2)) {
+                return $this->erro('Em equipes, o número de jogadores precisa dividir em equipes iguais de pelo menos 2: 4 ou 6 jogadores para 2 equipes, 6 para 3.');
+            }
             if ($vagas > 2) {
                 $convidado = null; // mesa com várias vagas fica aberta a qualquer um da campanha
             }
             // quem entra na mesa, na ordem da roda, e o deck de cada um (null: 20 sorteadas)
             $config = ['vagas' => $vagas, 'jogadores' => [$uid], 'decks' => [(string) $uid => $deck],
                        'comandantes' => [(string) $uid => $this->comandanteDe($campanha, $uid, $d['deck_id'] ?? null)],
-                       'fichas' => [(string) $uid => $ficha]];
+                       'fichas' => [(string) $uid => $ficha]]
+                + ($equipes ? ['equipes' => $equipes, 'equipe' => [(string) $uid => min($equipes - 1, (int) ($d['equipe'] ?? 0))]] : []);
         } else {
             $ex = json_decode((string) ($d['exercito'] ?? ''), true) ?: PelaDama::exercitoPadrao();
             if ($msg = PelaDama::validarExercito($ex, $this->tiposDe($campanha, $uid))) {
@@ -503,6 +513,16 @@ class CampanhaJogoController extends Controller
                     $ficha = $this->fichaDaAposta($campanha, $uid, $request->input('ficha_id'));
                     if ($p->aposta > $this->saldoDaAposta($campanha, $uid, $ficha)) {
                         throw new \InvalidArgumentException($ficha ? 'Esse personagem não tem Dinheiro suficiente para essa aposta.' : 'Você não tem Dinheiro suficiente para essa aposta.');
+                    }
+                    if ($cfg['equipes']) { // em equipes: entra na escolhida, se ainda houver vaga nela
+                        $eq = (int) $request->input('equipe', -1);
+                        if ($eq < 0 || $eq >= $cfg['equipes']) {
+                            throw new \InvalidArgumentException('Escolha em qual equipe entrar.');
+                        }
+                        if (count(array_keys($cfg['equipe'], $eq, true)) >= intdiv($cfg['vagas'], $cfg['equipes'])) {
+                            throw new \InvalidArgumentException('Essa equipe já está completa.');
+                        }
+                        $cfg['equipe'][(string) $uid] = $eq;
                     }
                     $cfg['jogadores'][] = $uid;
                     $cfg['fichas'][(string) $uid] = $ficha;
@@ -560,8 +580,12 @@ class CampanhaJogoController extends Controller
                 if ((int) $p->jogador1_id !== $uid) {
                     throw new \InvalidArgumentException('Só quem criou a mesa pode começar a partida.');
                 }
-                if (count($this->configMesa($p)['jogadores']) < 2) {
+                $cfgM = $this->configMesa($p);
+                if (count($cfgM['jogadores']) < 2) {
                     throw new \InvalidArgumentException('Espere pelo menos mais um jogador entrar.');
+                }
+                if ($cfgM['equipes'] && count(array_unique($cfgM['equipe'])) < $cfgM['equipes']) {
+                    throw new \InvalidArgumentException('Cada equipe precisa de pelo menos um jogador para começar.');
                 }
                 $this->comecarMesa($campanha, $p);
             });
@@ -582,6 +606,8 @@ class CampanhaJogoController extends Controller
         $cfg['comandantes'] = (array) ($cfg['comandantes'] ?? []);
         $cfg['fichas'] = (array) ($cfg['fichas'] ?? []); // personagem de cada um cuja aposta sai do Dinheiro dele
         $cfg['ocultos'] = array_map('intval', (array) ($cfg['ocultos'] ?? []));
+        $cfg['equipes'] = (int) ($cfg['equipes'] ?? 0); // 0: todos contra todos
+        $cfg['equipe'] = array_map('intval', (array) ($cfg['equipe'] ?? [])); // uid => índice da equipe
         unset($cfg['deck']);
 
         return $cfg;
@@ -595,6 +621,22 @@ class CampanhaJogoController extends Controller
     {
         $cfg = $this->configMesa($p);
         $cartas = $this->catalogo($campanha);
+        if ($cfg['equipes']) { // na roda, as equipes se alternam (A1, B1, A2, B2…)
+            $porEquipe = [];
+            foreach ($cfg['jogadores'] as $quem) {
+                $porEquipe[$cfg['equipe'][(string) $quem] ?? 0][] = $quem;
+            }
+            ksort($porEquipe);
+            $roda = [];
+            for ($k = 0; $k < max(array_map('count', $porEquipe)); $k++) {
+                foreach ($porEquipe as $membros) {
+                    if (isset($membros[$k])) {
+                        $roda[] = $membros[$k];
+                    }
+                }
+            }
+            $cfg['jogadores'] = $roda;
+        }
         $p->config = $cfg;
         if ($p->aposta > 0) { // da ficha vinculada ou da carteira da campanha de cada um
             foreach ($cfg['jogadores'] as $quem) {
@@ -625,7 +667,11 @@ class CampanhaJogoController extends Controller
         $p->config = $cfg;
         $p->jogador2_id = $cfg['jogadores'][1] ?? null;
         // antes do primeiro turno, cada um decide se mantém a mão inicial ou faz mulligan
-        $p->estado = Gladio::abrirMulligan(Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes, array_filter($comandantes)));
+        $equipesLado = [];
+        foreach ($cfg['equipes'] ? $cfg['jogadores'] : [] as $k => $quem) {
+            $equipesLado[Gladio::LADOS[$k]] = self::LETRAS[$cfg['equipe'][(string) $quem] ?? 0];
+        }
+        $p->estado = Gladio::abrirMulligan(Gladio::iniciar($cartas, (int) $p->aposta, $decks, null, $nomes, array_filter($comandantes), $equipesLado));
         $p->status = 'andamento';
         $p->versao = (int) $p->versao + 1;
         $p->save();
@@ -647,7 +693,7 @@ class CampanhaJogoController extends Controller
                     if ($p->jogo === 'gladio' && (int) $p->jogador1_id !== $uid && in_array($uid, $this->configMesa($p)['jogadores'], true)) {
                         $cfg = $this->configMesa($p);
                         $cfg['jogadores'] = array_values(array_diff($cfg['jogadores'], [$uid]));
-                        unset($cfg['decks'][(string) $uid], $cfg['comandantes'][(string) $uid]);
+                        unset($cfg['decks'][(string) $uid], $cfg['comandantes'][(string) $uid], $cfg['equipe'][(string) $uid]);
                         $p->config = $cfg;
                         $p->versao = (int) $p->versao + 1;
                         $p->save();
@@ -894,8 +940,15 @@ class CampanhaJogoController extends Controller
                         // o vencedor leva o pote inteiro: a aposta de todos os jogadores da mesa
                         $k = $venceu === null ? false : array_search($venceu, Gladio::LADOS, true);
                         $vencedorId = $k === false ? null : ($p->jogadores()[$k] ?? null);
-                        if ($p->aposta > 0 && $vencedorId) { // para a ficha que ele vinculou ou para a carteira
-                            $this->moverAposta($campanha, $p, (int) $vencedorId, (int) $p->aposta * count($p->jogadores()));
+                        $time = $e['fim']['equipe'] ?? null;
+                        $ganham = $time === null ? array_filter([$vencedorId]) : array_values(array_filter($p->jogadores(),
+                            fn ($id, $k) => ($e['equipes'][Gladio::LADOS[$k]] ?? null) === $time, ARRAY_FILTER_USE_BOTH));
+                        if ($p->aposta > 0 && $ganham) { // para a ficha que cada um vinculou ou para a carteira
+                            $pote = (int) $p->aposta * count($p->jogadores());
+                            foreach ($ganham as $n => $id) { // em equipe, divide igual (o que sobra da divisão vai para o primeiro)
+                                $parte = intdiv($pote, count($ganham)) + ($n === 0 ? $pote % count($ganham) : 0);
+                                $this->moverAposta($campanha, $p, (int) $id, $parte);
+                            }
                         }
                     } else {
                         // Pela Dama: brancas ('b') é quem criou o desafio; empate não tem vencedor
@@ -1140,6 +1193,11 @@ class CampanhaJogoController extends Controller
                     'j2'        => $nome($p->jogador2_id),
                     'jogadores' => array_values(array_map(fn ($id) => $nome($id), $jogadores)),
                     'vagas'     => $vagas,
+                    'equipes'   => $gladio && $cfg['equipes'] ? array_map(fn ($k) => [
+                        'letra' => self::LETRAS[$k],
+                        'nomes' => array_values(array_map(fn ($id) => $nome($id), array_keys(array_filter($cfg['equipe'], fn ($x) => $x === $k)))),
+                        'vaga'  => $p->status === 'aberta' && count(array_keys($cfg['equipe'], $k, true)) < intdiv($vagas, $cfg['equipes']),
+                    ], range(0, $cfg['equipes'] - 1)) : null,
                     'convidado' => $nome($p->convidado_id),
                     'vencedor'  => $nome($p->vencedor_id),
                     'meu'       => $estou,

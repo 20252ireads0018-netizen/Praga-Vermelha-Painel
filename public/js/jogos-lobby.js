@@ -52,6 +52,7 @@
 
     /* ---------- partidas e Dinheiro ---------- */
     function rotulo(p) {
+        if (p.status === 'aberta' && p.equipes) return `Equipes ${Array(p.equipes.length).fill(p.vagas / p.equipes.length).join('v')} · ${p.jogadores.length}/${p.vagas} jogadores`;
         if (p.status === 'aberta' && p.jogo === 'gladio' && p.vagas > 2) return `Mesa aberta · ${p.jogadores.length}/${p.vagas} jogadores`;
         if (p.status === 'aberta') return p.convidado ? `Aguardando ${esc(p.convidado)}` : 'Aberto a qualquer um';
         if (p.status === 'andamento') return 'Em andamento';
@@ -64,10 +65,15 @@
             const limpar = $(`[data-limpar-partidas="${box.dataset.lista}"]`); // só aparece com partidas terminadas
             if (limpar) limpar.hidden = !lista.some(p => p.status === 'fim' || p.status === 'cancelada');
             box.innerHTML = lista.length ? lista.map(p => {
-                const nomes = (p.jogadores && p.jogadores.length ? p.jogadores : [p.j1, p.j2].filter(Boolean)).map(esc).join(' × ');
+                const nomes = p.equipes // em equipes: quem está em cada uma
+                    ? `<span class="jg-equipes-mesa">${p.equipes.map(q => `<span><span class="gl-equipe gl-equipe--${q.letra}">${q.letra}</span> ${q.nomes.length ? q.nomes.map(esc).join(', ') : '<em>vazia</em>'}</span>`).join('')}</span>`
+                    : (p.jogadores && p.jogadores.length ? p.jogadores : [p.j1, p.j2].filter(Boolean)).map(esc).join(' × ');
                 const aposta = p.jogo === 'gladio' ? (p.aposta ? ` · aposta ${p.aposta}` : ' · amistoso') : '';
                 let botoes = '';
-                if (p.aceitar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}">${p.jogo === 'gladio' && p.vagas > 2 ? 'Entrar' : 'Aceitar'}</button>`;
+                if (p.aceitar && p.equipes) p.equipes.forEach((q, k) => { // escolhe a equipe ao entrar
+                    if (q.vaga) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}" data-equipe="${k}">Entrar na ${q.letra}</button>`;
+                });
+                else if (p.aceitar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}">${p.jogo === 'gladio' && p.vagas > 2 ? 'Entrar' : 'Aceitar'}</button>`;
                 if (p.comecar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-comecar="${p.id}">Começar com ${p.jogadores.length}</button>`;
                 if (p.sair) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-sair="${p.id}">Sair da mesa</button>`;
                 if (p.status === 'andamento' || p.status === 'fim')
@@ -110,6 +116,7 @@
             if (b.dataset.aceitar) {
                 b.disabled = true;
                 const dados = b.dataset.jogo === 'pela_dama' ? { exercito: JSON.stringify(exercito()) } : { deck_id: deckEscolhido(), ficha_id: fichaEscolhida() };
+                if (b.dataset.equipe != null) dados.equipe = b.dataset.equipe;
                 const r = await post(urlPartida(b.dataset.aceitar, 'aceitar'), dados, D.csrf);
                 if (r.comecou === false) { lobby = r; renderPartidas(); msg('Você entrou na mesa. A partida começa quando as vagas encherem ou quando quem criou mandar começar.'); return; }
                 location.href = r.url;
@@ -144,10 +151,23 @@
         } catch (err) { b.disabled = false; falhou(err); }
     });
 
+    // formato em equipes: aparece a escolha da própria equipe (só as que existem no formato)
+    $$('.jg-desafio').forEach(f => {
+        if (!f.equipes) return;
+        f.equipes.addEventListener('change', () => {
+            const n = +f.equipes.value || 0;
+            f.querySelector('.jg-sua-equipe').hidden = !n;
+            [...f.equipe.options].forEach(o => { o.hidden = +o.value >= n; });
+            if (+f.equipe.value >= n) f.equipe.value = '0';
+        });
+    });
     $$('.jg-desafio').forEach(f => f.addEventListener('submit', async e => {
         e.preventDefault();
         const dados = { jogo: f.dataset.jogo, convidado_id: f.convidado_id.value || null };
-        if (f.dataset.jogo === 'gladio') { dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); dados.vagas = f.vagas.value; dados.ficha_id = fichaEscolhida(); }
+        if (f.dataset.jogo === 'gladio') {
+            dados.aposta = f.aposta.value || 0; dados.deck_id = deckEscolhido(); dados.vagas = f.vagas.value; dados.ficha_id = fichaEscolhida();
+            if (f.equipes && +f.equipes.value) { dados.equipes = f.equipes.value; dados.equipe = f.equipe.value; }
+        }
         else {
             const ex = exercito();
             if (ex.filter(t => t === 'rei').length !== 1) return msg('Seu exército precisa de exatamente um Rei.', true);
