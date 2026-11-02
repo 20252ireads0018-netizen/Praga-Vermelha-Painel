@@ -157,6 +157,8 @@
         };
     }
     const tem = (x, p) => (x.pal || []).includes(p);
+    // mesmas regras de Gladio::atacar: pronta, com ataque, sem Defensor e sem nada que a impeça ("não pode mais atacar")
+    const podeAtacar = x => x.pode && x.atk > 0 && !tem(x, 'defensor') && !x.preso && !(x.fl || []).some(f => f === 'silhueta' || f === 'preso_eq');
 
     /* ---------- desenho ---------- */
     function renderGladio() {
@@ -165,7 +167,7 @@
 
         // seleções que deixaram de valer
         if (!minhaVez) { atacantes = []; if (alvo) alvo = null; }
-        atacantes = atacantes.filter(i => L[eu].mesa.some(m => m.i === i && m.pode));
+        atacantes = atacantes.filter(i => L[eu].mesa.some(m => m.i === i && podeAtacar(m)));
         if (!defendo) bloqueador = null;
 
         const alvoOk = (lado, tipo, x) => {
@@ -218,7 +220,7 @@
             if (feitico) {
                 attrs = `data-feitico="${x.i}" data-dono="${lado}"${ver(x.c, x.i, lado)}`;
             } else {
-                if (meu && minhaVez && !e.atacou && x.pode && x.atk > 0 && !tem(x, 'defensor')) cls.push('gl-pode');
+                if (meu && minhaVez && !e.atacou && podeAtacar(x)) cls.push('gl-pode');
                 if (x.virada) cls.push('gl-virada');
                 if (atacantes.includes(x.i)) cls.push('gl-escolhido');
                 if (atacando.includes(x.i)) cls.push('gl-atacando');
