@@ -159,11 +159,33 @@ trait GladioRegras
      * Momentos que a tela anima: 'conjurou' (feitiço, encantamento ou equipamento jogado) e 'efeito' (o texto de uma
      * carta começou a acontecer). Lista curta e numerada: a tela anima os números que ainda não viu.
      */
-    private static function brilho(array &$e, string $t, string $lado, ?string $c, ?int $i): void
+    private static function brilho(array &$e, string $t, string $lado, ?string $c, ?int $i, array $extra = []): void
     {
         $e['brilho_n'] = (int) ($e['brilho_n'] ?? 0) + 1;
-        $e['brilho'][] = ['n' => $e['brilho_n'], 't' => $t, 'lado' => $lado, 'c' => $c, 'i' => $i];
-        $e['brilho'] = array_slice($e['brilho'], -20);
+        $e['brilho'][] = ['n' => $e['brilho_n'], 't' => $t, 'lado' => $lado, 'c' => $c, 'i' => $i] + $extra;
+        $e['brilho'] = array_slice($e['brilho'], -30);
+    }
+
+    /**
+     * 'mira': a tela desenha uma seta da carta que está resolvendo (ou do dono dela) até cada alvo, Lenda ou jogador.
+     * Efeitos que atingem muita coisa (Ruína) não ganham seta para não poluir a mesa.
+     */
+    private static function mirar(array &$e, array $ef, array $lendas, array $jogadores = []): void
+    {
+        if (count($lendas) + count($jogadores) > 5) {
+            return;
+        }
+        $de = isset($ef['i']) ? (int) $ef['i'] : null;
+        foreach ($lendas as $i) {
+            if ((int) $i !== $de) { // a própria carta não mira a si mesma
+                self::brilho($e, 'mira', $ef['lado'], $ef['c'] ?? null, $de, ['para' => (int) $i]);
+            }
+        }
+        foreach ($jogadores as $l) {
+            if ($l !== $ef['lado']) {
+                self::brilho($e, 'mira', $ef['lado'], $ef['c'] ?? null, $de, ['para_lado' => $l]);
+            }
+        }
     }
 
     /* ================================================================== */

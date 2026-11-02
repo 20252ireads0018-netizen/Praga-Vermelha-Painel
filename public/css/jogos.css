@@ -860,3 +860,18 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-equipe--B { background: #f87171; }
 .gl-equipe--C { background: #4ade80; }
 .jg-equipes-mesa { display: flex; flex-wrap: wrap; gap: .25rem .8rem; }
+
+/* setas: quem um efeito mirou e quem ataca/bloqueia quem */
+.gl-setas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 1940; overflow: visible; }
+.gl-seta { fill: none; stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(0, 0, 0, .8)); }
+.gl-seta-ponta { stroke: #111; stroke-width: 1.5; }
+.gl-seta--efeito { stroke: #c084fc; stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: gl-seta-vai .45s ease-out forwards, gl-seta-some 1.7s ease-in forwards; }
+.gl-seta-ponta.gl-seta--efeito { fill: #c084fc; stroke-dasharray: none; animation: gl-seta-some 1.7s ease-in forwards; }
+.gl-seta--ataque { stroke: #f87171; stroke-dasharray: 10 8; animation: gl-seta-marcha .8s linear infinite; opacity: .85; }
+.gl-seta-ponta.gl-seta--ataque { fill: #f87171; stroke-dasharray: none; animation: none; }
+.gl-seta--bloqueio { stroke: #60a5fa; stroke-dasharray: 10 8; animation: gl-seta-marcha .8s linear infinite; opacity: .9; }
+.gl-seta-ponta.gl-seta--bloqueio { fill: #60a5fa; stroke-dasharray: none; animation: none; }
+@keyframes gl-seta-vai { to { stroke-dashoffset: 0; } }
+@keyframes gl-seta-some { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gl-seta-marcha { to { stroke-dashoffset: -18; } }
+@media (prefers-reduced-motion: reduce) { .gl-seta--efeito, .gl-seta--ataque, .gl-seta--bloqueio { animation: none; stroke-dashoffset: 0; } }

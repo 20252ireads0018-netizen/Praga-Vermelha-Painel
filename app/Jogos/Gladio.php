@@ -2476,6 +2476,9 @@ class Gladio
                 $jogadores = self::ladosDo($e, $alvo, $dono) ?? [];
             }
 
+            if (!empty($lendas)) { // a seta do efeito até cada Lenda que ele atinge
+                self::mirar($e, $ef, array_map(fn ($x) => (int) $e['lados'][$x[0]]['mesa'][$x[1]]['i'], $lendas));
+            }
             if ($a === 'equipar') { // o feitiço que está resolvendo fica vinculado à Lenda escolhida
                 [$l, $k] = $lendas[0] ?? [null, null];
                 if ($l !== null && $ef['i'] !== null && self::idx($e['lados'][$dono]['feiticos'], (int) $ef['i']) >= 0) { // em qualquer Lenda (Quente, Controlado, Frio)
@@ -2654,6 +2657,7 @@ class Gladio
 
             return self::pedir($e, $p, $dono, 'jogador', array_map(fn ($l) => 'j:' . $l, $ops), "$fonte: escolha o jogador");
         }
+        self::mirar($e, $ef, [], $lados); // a seta do efeito até cada jogador atingido
         // roubar e trocar de mão: o escolhido é a vítima; quem controla a carta é quem leva
         if ($a === 'roubar' || $a === 'trocamao') {
             foreach ($lados as $l) {

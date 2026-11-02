@@ -1019,9 +1019,64 @@
         const visto = Math.max(0, ...(a.brilho || []).map(x => x.n));
         const novos = (b.brilho || []).filter(x => x.n > visto);
         // o efeito do feitiço que acabou de ser conjurado já aparece junto com ele
-        novos.filter(x => !(x.t === 'efeito' && novos.some(y => y.t === 'conjurou' && y.i === x.i)))
+        novos.filter(x => x.t !== 'mira' && !(x.t === 'efeito' && novos.some(y => y.t === 'conjurou' && y.i === x.i)))
             .slice(-6).forEach((x, k) => setTimeout(() => brilhar(x, slot(x.i)), k * 380));
+        // quem o efeito mirou: uma seta da carta (ou do dono dela) até cada alvo
+        novos.filter(x => x.t === 'mira').slice(-8).forEach((x, k) => setTimeout(() => {
+            const de = (x.i != null && slot(x.i)) || box.querySelector(`[data-heroi="${x.lado}"]`);
+            const para = x.para != null ? slot(x.para) : box.querySelector(`[data-heroi="${x.para_lado}"]`);
+            seta(de, para, 'gl-seta--efeito', 1700);
+        }, 250 + k * 200));
     }
+    /* ---------- setas: de quem para quem ---------- */
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    function centro(el) { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+    /** Seta de el1 até el2 (por cima de tudo). ms: some depois disso; sem ms, fica até ser apagada. */
+    function seta(el1, el2, classe, ms, svg) {
+        if (!el1 || !el2 || el1 === el2) return null;
+        const [x1, y1] = centro(el1), [x2, y2] = centro(el2);
+        if (!svg) {
+            svg = document.createElementNS(SVGNS, 'svg');
+            svg.setAttribute('class', 'gl-setas');
+            camada().appendChild(svg);
+            if (ms) setTimeout(() => svg.remove(), ms);
+        }
+        // termina um pouco antes do centro do alvo, para a ponta não sumir debaixo da carta
+        const d = Math.hypot(x2 - x1, y2 - y1) || 1, recuo = Math.min(28, d / 3);
+        const xf = x2 - (x2 - x1) / d * recuo, yf = y2 - (y2 - y1) / d * recuo;
+        const curva = Math.min(80, d / 4); // um arco suave, para setas paralelas não se sobreporem
+        const mx = (x1 + xf) / 2 - (yf - y1) / d * curva, my = (y1 + yf) / 2 + (xf - x1) / d * curva;
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('d', `M${x1},${y1} Q${mx},${my} ${xf},${yf}`);
+        p.setAttribute('class', 'gl-seta ' + (classe || ''));
+        const ponta = document.createElementNS(SVGNS, 'circle');
+        ponta.setAttribute('cx', xf); ponta.setAttribute('cy', yf); ponta.setAttribute('r', 5);
+        ponta.setAttribute('class', 'gl-seta-ponta ' + (classe || ''));
+        svg.appendChild(p);
+        svg.appendChild(ponta);
+        return svg;
+    }
+    // combate em andamento: atacantes → jogador atacado e bloqueadores → atacante, enquanto a defesa é escolhida
+    let linhasCombate = null;
+    function desenharCombate() {
+        if (linhasCombate) { linhasCombate.remove(); linhasCombate = null; }
+        const e = D.jogo === 'gladio' && D.estado;
+        const at = e && e.ataque;
+        if (!at || !(at.atacantes || []).length || e.fim) return;
+        const s = i => box.querySelector(`.gl-campo [data-slot="${i}"]`);
+        const bloq = at.bloqueios || {};
+        const bloqueados = new Set(Object.values(bloq).map(Number));
+        at.atacantes.forEach(i => {
+            if (!bloqueados.has(+i)) linhasCombate = seta(s(i), box.querySelector(`[data-heroi="${at.defensor}"]`), 'gl-seta--ataque', 0, linhasCombate);
+        });
+        Object.entries(bloq).forEach(([b, a]) => { linhasCombate = seta(s(b), s(a), 'gl-seta--bloqueio', 0, linhasCombate); });
+        if (linhasCombate) linhasCombate.classList.add('gl-setas--combate');
+    }
+    let redesenho = null;
+    const redesenhar = () => { clearTimeout(redesenho); redesenho = setTimeout(desenharCombate, 60); };
+    window.addEventListener('resize', redesenhar);
+    window.addEventListener('scroll', redesenhar, true);
+    document.addEventListener('fullscreenchange', redesenhar);
     function rotulo(el, texto, classe) {
         const r = el.getBoundingClientRect();
         const s = document.createElement('span');
@@ -1064,6 +1119,7 @@
         renderGladio();
         if (foto) animar(estadoAnterior, D.estado, foto);
         estadoAnterior = D.estado;
+        desenharCombate();
         tique();
     }
     box.addEventListener('click', ev => (D.jogo === 'gladio' ? cliqueGladio(ev) : cliquePelaDama(ev)));
