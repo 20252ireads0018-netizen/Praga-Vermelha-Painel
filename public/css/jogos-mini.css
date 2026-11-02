@@ -1,0 +1,29 @@
+/* Miniatura do Gladio: janelinha flutuante que acompanha a partida em andamento por todo o site */
+.jg-mini { position: fixed; right: 16px; bottom: 16px; z-index: 1500; width: min(320px, calc(100vw - 32px)); border-radius: 12px;
+    background: #17101f; color: #f3ecf8; border: 1px solid rgba(250, 204, 21, .25); box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+    font-size: .85rem; overflow: hidden; display: flex; flex-direction: column; }
+.jg-mini[hidden] { display: none; }
+.jg-mini--vez { border-color: #facc15; animation: jg-mini-pulso 2s ease-in-out infinite; }
+@keyframes jg-mini-pulso { 50% { box-shadow: 0 0 0 4px rgba(250, 204, 21, .35), 0 10px 30px rgba(0, 0, 0, .55); } }
+.jg-mini-topo { display: flex; align-items: stretch; gap: 4px; padding: 6px; }
+.jg-mini-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left; background: none; border: 0; color: inherit;
+    cursor: pointer; padding: 2px 4px; font: inherit; }
+.jg-mini-titulo { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jg-mini-status { color: #fde68a; font-weight: 700; }
+.jg-mini--vez .jg-mini-status { color: #facc15; }
+.jg-mini-dados { opacity: .7; font-size: .78rem; }
+.jg-mini-botoes { display: flex; align-items: flex-start; gap: 2px; }
+.jg-mini-botoes > * { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 0;
+    background: rgba(255, 255, 255, .08); color: inherit; text-decoration: none; cursor: pointer; font-size: .95rem; line-height: 1; }
+.jg-mini-botoes > *:hover, .jg-mini-botoes > *:focus-visible { background: rgba(255, 255, 255, .18); }
+.jg-mini-corpo { display: none; }
+/* expandida: a mesa inteira cabe aqui, e dá para puxar o canto para aumentar */
+.jg-mini--aberta { width: min(560px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); resize: both; min-width: 280px; min-height: 260px;
+    max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); animation: none; }
+.jg-mini--aberta .jg-mini-corpo { display: block; flex: 1; min-height: 0; background: #0b0710; }
+.jg-mini-corpo iframe { width: 100%; height: 100%; border: 0; display: block; }
+@media (max-width: 600px) {
+    .jg-mini { right: 8px; bottom: 8px; width: calc(100vw - 16px); }
+    .jg-mini--aberta { height: calc(100vh - 16px); resize: none; }
+}
+@media (prefers-reduced-motion: reduce) { .jg-mini--vez { animation: none; } }

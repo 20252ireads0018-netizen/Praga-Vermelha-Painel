@@ -845,3 +845,9 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
     background: rgba(10, 6, 16, .62); backdrop-filter: blur(2px); text-align: center; padding: 1rem; pointer-events: auto; border-radius: 12px; }
 .gl-pausa b { font-size: 1.6rem; color: #fde68a; }
 .gl-pausa span { max-width: 28rem; font-size: .9rem; opacity: .85; }
+
+/* página da partida dentro da miniatura do site (?mini=1): sem cabeçalho nem rodapé, só a mesa */
+.pv-mini .pv-header, .pv-mini .pv-footer { display: none; }
+.pv-mini .pv-main { padding: 0; margin: 0; }
+.gl-mini-mesa #jg-tela-cheia { display: none; }
+.gl-mini-mesa .jg-topo--partida h1 { font-size: .95rem; }

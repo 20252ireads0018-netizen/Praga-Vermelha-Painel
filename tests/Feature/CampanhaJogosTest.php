@@ -71,6 +71,25 @@ class CampanhaJogosTest extends TestCase
     }
 
     /** Gladio começa no mulligan: quem está na partida mantém a mão inicial. */
+    public function test_miniatura_lista_as_partidas_em_andamento_do_jogador(): void
+    {
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        $this->actingAs($this->ana)->getJson('/campanhas/jogos/ativas')->assertOk()->assertJson(['partidas' => []]);
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p);
+        $vez = $p->fresh()->estado['vez'];
+        $r = $this->actingAs($this->ana)->getJson('/campanhas/jogos/ativas')->assertOk();
+        $this->assertSame([$p->id, $vez === 'a'], [$r->json('partidas.0.id'), $r->json('partidas.0.minha')]);
+        $this->assertStringContainsString("/partidas/{$p->id}", $r->json('partidas.0.url'));
+        $this->actingAs($this->mestre)->getJson('/campanhas/jogos/ativas')->assertOk()->assertJson(['partidas' => []]); // só quem joga
+        // a miniatura aparece nas páginas do site, mas não na própria mesa
+        $this->actingAs($this->ana)->get($this->url())->assertSee('id="jg-mini"', false);
+        $this->actingAs($this->ana)->get($this->url("/partidas/{$p->id}"))->assertDontSee('id="jg-mini"', false);
+        $this->actingAs($this->ana)->get($this->url("/partidas/{$p->id}?mini=1"))->assertSee('pv-mini', false);
+    }
+
     public function test_mestre_pausa_e_retoma_o_gladio(): void
     {
         GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);

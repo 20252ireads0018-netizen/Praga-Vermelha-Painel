@@ -729,6 +729,46 @@ class CampanhaJogoController extends Controller
         return response()->json(['ok' => true] + $this->dadosLobby($campanha));
     }
 
+    /**
+     * Miniatura do Gladio (todas as páginas do site): as partidas em andamento em que o usuário joga, com o resumo
+     * de quem a mesa espera, para ele acompanhar e abrir a mesa sem sair do que está fazendo.
+     */
+    public function ativas(): JsonResponse
+    {
+        $uid = (int) auth()->id();
+        $lista = [];
+        foreach (JogoPartida::where('jogo', 'gladio')->where('status', 'andamento')->latest('updated_at')->limit(50)->get() as $p) {
+            $lado = $p->ladoDe($uid);
+            $e = $p->estado;
+            if (!$lado || !$e || !empty($e['lados'][$lado]['fora'])) {
+                continue;
+            }
+            $e = Gladio::completar($e);
+            $nomes = [];
+            foreach ($p->jogadores() as $k => $id) {
+                $nomes[Gladio::LADOS[$k]] = (string) (User::whereKey($id)->value('name') ?? 'Jogador');
+            }
+            $espera = Gladio::esperando($e);
+            $campanha = Campanha::find($p->campanha_id);
+            $lista[] = [
+                'id'       => (int) $p->id,
+                'v'        => (int) $p->versao,
+                'campanha' => (string) ($campanha->nome ?? ''),
+                'url'      => route('campanhas.jogos.partida', [$p->campanha_id, $p->id]),
+                'minha'    => $espera === $lado && empty($e['pausa']) && ($e['fase'] ?? '') !== 'mulligan',
+                'espera'   => $nomes[$espera] ?? '',
+                'pausa'    => !empty($e['pausa']),
+                'mulligan' => ($e['fase'] ?? '') === 'mulligan',
+                'turno'    => (int) ($e['turno'] ?? 1),
+                'vida'     => (int) ($e['lados'][$lado]['vida'] ?? 0),
+                'mao'      => count($e['lados'][$lado]['mao'] ?? []),
+            ];
+        }
+        usort($lista, fn ($a, $b) => $b['minha'] <=> $a['minha']); // primeiro a que espera por ele
+
+        return response()->json(['partidas' => $lista])->header('Cache-Control', 'no-store');
+    }
+
     public function estado(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
     {
         $this->exigirMembro($campanha);

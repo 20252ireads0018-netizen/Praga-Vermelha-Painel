@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
         // Jogos da campanha: Gladio (cartas e apostas) e Pela Dama (xadrez com peças customizadas)
         Route::get('/{campanha}/jogos', [CampanhaJogoController::class, 'index'])->name('jogos.index');
         Route::get('/{campanha}/jogos/lobby', [CampanhaJogoController::class, 'lobby'])->name('jogos.lobby'); // polling do lobby
+        Route::get('/jogos/ativas', [CampanhaJogoController::class, 'ativas'])->name('jogos.ativas'); // miniatura do Gladio em todo o site
         Route::post('/{campanha}/jogos/dinheiro', [CampanhaJogoController::class, 'dinheiro'])->name('jogos.dinheiro');
         Route::post('/{campanha}/jogos/cartas', [CampanhaJogoController::class, 'salvarCarta'])
             ->middleware('throttle:60,1')->name('jogos.cartas.salvar');

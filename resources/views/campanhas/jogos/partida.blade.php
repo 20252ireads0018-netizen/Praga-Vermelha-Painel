@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ asset('css/campanha.css') }}?v={{ @filemtime(public_path('css/campanha.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/jogos.css') }}?v={{ @filemtime(public_path('css/jogos.css')) }}">
 
-<div class="camp-wrap camp-wrap-larga jg jg-partida-pagina" id="jg-partida">
+<div class="camp-wrap camp-wrap-larga jg jg-partida-pagina{{ request()->boolean('mini') ? ' gl-foco gl-mini-mesa' : '' }}" id="jg-partida">
     <header class="jg-topo jg-topo--partida">
         <a href="{{ route('campanhas.jogos.index', $campanha) }}" class="camp-voltar">← Jogos da campanha</a>
         <h1>{{ $partida->jogo === 'gladio' ? '⚔️ Gladio' : '♛ Pela Dama' }}</h1>

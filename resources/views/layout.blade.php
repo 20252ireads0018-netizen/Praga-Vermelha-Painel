@@ -53,7 +53,7 @@
         }
     </style>
 </head>
-<body class="pv-body">
+<body class="pv-body{{ request()->boolean('mini') ? ' pv-mini' : '' }}">
 
     <header class="pv-header">
         <div class="pv-container pv-header__inner">
@@ -204,11 +204,19 @@
     <main class="pv-main">
         @yield('conteudo')
 
-        @include('partials.anuncio')
+        @unless (request()->boolean('mini')) @include('partials.anuncio') @endunless
 
         <script src="{{ asset('js/script.js') }}"></script>
         @yield('script')
     </main>
+    @auth
+        @if (!request()->boolean('mini') && !request()->routeIs('campanhas.jogos.partida') && \Illuminate\Support\Facades\Route::has('campanhas.jogos.ativas'))
+            {{-- miniatura do Gladio: a partida em andamento acompanha o jogador pelo site --}}
+            <div id="jg-mini" data-url="{{ route('campanhas.jogos.ativas') }}" hidden></div>
+            <link rel="stylesheet" href="{{ asset('css/jogos-mini.css') }}?v={{ @filemtime(public_path('css/jogos-mini.css')) }}">
+            <script src="{{ asset('js/jogos-mini.js') }}?v={{ @filemtime(public_path('js/jogos-mini.js')) }}" defer></script>
+        @endif
+    @endauth
 
     <footer class="pv-footer">
         <div class="pv-container pv-footer__inner">
