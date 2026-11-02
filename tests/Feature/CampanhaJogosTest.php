@@ -133,8 +133,16 @@ class CampanhaJogosTest extends TestCase
         $r = $entrar($caio, 0)->assertOk();
         $this->assertSame([['A', ['Ana', 'Caio'], false], ['B', ['Bia'], true]],
             array_map(fn ($q) => [$q['letra'], $q['nomes'], $q['vaga']], $r->json('partidas.0.equipes')));
+        // antes de começar dá para trocar de equipe, se houver vaga
+        $trocar = fn (User $u, int $eq) => $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/equipe"), ['equipe' => $eq]);
+        $trocar($this->bia, 0)->assertStatus(422); // a A está completa
+        $trocar($caio, 1)->assertOk();
+        $this->assertSame([1, true], [$p->fresh()->config['equipe'][(string) $caio->id], $this->actingAs($caio)->getJson($this->url('/lobby'))->json('partidas.0.equipes.1.minha')]);
+        $trocar($caio, 0)->assertOk(); // e volta
+        $trocar($this->estranho, 1)->assertStatus(403); // quem não é da campanha
         $entrar($this->mestre, 0)->assertStatus(422); // a A já está completa
         $entrar($this->mestre, 1)->assertOk(); // lotou: começa
+        $trocar($caio, 1)->assertStatus(422); // já começou
 
         $p = $p->fresh();
         $this->assertSame('andamento', $p->status);

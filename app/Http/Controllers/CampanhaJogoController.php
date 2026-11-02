@@ -565,6 +565,44 @@ class CampanhaJogoController extends Controller
             + ($comecou ? [] : $this->dadosLobby($campanha)));
     }
 
+    /** Gladio em equipes: quem já está na mesa muda de equipe enquanto ela espera começar (se houver vaga na outra). */
+    public function trocarEquipe(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $this->daCampanha($campanha, $partida);
+        $uid = (int) auth()->id();
+        $eq = (int) $request->validate(['equipe' => ['required', 'integer', 'min:0', 'max:2']])['equipe'];
+        try {
+            DB::transaction(function () use ($partida, $uid, $eq) {
+                $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
+                $cfg = $p->jogo === 'gladio' ? $this->configMesa($p) : null;
+                if (!$cfg || $p->status !== 'aberta' || !$cfg['equipes']) {
+                    throw new \InvalidArgumentException('Essa mesa não está esperando jogadores em equipes.');
+                }
+                if (!in_array($uid, $cfg['jogadores'], true)) {
+                    throw new \InvalidArgumentException('Você não está nessa mesa.');
+                }
+                if ($eq >= $cfg['equipes']) {
+                    throw new \InvalidArgumentException('Essa equipe não existe nesta mesa.');
+                }
+                if (($cfg['equipe'][(string) $uid] ?? null) === $eq) {
+                    return;
+                }
+                if (count(array_keys($cfg['equipe'], $eq, true)) >= intdiv($cfg['vagas'], $cfg['equipes'])) {
+                    throw new \InvalidArgumentException('Essa equipe já está completa.');
+                }
+                $cfg['equipe'][(string) $uid] = $eq;
+                $p->config = $cfg;
+                $p->versao = (int) $p->versao + 1;
+                $p->save();
+            });
+        } catch (\InvalidArgumentException $e) {
+            return $this->erro($e->getMessage());
+        }
+
+        return response()->json(['ok' => true] + $this->dadosLobby($campanha));
+    }
+
     /** Gladio: quem criou a mesa começa a partida antes de encher as vagas (precisa de pelo menos 2 jogadores). */
     public function comecar(Campanha $campanha, JogoPartida $partida): JsonResponse
     {
@@ -1197,6 +1235,7 @@ class CampanhaJogoController extends Controller
                         'letra' => self::LETRAS[$k],
                         'nomes' => array_values(array_map(fn ($id) => $nome($id), array_keys(array_filter($cfg['equipe'], fn ($x) => $x === $k)))),
                         'vaga'  => $p->status === 'aberta' && count(array_keys($cfg['equipe'], $k, true)) < intdiv($vagas, $cfg['equipes']),
+                        'minha' => ($cfg['equipe'][(string) $uid] ?? null) === $k,
                     ], range(0, $cfg['equipes'] - 1)) : null,
                     'convidado' => $nome($p->convidado_id),
                     'vencedor'  => $nome($p->vencedor_id),

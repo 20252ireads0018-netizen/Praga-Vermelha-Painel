@@ -74,6 +74,9 @@
                     if (q.vaga) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}" data-equipe="${k}">Entrar na ${q.letra}</button>`;
                 });
                 else if (p.aceitar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-aceitar="${p.id}" data-jogo="${p.jogo}">${p.jogo === 'gladio' && p.vagas > 2 ? 'Entrar' : 'Aceitar'}</button>`;
+                if (p.meu && p.status === 'aberta' && p.equipes) p.equipes.forEach((q, k) => { // trocar de equipe antes de começar
+                    if (!q.minha && q.vaga) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-trocar-equipe="${p.id}" data-equipe="${k}">Ir para a ${q.letra}</button>`;
+                });
                 if (p.comecar) botoes += `<button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno" data-comecar="${p.id}">Começar com ${p.jogadores.length}</button>`;
                 if (p.sair) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-sair="${p.id}">Sair da mesa</button>`;
                 if (p.status === 'andamento' || p.status === 'fim')
@@ -120,6 +123,10 @@
                 const r = await post(urlPartida(b.dataset.aceitar, 'aceitar'), dados, D.csrf);
                 if (r.comecou === false) { lobby = r; renderPartidas(); msg('Você entrou na mesa. A partida começa quando as vagas encherem ou quando quem criou mandar começar.'); return; }
                 location.href = r.url;
+            } else if (b.dataset.trocarEquipe) {
+                b.disabled = true;
+                lobby = await post(urlPartida(b.dataset.trocarEquipe, 'equipe'), { equipe: b.dataset.equipe }, D.csrf);
+                renderPartidas();
             } else if (b.dataset.comecar) {
                 b.disabled = true;
                 location.href = (await post(urlPartida(b.dataset.comecar, 'comecar'), {}, D.csrf)).url;

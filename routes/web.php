@@ -163,6 +163,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/jogos/partidas/{partida}/aceitar', [CampanhaJogoController::class, 'aceitar'])->name('jogos.aceitar');
         Route::post('/{campanha}/jogos/partidas/{partida}/cancelar', [CampanhaJogoController::class, 'cancelar'])->name('jogos.cancelar');
         Route::post('/{campanha}/jogos/partidas/{partida}/comecar', [CampanhaJogoController::class, 'comecar'])->name('jogos.comecar'); // Gladio: começar antes de encher as vagas
+        Route::post('/{campanha}/jogos/partidas/{partida}/equipe', [CampanhaJogoController::class, 'trocarEquipe'])->name('jogos.equipe'); // Gladio: mudar de equipe antes de começar
         Route::post('/{campanha}/jogos/partidas/{partida}/acao', [CampanhaJogoController::class, 'acao'])
             ->middleware('throttle:120,1')->name('jogos.acao');
 
