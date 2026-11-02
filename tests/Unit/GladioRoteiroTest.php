@@ -594,6 +594,31 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame(3, $this->m($e, 'a', $apo)['vida']);
     }
 
+    public function test_mundo_conjurado_ataca_as_lendas_de_todos_os_inimigos(): void
+    {
+        $cartas = self::BASE + [
+            'big'   => ['nome' => 'Gigante', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 10, 'palavras' => '', 'descricao' => ''],
+            'mundo' => ['nome' => 'Mundo Conjurado', 'tipo' => 'encanto', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'palavras' => '',
+                'descricao' => 'No início de seu turno, pague 5 em aura, caso contrário, perca essa carta. Toda vez que uma lenda sua atacar, ataque todas as lendas de todos os inimigos'],
+        ];
+        $deck = array_fill(0, 20, 'x');
+        $e = Gladio::iniciar($cartas, 0, ['a' => $deck, 'b' => $deck, 'c' => $deck], fn ($a) => $a, [], ['a' => 'x', 'b' => 'x', 'c' => 'x']);
+        $e['lados']['a']['energia'] = 20;
+        $e = $this->joga($e, 'a', 'mundo');
+        [$e, $big] = $this->poe($e, 'a', 'big');
+        foreach (['b' => [801, 802, 803], 'c' => [811, 812]] as $l => $is) {
+            foreach ($is as $i) {
+                $e['lados'][$l]['mesa'][] = ['i' => $i, 'c' => 'x', 'atk' => 1, 'vida' => 1, 'max' => 1, 'pode' => true, 'virada' => false, 'pal' => []];
+            }
+        }
+        $this->assertContains('ataca_todas', $this->m($e, 'a', $big)['fl'], 'o encantamento dá a marca às Lendas do dono');
+        $e = Gladio::atacar($e, 'a', [$big], 'b');
+        $e = Gladio::defender($e, 'b');
+        $this->assertSame([[], []], [$e['lados']['b']['mesa'], $e['lados']['c']['mesa']], 'as do atacado e as do outro inimigo caíram');
+        $this->assertSame(5, $this->m($e, 'a', $big)['vida'], 'e as cinco revidaram');
+        $this->assertSame([30, 30], [$e['lados']['b']['vida'], $e['lados']['c']['vida']], 'com Lendas para atacar, ninguém leva dano direto');
+    }
+
     public function test_aporium_passa_para_o_atacado_e_cobra_no_fim_do_turno(): void
     {
         $e = $this->mesa(['apo' => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 3, 'palavras' => '',

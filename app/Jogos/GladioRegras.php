@@ -524,7 +524,8 @@ trait GladioRegras
             }
         }
         foreach (self::vivos($e) as $l) {
-            foreach ($e['lados'][$l]['mesa'] as $s) {
+            // de Lendas e também de encantamentos/equipamentos no campo (Mundo Conjurado: "toda Lenda sua…")
+            foreach (array_merge($e['lados'][$l]['mesa'], $e['lados'][$l]['feiticos']) as $s) {
                 $ef = ['lado' => $l, 'i' => (int) $s['i'], 'ctx' => null];
                 foreach (self::estDe($e, $s) as $q) {
                     if (!isset($q['q']) || (isset($q['se']) && !self::condicao($e, $ef, $q['se']))) {

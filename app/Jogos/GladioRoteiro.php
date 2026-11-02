@@ -297,7 +297,7 @@ class GladioRoteiro
             'Clone a Lenda alvo para o seu lado do campo' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'clonar'] + $lenda()]]]],
             'Tome controle da lenda alvo' => ['mods' => ['controla' => true, 'alvo' => 'inimigo']],
             'No início de seu turno, pague 5 em aura, caso contrário, perca essa carta. Toda vez que uma lenda sua atacar, ataque todas as lendas de todos os inimigos' => [
-                'est' => [['q' => 'meus', 'fl' => ['ataca_todas']]],
+                'est' => [['q' => 'meus', 'fl' => ['ataca_todas', 'ataca_inimigos']]],
                 'hab' => [['g' => 'inicio_meu', 'passos' => [['a' => 'manter_pagando', 'energia' => 5]]]]],
             'Transforme a propriedade fisiomante ou forma hexomante alvo em outra carta de mesmo tipo que estiver em sua mão' => ['hab' => [['g' => 'conjurar', 'passos' => [
                 ['a' => 'trocar_forma']]]]],

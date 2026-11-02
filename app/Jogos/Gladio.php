@@ -1136,6 +1136,7 @@ class Gladio
             $bloq = array_values(array_filter(array_map(fn ($bi) => self::idx($e['lados'][$lado]['mesa'], $bi), $bsInst), fn ($kb) => $kb >= 0));
             $nomeA = self::nomeLenda($e, $e['lados'][$at]['mesa'][$ka]);
             $todas = self::fl($e['lados'][$at]['mesa'][$ka], 'ataca_todas');
+            $outros = self::fl($e['lados'][$at]['mesa'][$ka], 'ataca_inimigos') ? array_values(array_diff(self::inimigos($e, $at), [$lado])) : [];
 
             foreach ($passos as $passo) {
                 $a = $e['lados'][$at]['mesa'][$ka];
@@ -1185,6 +1186,23 @@ class Gladio
                         }
                     }
                 }
+                // Mundo Conjurado: as Lendas dos outros inimigos também são atacadas (com o ataque inteiro) e revidam
+                $danoOutros = [];
+                $bate = self::age($a, $passo) && self::dePe($a) && $a['atk'] > 0;
+                foreach ($outros as $o) {
+                    foreach ($e['lados'][$o]['mesa'] as $kb => $b) {
+                        if (!self::dePe($b)) {
+                            continue;
+                        }
+                        if ($bate) {
+                            $danoOutros[] = [$o, $kb];
+                        }
+                        if (self::age($b, $passo) && $b['atk'] > 0) {
+                            $danoNoAtacante += $b['atk'];
+                            $toqueNoAtacante = $toqueNoAtacante || self::tem($b, 'toque');
+                        }
+                    }
+                }
 
                 // tudo do mesmo passo acontece junto (com as proteções de cada Lenda)
                 $causado = $danoNoJogador;
@@ -1196,6 +1214,16 @@ class Gladio
                     }
                     $e['lados'][$lado]['mesa'][$kb]['combateu'] = [$at, $ai];
                     $e['lados'][$at]['mesa'][$ka]['combateu'] = [$lado, (int) $e['lados'][$lado]['mesa'][$kb]['i']];
+                }
+                foreach ($danoOutros as [$o, $kb]) {
+                    $foi = self::danoLenda($e, $o, $kb, $a['atk'], ['tipo' => 'combate', 'custo' => $custo($a), 'quebra' => self::fl($a, 'quebra_indestrutivel')]);
+                    $causado += $foi;
+                    if ($foi > 0 && self::tem($a, 'toque')) {
+                        $e['lados'][$o]['mesa'][$kb]['morto'] = true;
+                    }
+                }
+                if ($danoOutros && $passo !== 'extra') {
+                    self::log($e, "$nomeA atacou também as Lendas de " . implode(', ', array_map(fn ($o) => self::quem($e, $o), array_unique(array_column($danoOutros, 0)))) . '.');
                 }
                 if ($danoNoJogador > 0) {
                     self::perdeVida($e, $lado, $danoNoJogador, true);

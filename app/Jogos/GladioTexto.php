@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 8;
+    public const VERSAO = 9;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
