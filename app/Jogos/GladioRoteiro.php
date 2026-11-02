@@ -325,6 +325,10 @@ class GladioRoteiro
                 $sim(2), ['a' => 'perder', 'n' => 15, 'alvo' => 'eu'], ['a' => 'destruir'] + $lenda()]]]],
             'Toda vez que um jogador fosse invocar uma ficha, gire uma moeda, ele só invoca se sair cara' => ['est' => [['g' => 'ficha_moeda']]],
             'Lucas pode destruir cartas indestrutíveis em combate' => ['est' => [['q' => 'fonte', 'fl' => ['quebra_indestrutivel']]]],
+            'Todo início de turno, invoque uma ficha de tranqueira 0/1. Toda carta com nome Amir ganha +3/+3 e uma palavra chave para cada ficha de tranqueira em campo' => [
+                // a palavra-chave de cada tranqueira é escolhida pelo dono de cada Amir quando ela entra (vale enquanto ela estiver em campo)
+                'est' => [['q' => 'todos', 'nome' => 'amir', 'atk' => '#tranqueiras3', 'vida' => '#tranqueiras3', 'pal' => '*amir']],
+                'hab' => [['g' => 'inicio', 'passos' => [self::ficha('Tranqueira', 0, 1)]], ['g' => 'ficha', 'passos' => [['a' => 'amir_palavra']]]]],
             'Todo início de turno, invoque uma ficha de tranqueira 0/1. Toda carta com nome Amir ganha +1/+1 para cada ficha de tranqueira em campo' => [
                 'est' => [['q' => 'todos', 'nome' => 'amir', 'atk' => '#tranqueiras', 'vida' => '#tranqueiras']],
                 'hab' => [['g' => 'inicio', 'passos' => [self::ficha('Tranqueira', 0, 1)]]]],

@@ -377,6 +377,7 @@ trait GladioRegras
             '#defesa2'    => count(array_filter($e['lados'][$dono]['mesa'], fn ($x) => (int) $x['vida'] <= 2)),
             '#formas_cem' => count(array_filter(array_merge(...array_map(fn ($l) => $e['lados'][$l]['cemiterio'], $e['ordem'])), fn ($c) => self::temSub($e, $c['c'], 'forma'))),
             '#tranqueiras' => count(array_filter($lendas(), fn ($x) => GladioTexto::normalizar(self::nomeLenda($e, $x)) === 'tranqueira')),
+            '#tranqueiras3' => 3 * count(array_filter($lendas(), fn ($x) => GladioTexto::normalizar(self::nomeLenda($e, $x)) === 'tranqueira')),
             '#valor'      => (int) ($ef['ctx']['valor'] ?? 0),
             default       => 0,
         });
@@ -564,7 +565,7 @@ trait GladioRegras
                         $w = &$quer[(int) $x['i']];
                         $w['atk'] += $atk;
                         $w['vida'] += $vida;
-                        $w['pal'] = array_merge($w['pal'], (array) $pal);
+                        $w['pal'] = array_merge($w['pal'], $pal === '*amir' ? self::palavrasDoAmir($e, $x) : (array) $pal);
                         $w['fl'] = array_merge($w['fl'], $q['fl'] ?? []);
                         unset($w);
                     }
@@ -1098,6 +1099,19 @@ trait GladioRegras
         }
 
         return false;
+    }
+
+    /** Amir: as palavras-chave escolhidas pelas tranqueiras que ainda estão em campo. */
+    private static function palavrasDoAmir(array $e, array $x): array
+    {
+        $r = [];
+        foreach ($x['amir_pal'] ?? [] as $t => $pal) {
+            if (self::acharLenda($e, (int) $t)) {
+                $r[] = $pal;
+            }
+        }
+
+        return $r;
     }
 
     /** A Lenda está protegida neste turno (Aporium: "não pode sofrer dano este turno"): não sofre dano nem é destruída. */
@@ -1938,6 +1952,38 @@ trait GladioRegras
                 $e['ataque']['bloqueios'] = (object) $bloqueios;
                 $e['ataque']['forcados'] = (object) $forcados;
                 self::log($e, "$fonte desafiou " . self::nomeLenda($e, $e['lados'][$defensor]['mesa'][$kb]) . ', que é obrigada a bloqueá-la.');
+
+                return $e;
+            case 'amir_palavra': // Amir: cada tranqueira que entra dá uma palavra-chave, escolhida pelo dono de cada Amir
+                $t = (int) ($p['t'] ?? ($ef['ctx']['i'] ?? 0));
+                $to = self::acharLenda($e, $t);
+                if (!$to || GladioTexto::normalizar(self::nomeLenda($e, $e['lados'][$to[0]]['mesa'][$to[1]])) !== 'tranqueira') {
+                    return $e;
+                }
+                if (!isset($p['amir'])) { // uma escolha para cada Amir em campo que ainda não ganhou por esta tranqueira
+                    foreach (self::vivos($e) as $l) {
+                        foreach ($e['lados'][$l]['mesa'] as $x) {
+                            if (str_contains(GladioTexto::normalizar(self::nomeLenda($e, $x)), 'amir') && !isset($x['amir_pal'][$t])) {
+                                $e['fila'][] = ['lado' => $l, 'fonte' => self::nomeLenda($e, $x), 'i' => (int) $x['i'], 'c' => $x['c'], 'jog' => null, 'ctx' => null,
+                                                'ult' => null, 'passos' => [['a' => 'amir_palavra', 'amir' => (int) $x['i'], 't' => $t]]];
+                            }
+                        }
+                    }
+
+                    return $e;
+                }
+                $ao = self::acharLenda($e, (int) $p['amir']);
+                if (!$ao || isset($e['lados'][$ao[0]]['mesa'][$ao[1]]['amir_pal'][$t])) {
+                    return $e;
+                }
+                $amir = $e['lados'][$ao[0]]['mesa'][$ao[1]];
+                if (($p['escolhido'] ?? null) === null) {
+                    $ops = array_values(array_diff(array_keys(self::PALAVRAS), $amir['pal'] ?? []));
+
+                    return self::pedir($e, $p + ['obrig' => true], $ao[0], 'palavra', $ops, self::nomeLenda($e, $amir) . ': escolha a palavra-chave que ele ganha por esta tranqueira');
+                }
+                $e['lados'][$ao[0]]['mesa'][$ao[1]]['amir_pal'][$t] = (string) $p['escolhido'];
+                self::log($e, self::nomeLenda($e, $amir) . ' ganhou ' . (self::PALAVRAS[$p['escolhido']] ?? $p['escolhido']) . ' pela tranqueira.');
 
                 return $e;
             case 'organizar': // Organizador do torneio: soma o ataque dele a uma das duas Lendas da batalha

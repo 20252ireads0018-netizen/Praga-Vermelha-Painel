@@ -30,7 +30,7 @@ namespace App\Jogos;
 class GladioTexto
 {
     /** Sobe quando o leitor muda: partidas em andamento releem as cartas. */
-    public const VERSAO = 9;
+    public const VERSAO = 10;
 
     private const NUM = '(\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)';
     private const NUMEROS = ['um' => 1, 'uma' => 1, 'dois' => 2, 'duas' => 2, 'tres' => 3, 'quatro' => 4, 'cinco' => 5,
@@ -728,6 +728,7 @@ class GladioTexto
             'dobrar'     => 'dobra o ataque de ' . self::lendaTexto($p),
             'tirapal_fixa' => 'perde a palavra-chave',
             'organizar'  => 'soma o ataque a uma Lenda da batalha',
+            'amir_palavra' => 'cada Amir em campo ganha uma palavra-chave à escolha do dono',
             default      => $p['a'],
         };
     }

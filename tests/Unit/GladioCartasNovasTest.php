@@ -310,6 +310,25 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([3, 3], [$m['atk'], $m['max']], '+1/+1 pela tranqueira');
     }
 
+    public function test_amir_novo_ganha_3_3_e_uma_palavra_por_tranqueira(): void
+    {
+        $e = $this->mesa(['amir' => $this->c('Amir', 'lenda', 'Todo início de turno, invoque uma ficha de tranqueira 0/1. Toda carta com nome Amir ganha +3/+3 e uma palavra chave para cada ficha de tranqueira em campo', ['ataque' => 1, 'vida' => 2])]);
+        [$e, $amir] = $this->poe($e, 'a', 'amir');
+        $e = Gladio::passar($e, 'a');
+        $e = Gladio::passar($e, 'b'); // início do turno de a: entra uma tranqueira e o dono escolhe a palavra
+        $this->assertSame(['a', 'palavra'], [$e['escolha']['lado'], $e['escolha']['tipo']]);
+        $e = Gladio::escolher($e, 'a', 'voar');
+        $m = array_values(array_filter($e['lados']['a']['mesa'], fn ($x) => (int) $x['i'] === $amir))[0];
+        $this->assertSame([4, 5], [$m['atk'], $m['max']], '+3/+3 pela tranqueira');
+        $this->assertContains('voar', $m['pal']);
+        // a tranqueira sai: o bônus e a palavra vão embora
+        $e['lados']['a']['mesa'] = array_values(array_filter($e['lados']['a']['mesa'], fn ($x) => (int) $x['i'] === $amir));
+        $e = Gladio::passar($e, 'a');
+        $m = array_values(array_filter($e['lados']['a']['mesa'], fn ($x) => (int) $x['i'] === $amir))[0];
+        $this->assertSame(1, $m['atk']);
+        $this->assertNotContains('voar', $m['pal']);
+    }
+
     public function test_fantasma_dobra_o_mill_e_pode_ser_comandante(): void
     {
         $fantasma = $this->c('Fantasma das paredes', 'encanto', 'Essa carta pode ser seu comandante, mesmo sendo um encantamento. Toda vez que um jogador Mill, ele mila o dobro de cartas. Sempre que um jogador Mill, uma vez por turno, compre uma carta.');
