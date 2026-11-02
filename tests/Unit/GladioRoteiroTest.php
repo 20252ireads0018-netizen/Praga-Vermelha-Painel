@@ -549,6 +549,39 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame(5, Gladio::custoComandante($e, 'a'));
     }
 
+    public function test_aporium_descarta_para_nao_sofrer_dano_nem_ser_destruido(): void
+    {
+        $e = $this->mesa([
+            'apo'  => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 2, 'vida' => 3, 'palavras' => '',
+                'descricao' => 'Uma vez por turno, você pode descartar uma carta, se fizer isso, Aporium não pode sofrer dano este turno. Todo início de turno, dobre o ataque de Aporium.'],
+            'mata' => ['nome' => 'Morte', 'tipo' => 'feitico', 'custo' => 1, 'ataque' => 0, 'vida' => 0, 'palavras' => '', 'descricao' => 'Destrua uma lenda alvo'],
+        ]);
+        [$e, $apo] = $this->poe($e, 'a', 'apo');
+        $this->naMao($e, 'a', 'x');
+        // b conjura Morte no turno dele mirando o Aporium: a pode responder com a habilidade
+        $e['vez'] = 'b';
+        $e = $this->joga($e, 'b', 'mata');
+        $e = Gladio::escolher($e, 'b', (string) $apo);
+        $this->assertSame(['a', 'resposta'], [$e['escolha']['lado'], $e['escolha']['tipo']]);
+        $this->assertContains("hab:$apo:0", $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'a', "hab:$apo:0");
+        $this->assertSame(['a', 'mao'], [$e['escolha']['lado'], $e['escolha']['tipo']], 'paga descartando uma carta');
+        $e = Gladio::escolher($e, 'a', (string) $e['escolha']['opcoes'][0]);
+        $this->assertNotNull($this->m($e, 'a', $apo), 'protegido, a Morte não o destrói');
+        $this->assertSame([], $e['lados']['a']['mao']);
+
+        // usada no próprio turno: o Tiro não causa dano
+        $e = $this->mesa(['apo' => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 2, 'vida' => 3, 'palavras' => '',
+            'descricao' => 'Uma vez por turno, você pode descartar uma carta, se fizer isso, Aporium não pode sofrer dano este turno. Todo início de turno, dobre o ataque de Aporium.']]);
+        [$e, $apo] = $this->poe($e, 'a', 'apo');
+        $this->naMao($e, 'a', 'x');
+        $e = Gladio::habilidade($e, 'a', $apo, '0');
+        $e = Gladio::escolher($e, 'a', (string) $e['escolha']['opcoes'][0]);
+        $e = $this->joga($e, 'a', 'tiro');
+        $e = Gladio::escolher($e, 'a', (string) $apo);
+        $this->assertSame(3, $this->m($e, 'a', $apo)['vida']);
+    }
+
     public function test_aporium_passa_para_o_atacado_e_cobra_no_fim_do_turno(): void
     {
         $e = $this->mesa(['apo' => ['nome' => 'Aporium', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 3, 'vida' => 3, 'palavras' => '',

@@ -133,7 +133,7 @@ class GladioRoteiro
             'Quando uma lenda aliada sofrer dano, você pode transferir qualquer quantia deste dano para Alvinho. Se equipado com Imbuir, pode transferir para qualquer Lenda em campo'
                 => ['est' => [['q' => 'fonte', 'fl' => ['alvinho']]]],
             'Uma vez por turno, você pode descartar uma carta, se fizer isso, Aporium não pode sofrer dano este turno. Todo início de turno, dobre o ataque de Aporium' => [
-                'ativ' => [['rot' => 'Descartar uma carta: não sofre dano neste turno', 'custo' => ['descartar' => 1], 'vez' => 'qualquer', 'uma' => true,
+                'ativ' => [['rot' => 'Descartar uma carta: não sofre dano nem é destruído neste turno', 'custo' => ['descartar' => 1], 'vez' => 'qualquer', 'uma' => true,
                     'passos' => [['a' => 'status', 's' => 'semdano'] + $fonte]]],
                 'hab' => [['g' => 'inicio', 'passos' => [['a' => 'dobrar'] + $fonte]]]],
             'Todos os seus hexomantes ganham toque da morte e inicativa' => ['est' => [['q' => 'meus', 'sub' => 'hexomante', 'pal' => ['toque', 'iniciativa']]]],

@@ -2358,7 +2358,9 @@ class Gladio
         if ($a === 'destruir' && $alvo === 'tudo') {
             foreach (self::vivos($e) as $l) {
                 foreach ($e['lados'][$l]['mesa'] as $k => $m) {
-                    $e['lados'][$l]['mesa'][$k]['morto'] = true;
+                    if (!self::protegida($e, $m)) { // Aporium: protegida neste turno, fica de pé
+                        $e['lados'][$l]['mesa'][$k]['morto'] = true;
+                    }
                 }
                 $ficam = [];
                 foreach ($e['lados'][$l]['feiticos'] as $f) {
@@ -2527,6 +2529,10 @@ class Gladio
                         self::log($e, "$fonte: $foi de dano em $nome.");
                         continue 2;
                     case 'destruir':
+                        if (self::protegida($e, $m)) {
+                            self::log($e, "$nome não pode ser destruída neste turno.");
+                            break;
+                        }
                         if (self::origemDe($e, $ef)['tipo'] === 'feitico' && self::fl($m, 'mitigacao')) {
                             self::log($e, "$nome não pode ser destruída por feitiços.");
                             break;
@@ -2944,10 +2950,10 @@ class Gladio
         // Imbuir: com o alvo escolhido, quem tem a carta pode trocá-lo antes de o efeito acontecer
         if (in_array($es['tipo'], ['lenda', 'qualquer', 'jogador'], true) && empty($p['imbuido'])
             && !in_array($p['a'], ['sacrificar', 'absorver1', 'serrar', 'organizar', 'fixar', 'desafiar'], true)
-            && ($podem = self::respondentes($e, $lado, 'imbuir'))) {
-            $e['pilha'] = ['tipo' => 'alvo', 'resp' => ['imbuir'], 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
+            && ($podem = self::respondentes($e, $lado, ['imbuir', 'protecao'], 'alvo:' . $p['alvo']))) {
+            $e['pilha'] = ['tipo' => 'alvo', 'resp' => ['imbuir', 'protecao'], 'campo' => 'alvo:' . $p['alvo'], 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
                            'opcoes' => $es['opcoes'], 'esc_tipo' => $es['tipo'], 'lado' => $lado,
-                           'texto' => self::quem($e, $lado) . " escolheu o alvo de {$es['fonte']}: você pode trocar o alvo"];
+                           'texto' => self::quem($e, $lado) . " escolheu o alvo de {$es['fonte']}: você pode responder"];
 
             return self::seguir(self::pedirResposta($e));
         }

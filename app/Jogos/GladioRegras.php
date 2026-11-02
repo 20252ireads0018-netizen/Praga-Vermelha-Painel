@@ -617,7 +617,7 @@ trait GladioRegras
         $nome = self::nomeLenda($e, $m);
         $motivo = match (true) {
             $n <= 0 => '',
-            self::fl($m, 'semdano') => 'não sofre dano neste turno',
+            self::protegida($e, $m) => 'não sofre dano neste turno',
             $tipo === 'combate' && self::fl($m, 'imune_combate') => 'não sofre dano de ataques',
             $tipo !== 'combate' && (self::fl($m, 'imune_efeito')) => 'não sofre dano de efeitos de cartas',
             $tipo === 'feitico' && (self::fl($m, 'imune_feitico') || self::fl($m, 'mitigacao')) => 'não sofre dano de feitiços',
@@ -1002,6 +1002,11 @@ trait GladioRegras
                 }
             }
         }
+        if (in_array('protecao', $tipos, true) && is_string($campo) && str_starts_with($campo, 'alvo:inst:')) {
+            foreach (self::protecoes($e, $l, (int) substr($campo, 10)) as $chave => $rot) {
+                $ops[$chave] = $rot;
+            }
+        }
         if ($campo === 'painel') {
             foreach (self::doJogador($e, $l, 'painel_negar') as $q) {
                 if ($e['lados'][$l]['energia'] >= (int) $q['energia']) {
@@ -1067,11 +1072,67 @@ trait GladioRegras
         return self::evento($e, 'feitico', ['lado' => $lado, 'i' => $inst, 'c' => $c]);
     }
 
+    /** A Lenda está protegida neste turno (Aporium: "não pode sofrer dano este turno"): não sofre dano nem é destruída. */
+    private static function protegida(array $e, array $m): bool
+    {
+        return self::fl($m, 'semdano') || (($m['st']['semdano'] ?? null) === ($e['turno'] ?? null));
+    }
+
+    /**
+     * Habilidades de proteção que $l pode usar agora na Lenda $inst dele (escolhida como alvo de um efeito):
+     * [ 'hab:<inst>:<qual>' => rótulo ].
+     */
+    private static function protecoes(array $e, string $l, int $inst): array
+    {
+        $k = self::idx($e['lados'][$l]['mesa'], $inst);
+        if ($k < 0) {
+            return [];
+        }
+        $x = $e['lados'][$l]['mesa'][$k];
+        if (self::protegida($e, $x)) {
+            return [];
+        }
+        $r = [];
+        foreach (self::habilidadesDe($e, $x, 'mesa') as $qual => $h) {
+            $protege = in_array('semdano', array_column(array_filter($h['passos'], fn ($q) => ($q['a'] ?? '') === 'status'), 's'), true);
+            $custo = $h['custo'] ?? [];
+            if (!$protege || (!empty($h['uma']) && ($x['usou'][$qual] ?? null) === $e['turno'])
+                || (int) ($custo['energia'] ?? 0) > $e['lados'][$l]['energia'] || count($e['lados'][$l]['mao']) < (int) ($custo['descartar'] ?? 0)) {
+                continue;
+            }
+            $r["hab:$inst:$qual"] = self::nomeLenda($e, $x) . ': ' . $h['rot'];
+        }
+
+        return $r;
+    }
+
     /** $lado responde com $valor: a instância de uma carta da mão ou 'campo:<inst>' (efeito de uma carta em jogo). */
     private static function responder(array $e, string $lado, int|string $valor): array
     {
         $p = $e['pilha'];
         $e['pilha'] = null;
+        if (is_string($valor) && str_starts_with($valor, 'hab:')) { // Aporium: protege-se antes de o efeito acontecer
+            [, $inst, $qual] = explode(':', $valor, 3);
+            $k = self::idx($e['lados'][$lado]['mesa'], (int) $inst);
+            $x = $e['lados'][$lado]['mesa'][$k];
+            $h = self::habilidadesDe($e, $x, 'mesa')[$qual];
+            $custo = $h['custo'] ?? [];
+            $e['lados'][$lado]['energia'] -= (int) ($custo['energia'] ?? 0);
+            $e['lados'][$lado]['mesa'][$k]['usou'][$qual] = $e['turno'];
+            $e['lados'][$lado]['mesa'][$k]['st']['semdano'] = $e['turno']; // vale já, antes do efeito que a mirou
+            $nome = self::nomeLenda($e, $x);
+            self::log($e, self::quem($e, $lado) . " respondeu usando $nome: {$h['rot']}.");
+            $passos = [];
+            for ($n = 0; $n < (int) ($custo['descartar'] ?? 0); $n++) { // o custo de descartar vem logo depois
+                $passos[] = ['a' => 'descartar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true];
+            }
+            if ($passos) {
+                $e['fila'][] = ['lado' => $lado, 'fonte' => $nome, 'i' => (int) $inst, 'c' => $x['c'], 'passos' => $passos, 'jog' => null, 'ctx' => null, 'ult' => null];
+            }
+            $e['pilha'] = $p; // os outros ainda podem responder ao mesmo efeito
+
+            return self::pedirResposta($e);
+        }
         if (is_string($valor) && str_starts_with($valor, 'campo:')) { // Marechal Fonsceca / Painel de Kuros
             $x = self::emJogo($e, (int) substr($valor, 6));
             $fonteX = $x ? $e['lados'][$x[0]][$x[1]][$x[2]] : null;
