@@ -1000,3 +1000,7 @@ input:where([type="checkbox"], [type="radio"]){
     cursor: pointer;
 }
 input:where([type="color"]){ padding: 2px; width: 2.6rem; height: 2rem; cursor: pointer; }
+
+/* rodapé: atalho para o Reclame aqui */
+.pv-footer__reclame{ color:var(--pv-gold); font-size:.9rem; text-decoration:none; }
+.pv-footer__reclame:hover{ text-decoration:underline; }

@@ -184,6 +184,12 @@
                                     <strong>Meu plano</strong>
                                     <small class="pv-plano-selo">{{ \App\Support\Plano::nome($planoMenu) }}@if ($planoMenu === 'teste') · {{ \App\Support\Plano::diasDeTeste(auth()->user()) }} dias restantes @endif</small>
                                 </a>
+                                @if (Route::has('reclamacoes.index'))
+                                    <a href="{{ route('reclamacoes.index') }}" class="pv-dropdown__link">
+                                        <strong>Reclame aqui</strong>
+                                        <small>Problemas, sugestões e respostas</small>
+                                    </a>
+                                @endif
                                 <div class="pv-dropdown__sep"></div>
                                 <form action="{{ route('logout') }}" method="POST" class="pv-dropdown__form">
                                     @csrf
@@ -238,6 +244,9 @@
                 <span class="pv-brand__mark">✠</span>
                 <span>Praga Vermelha RPG</span>
             </div>
+            @if (Route::has('reclamacoes.index'))
+                <a href="{{ route('reclamacoes.index') }}" class="pv-footer__reclame">Achou um problema? Reclame aqui</a>
+            @endif
             <p>&copy; {{ date('Y') }} João Victor Barreto Pimentel. Todos os direitos reservados.</p>
         </div>
     </footer>

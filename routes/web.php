@@ -277,6 +277,13 @@ Route::get('/planos', [PlanoController::class, 'index'])->name('planos.index');
 // Vídeos explicativos (público, sem login): config/videos.php, arquivos em public/videos (o endereço não pode ser /videos: é a pasta)
 Route::get('/videos-explicativos', [App\Http\Controllers\VideoController::class, 'index'])->name('videos.index');
 
+// Reclame aqui do painel: a lista é pública; registrar pede conta; responder, só os administradores
+Route::get('/reclame-aqui', [App\Http\Controllers\ReclamacaoController::class, 'index'])->name('reclamacoes.index');
+Route::post('/reclame-aqui', [App\Http\Controllers\ReclamacaoController::class, 'store'])
+    ->middleware(['auth', 'throttle:6,60'])->name('reclamacoes.store');
+Route::post('/reclame-aqui/{reclamacao}/responder', [App\Http\Controllers\ReclamacaoController::class, 'responder'])
+    ->middleware(['auth', 'throttle:60,1'])->name('reclamacoes.responder');
+
 // Webhook do Asaas (sem login e sem CSRF; a autenticação é o token no header "asaas-access-token")
 Route::post('/webhooks/asaas', [CompraLivroController::class, 'webhook'])
     ->middleware('throttle:120,1')->name('webhooks.asaas');
