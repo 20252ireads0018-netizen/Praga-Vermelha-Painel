@@ -1,0 +1,101 @@
+/* Minijogos da campanha (Mines, Aviator, caça-níquel) na estética de Praga Vermelha: preto, sangue e ouro velho */
+
+.mj [hidden] { display: none !important; }
+.mj { --mj-ouro: #c9a45c; --mj-sangue: #a51e1e; --mj-brasa: #d63c3c; --mj-fundo: #120a0b; --mj-borda: rgba(201, 164, 92, .28); }
+.mj-ico { display: inline-flex; width: 1.6em; height: 1.6em; vertical-align: middle; }
+.mj-ico svg { width: 100%; height: 100%; }
+.mj-ico.pequeno { width: 1.4em; height: 1.4em; margin-right: 6px; }
+
+.mj-topo { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; margin: 12px 0; }
+.mj-com { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; flex: 1 1 260px; min-width: 0; }
+.mj-com select { min-height: 38px; max-width: 100%; }
+.mj-saldo { text-align: right; padding: 8px 14px; border: 1px solid var(--mj-borda); border-radius: 10px; background: linear-gradient(180deg, #1d1012, #0d0607); }
+.mj-saldo span { display: block; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+.mj-saldo strong { font-family: var(--fonte-titulo, 'Cinzel', serif); font-size: 1.5rem; color: #f2d7a0; }
+
+.mj-abas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.mj-abas button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 12px; cursor: pointer; color: inherit;
+    border: 1px solid var(--mj-borda); background: rgba(0, 0, 0, .3); font-family: var(--fonte-titulo, 'Cinzel', serif); font-size: 1rem; }
+.mj-abas button small { font-family: var(--fonte-corpo, Georgia, serif); font-size: .72rem; opacity: .65; }
+.mj-abas button .mj-ico { width: 2em; height: 2em; }
+.mj-abas button[aria-selected="true"] { background: radial-gradient(circle at 50% 0, rgba(165, 30, 30, .55), rgba(20, 6, 8, .9)); border-color: var(--mj-brasa); box-shadow: 0 0 18px rgba(214, 60, 60, .25); }
+
+.mj-painel { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; padding: 14px; border-radius: 14px;
+    border: 1px solid var(--mj-borda); background: radial-gradient(circle at 70% 20%, rgba(122, 21, 21, .25), transparent 60%), var(--mj-fundo); }
+@media (max-width: 760px) { .mj-painel { grid-template-columns: minmax(0, 1fr); } }
+.mj-controles { display: flex; flex-direction: column; gap: 10px; }
+.mj-controles label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; }
+.mj-controles input, .mj-controles select { min-height: 38px; width: 100%; box-sizing: border-box; }
+.mj-rapidos { display: flex; gap: 6px; }
+.mj-rapidos button { flex: 1; min-height: 32px; border-radius: 8px; border: 1px solid var(--mj-borda); background: rgba(0, 0, 0, .35); color: inherit; cursor: pointer; }
+.mj-info { font-size: .82rem; opacity: .85; min-height: 2.4em; }
+.mj-acao { min-height: 46px; font-size: 1.05rem; }
+.mj-acao.sacar { background: linear-gradient(180deg, #e0b25a, #9a6a1c); color: #1a0d02; border-color: #f2d7a0; }
+.mj-ganhou { color: #f2d7a0; font-weight: 700; }
+.mj-perdeu { color: #ff8080; font-weight: 700; }
+
+/* ---------- Mines ---------- */
+.mj-grade { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 460px; width: 100%; margin: 0 auto; }
+.mj-casa { aspect-ratio: 1; border-radius: 12px; border: 1px solid rgba(201, 164, 92, .3); cursor: pointer; padding: 18%; color: rgba(201, 164, 92, .55);
+    background: radial-gradient(circle at 35% 30%, #3a1418, #170709); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .45); transition: transform .15s, box-shadow .15s; }
+.mj-casa svg { width: 100%; height: 100%; display: block; }
+.mj-casa:not(:disabled):hover { transform: translateY(-2px); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .45), 0 0 14px rgba(214, 60, 60, .45); color: #f2d7a0; }
+.mj-casa:disabled { cursor: default; }
+.mj-casa.virando { animation: mj-vira .35s ease-in-out infinite alternate; }
+@keyframes mj-vira { to { transform: rotateY(70deg); } }
+.mj-casa.aberta { background: radial-gradient(circle at 50% 40%, #4a3510, #1a1004); border-color: #f2c45c; animation: mj-revela .35s ease-out; box-shadow: 0 0 16px rgba(242, 196, 92, .35); padding: 14%; }
+.mj-casa.mina { background: radial-gradient(circle, #5c0b0b, #180303); border-color: #d63c3c; padding: 12%; }
+.mj-casa.explodiu { animation: mj-explode .6s ease-out; box-shadow: 0 0 26px 6px rgba(255, 60, 60, .7); }
+.mj-casa.apagada { opacity: .35; }
+@keyframes mj-revela { from { transform: scale(.6) rotateY(90deg); } to { transform: none; } }
+@keyframes mj-explode { 0% { transform: scale(1.4); filter: brightness(2.2); } 100% { transform: none; } }
+.mj-grade.tremendo { animation: mj-treme .5s; }
+@keyframes mj-treme { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+
+/* ---------- Aviator ---------- */
+.mj-ceu { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid var(--mj-borda);
+    background: radial-gradient(ellipse at 80% 10%, rgba(214, 60, 60, .22), transparent 55%), linear-gradient(180deg, #1b0a0e, #070304);
+    background-image: linear-gradient(rgba(201, 164, 92, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(201, 164, 92, .06) 1px, transparent 1px),
+        radial-gradient(ellipse at 80% 10%, rgba(214, 60, 60, .22), transparent 55%), linear-gradient(180deg, #1b0a0e, #070304);
+    background-size: 40px 40px, 40px 40px, auto, auto; }
+.mj-curva { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mj-rastro { fill: rgba(165, 30, 30, .25); }
+#mj-rastro-linha { fill: none; stroke: #d63c3c; stroke-width: 3; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px rgba(255, 60, 60, .8)); }
+.mj-corvo { position: absolute; width: 54px; height: 54px; transform: translate(-50%, -60%) rotate(-12deg); transition: opacity .3s; }
+.mj-corvo .mj-ico { width: 100%; height: 100%; }
+.mj-ceu[data-estado="voando"] .mj-corvo { animation: mj-bate .35s ease-in-out infinite alternate; }
+@keyframes mj-bate { to { transform: translate(-50%, -66%) rotate(-6deg); } }
+.mj-ceu[data-estado="caiu"] .mj-corvo { animation: mj-cai 1s ease-in forwards; }
+@keyframes mj-cai { to { transform: translate(-50%, 260%) rotate(160deg); opacity: 0; } }
+.mj-ceu[data-estado="caiu"] { box-shadow: inset 0 0 60px rgba(255, 0, 0, .45); }
+.mj-ceu[data-estado="caiu"] #mj-rastro-linha { stroke: #6b6b6b; filter: none; }
+.mj-ceu[data-estado="sacou"] #mj-rastro-linha { stroke: #f2c45c; }
+.mj-mult { position: absolute; left: 0; right: 0; top: 18%; text-align: center; font-family: var(--fonte-titulo, 'Cinzel', serif);
+    font-size: clamp(2rem, 8vw, 4rem); color: #f5ecec; text-shadow: 0 0 18px rgba(214, 60, 60, .8); pointer-events: none; }
+.mj-mult small { display: block; font-family: var(--fonte-corpo, Georgia, serif); font-size: .95rem; text-shadow: none; opacity: .85; margin-top: 4px; }
+.mj-ceu[data-estado="caiu"] .mj-mult { color: #ff5b5b; }
+.mj-ceu[data-estado="sacou"] .mj-mult { color: #f2d7a0; }
+.mj-historico { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; gap: 4px; flex-wrap: wrap; pointer-events: none; }
+.mj-historico span { font-size: .72rem; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #ff9a9a; }
+.mj-historico span.alta { color: #f2d7a0; }
+
+/* ---------- Caça-níquel ---------- */
+.mj-maquina { --mj-simb: clamp(70px, 20vw, 120px); position: relative; padding: 18px; border-radius: 18px; margin: 0 auto; width: fit-content; max-width: 100%;
+    background: linear-gradient(180deg, #3a1418, #160608); border: 2px solid var(--mj-ouro); box-shadow: 0 0 0 4px #1a0b05, 0 0 30px rgba(214, 60, 60, .3); }
+.mj-rolos { display: flex; gap: 10px; }
+.mj-rolo { width: var(--mj-simb); height: var(--mj-simb); overflow: hidden; border-radius: 10px; background: linear-gradient(180deg, #e9dfcc, #fffaf0 45%, #d9cdb4);
+    box-shadow: inset 0 10px 14px rgba(0, 0, 0, .45), inset 0 -10px 14px rgba(0, 0, 0, .45); }
+.mj-simb { height: var(--mj-simb); padding: 14%; box-sizing: border-box; }
+.mj-simb svg { width: 100%; height: 100%; display: block; }
+.mj-linha { position: absolute; left: 10px; right: 10px; top: 50%; height: 2px; background: rgba(214, 60, 60, .55); pointer-events: none; }
+.mj-rolos.ganhou .mj-rolo { animation: mj-brilha .5s ease-in-out 3 alternate; }
+@keyframes mj-brilha { to { box-shadow: inset 0 10px 14px rgba(0, 0, 0, .3), 0 0 22px 4px rgba(242, 196, 92, .8); } }
+.mj-resultado { text-align: center; margin-top: 12px; min-height: 1.6em; font-size: 1.1rem; }
+.mj-tabela { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.mj-tabela th, .mj-tabela td { padding: 4px; border-bottom: 1px solid rgba(255, 255, 255, .07); text-align: left; }
+.mj-tabela td:not(:first-child), .mj-tabela th:not(:first-child) { text-align: right; white-space: nowrap; }
+.mj-tabela td:first-child { display: flex; align-items: center; }
+
+@media (prefers-reduced-motion: reduce) {
+    .mj *, .mj *::before { animation: none !important; transition: none !important; }
+}

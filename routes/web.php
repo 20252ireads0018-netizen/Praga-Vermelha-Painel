@@ -15,6 +15,7 @@ use App\Http\Controllers\CampanhaIniciativaController;
 use App\Http\Controllers\CampanhaJogoController;
 use App\Http\Controllers\KuroController;
 use App\Http\Controllers\TimeSkipController;
+use App\Http\Controllers\MinijogoController;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\CompraLivroController;
 
@@ -146,6 +147,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/timeskips', [TimeSkipController::class, 'salvar'])->middleware('throttle:60,1')->name('timeskips.salvar');
         Route::delete('/{campanha}/timeskips/{timeSkip}', [TimeSkipController::class, 'excluir'])->name('timeskips.excluir');
         Route::post('/{campanha}/timeskips/{timeSkip}/resposta', [TimeSkipController::class, 'responder'])->middleware('throttle:60,1')->name('timeskips.responder');
+        // Minijogos (Mines, Aviator, caça-níquel): apostas fictícias com o Dinheiro dos personagens
+        Route::get('/{campanha}/minijogos', [MinijogoController::class, 'index'])->name('minijogos.index');
+        Route::post('/{campanha}/minijogos/{jogo}/{acao}', [MinijogoController::class, 'acao'])
+            ->where(['jogo' => 'mines|aviator|slot', 'acao' => '[a-z]+'])->middleware('throttle:240,1')->name('minijogos.acao');
         Route::get('/{campanha}/jogos', [CampanhaJogoController::class, 'index'])->name('jogos.index');
         Route::get('/{campanha}/jogos/lobby', [CampanhaJogoController::class, 'lobby'])->name('jogos.lobby'); // polling do lobby
         Route::get('/jogos/ativas', [CampanhaJogoController::class, 'ativas'])->name('jogos.ativas'); // miniatura do Gladio em todo o site

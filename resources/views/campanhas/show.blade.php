@@ -257,6 +257,20 @@
             </section>
             @endif
 
+            @if (Route::has('campanhas.minijogos.index'))
+            {{-- ===== Minijogos: apostas fictícias com o Dinheiro dos personagens ===== --}}
+            <section class="camp-card">
+                <div class="camp-card-cab"><h2>Minijogos</h2></div>
+                <a href="{{ route('campanhas.minijogos.index', $campanha) }}" class="camp-clicavel">
+                    <span class="camp-clicavel-info">
+                        <strong>Mines, Aviator e caça-níquel</strong>
+                        <span class="camp-dica">Aposte o Dinheiro dos seus personagens (fictício, só dentro do RPG).</span>
+                    </span>
+                    <span class="camp-seta" aria-hidden="true">›</span>
+                </a>
+            </section>
+            @endif
+
             @if (Route::has('campanhas.timeskips.index'))
             {{-- ===== Time skips: o mestre monta as regras; cada jogador escolhe ramo, atividades e propriedades ===== --}}
             <section class="camp-card">
