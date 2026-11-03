@@ -2473,3 +2473,37 @@ select:-webkit-autofill:focus{
     .maldicao-custom .campo{ grid-template-columns: 1fr; gap: 6px; }
     .maldicao-tecnica-dados > div{ grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* ============================================
+   VALORES EXTRAS DAS HABILIDADES (origem de cada ponto, sem limite)
+   ============================================ */
+.hab-extras-dica { width: 100%; margin: 4px 0 0; font-size: .82rem; color: var(--pv-muted, #a89494); }
+.hab-extra-botao {
+    min-width: 34px; height: 30px; padding: 0 8px; border-radius: 999px; cursor: pointer; flex: none;
+    border: 1px dashed var(--linha, #472020); background: transparent; color: var(--pv-muted, #a89494);
+    font: 700 .82rem/1 Georgia, serif; font-variant-numeric: tabular-nums;
+}
+.hab-extra-botao:hover, .hab-extra-botao.aberto { border-style: solid; border-color: var(--sangue-3, #b62525); color: #fff; }
+.hab-extra-botao.tem { border-style: solid; border-color: var(--pv-gold, #c9a45c); color: #f2d7a0; background: rgba(201, 164, 92, .12); }
+.hab-extras-painel {
+    margin: 4px 0 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--pv-gold, #c9a45c);
+    background: rgba(20, 10, 10, .92); display: flex; flex-direction: column; gap: 8px;
+}
+.hab-extras-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .9rem; }
+.hab-extras-cab b { color: #f2d7a0; }
+.hab-extras-item { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.hab-extras-origem { flex: 1 1 160px; min-width: 0; padding: 6px 10px !important; }
+.hab-extras-passo { display: inline-flex; align-items: center; gap: 4px; }
+.hab-extras-passo button, .hab-extras-apagar {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--linha, #472020); background: #2b1717; color: inherit; cursor: pointer; font-size: 1rem;
+}
+.hab-extras-passo button:hover { border-color: var(--sangue-3, #b62525); }
+.hab-extras-apagar:hover { background: var(--sangue-1, #7a1515); }
+.hab-extras-valor { width: 70px; padding: 6px 8px !important; text-align: center; }
+.hab-extras-vazio { margin: 0; font-size: .85rem; color: var(--pv-muted, #a89494); }
+.hab-extras-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.hab-extras-acoes .button { padding: 6px 12px; font-size: .85rem; }
+/* a linha da habilidade ganha a coluna do botão de extras (entre o valor e o dado) */
+.habilidade-linha{ grid-template-columns: 1fr 60px 44px auto 30px; }
+@media (max-width: 600px){ .habilidade-linha{ grid-template-columns: 1fr 50px 36px auto 26px; } .hab-extra-botao{ min-width: 30px; padding: 0 6px; } }
+.hab-extras-painel{ grid-column: 1 / -1; }

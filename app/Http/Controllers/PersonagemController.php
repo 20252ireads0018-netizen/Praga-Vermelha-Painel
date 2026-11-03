@@ -137,7 +137,7 @@ class PersonagemController extends Controller
 
         // Campos que só são gravados se vieram no formulário (o merge abaixo cria a chave, então a presença é lida antes)
         $veio = [];
-        foreach (['armaduras', 'artes_marciais', 'niveis_profissao', 'estudos_ama'] as $campo) {
+        foreach (['armaduras', 'artes_marciais', 'niveis_profissao', 'estudos_ama', 'habilidades_extras'] as $campo) {
             $veio[$campo] = $request->has($campo);
         }
 
@@ -147,6 +147,8 @@ class PersonagemController extends Controller
             'armaduras' => $request->has('armaduras') ? (json_decode($request->input('armaduras') ?: 'null', true) ?: null) : null,
             // Estudos na AMA (períodos, matérias e provas): o mesmo cuidado, só decodifica se veio
             'estudos_ama' => $request->has('estudos_ama') ? (json_decode($request->input('estudos_ama') ?: 'null', true) ?: null) : null,
+            // Valores extras das habilidades ({chave: [{origem, valor}]}): o mesmo cuidado, só decodifica se veio
+            'habilidades_extras' => $request->has('habilidades_extras') ? (json_decode($request->input('habilidades_extras') ?: 'null', true) ?: []) : null,
         ]);
 
         // Artes marciais (nível, experiência e talentos de cada arte). Mesmo cuidado das armaduras: só decodifica se veio no formulário.
@@ -290,6 +292,10 @@ class PersonagemController extends Controller
             // Propriedades fisiomantes salvas na ficha (do catálogo ou personalizadas)
             'propriedades_fisiomantes' => 'nullable|array|max:300',
             'estudos_ama' => 'nullable|array',
+            'habilidades_extras' => 'nullable|array|max:60',
+            'habilidades_extras.*' => 'array|max:30',
+            'habilidades_extras.*.*.origem' => 'nullable|string|max:80',
+            'habilidades_extras.*.*.valor' => 'nullable|integer|min:-99999|max:99999',
             'estudos_ama.periodos' => 'nullable|array|max:20',
             'estudos_ama.periodos.*.aprovado' => 'nullable|boolean',
             'estudos_ama.periodos.*.talento' => 'nullable|string|max:80',
@@ -374,6 +380,32 @@ class PersonagemController extends Controller
             unset($dados['niveis_profissao']);
         } elseif (isset($dados['niveis_profissao'])) {
             $dados['niveis_profissao'] = array_values($dados['niveis_profissao']);
+        }
+
+        // Valores extras das habilidades: só grava se a coluna existir (SQL da migração 2026_11_03_000024) e se veio no
+        // formulário; ficam só habilidades conhecidas e, em cada uma, a origem (texto) e o valor (inteiro, sem limite de pontos)
+        if (!Schema::hasColumn('fichas', 'habilidades_extras') || !$veio['habilidades_extras']) {
+            unset($dados['habilidades_extras']);
+        } else {
+            $limpos = [];
+            foreach ((array) ($dados['habilidades_extras'] ?? []) as $chave => $lista) {
+                if (!in_array($chave, $nomesHabilidades, true) || !is_array($lista)) {
+                    continue;
+                }
+                $itens = [];
+                foreach ($lista as $e) {
+                    $origem = trim((string) ($e['origem'] ?? ''));
+                    $valor = (int) ($e['valor'] ?? 0);
+                    if ($origem === '' && $valor === 0) {
+                        continue;
+                    }
+                    $itens[] = ['origem' => mb_substr($origem, 0, 80), 'valor' => $valor];
+                }
+                if ($itens) {
+                    $limpos[$chave] = $itens;
+                }
+            }
+            $dados['habilidades_extras'] = $limpos;
         }
 
         // Estudos na AMA: só grava se a coluna existir (rode o SQL da migração 2026_11_02_000020) e se veio no formulário

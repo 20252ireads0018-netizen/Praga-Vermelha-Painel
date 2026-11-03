@@ -8,6 +8,10 @@
     // Mestre vendo a ficha de um jogador (campanhas): mesma página, mas nada pode ser alterado nem salvo
     $somenteLeitura = !empty($somenteLeitura ?? false);
     $habilidadesSalvas = $personagem->habilidades ?? [];
+    // Valores extras de cada habilidade, com a origem: {"luta": [{"origem": "...", "valor": 5}]} (sem limite de pontos)
+    $habilidadesExtras = $personagem->habilidades_extras ?? [];
+    if (is_string($habilidadesExtras)) { $habilidadesExtras = json_decode($habilidadesExtras, true) ?: []; }
+    if (!is_array($habilidadesExtras)) { $habilidadesExtras = []; }
     $pontosGastosAtributos = ($personagem->forca ?? 0) + ($personagem->constituicao ?? 0) + ($personagem->destreza ?? 0)
         + ($personagem->conhecimento ?? 0) + ($personagem->carisma ?? 0) + ($personagem->percepcao ?? 0) + ($personagem->alma ?? 0);
 
@@ -1475,6 +1479,8 @@
                         <button type="button" class="button" id="pontos-livre-aplicar">Aplicar</button>
                         <small>O valor digitado vira o saldo de "Pontos a distribuir". A diferença fica salva como ajuste da ficha e não mexe nos pontos extras.</small>
                     </div>
+                    <input type="hidden" id="habilidades-extras" name="habilidades_extras" value="{{ json_encode((object) $habilidadesExtras) }}">
+                    <p class="hab-extras-dica">Use o <b>+</b> ao lado de cada habilidade para valores extras livres (talentos, itens, bênçãos...): cada um com a origem, sem gastar pontos.</p>
                     <div class="pontos-extras">
                         <label for="pontos-extras-habilidades" title="Pontos de habilidade ganhos de fontes externas">Pontos extras</label>
                         <input id="pontos-extras-habilidades" name="pontos_extras_habilidades" type="text" inputmode="numeric"
@@ -3476,6 +3482,80 @@ window.PastasFicha = (function(){
     const rolarHabilidade = document.getElementById("rolar-dado-habilidade");
     const resultadoFinal = document.getElementById("resultado-final");
 
+    /* ---------- Valores extras das habilidades ----------
+       Cada habilidade ganha um botão "+N": abre um painel com a lista de origens (de onde vem cada ponto extra), em que o
+       jogador soma, tira, renomeia, apaga e adiciona. Não gastam pontos nem têm limite; entram nas rolagens. */
+    (function(){
+        const campo = document.getElementById("habilidades-extras");
+        if(!campo) return;
+        let extras = {};
+        try { extras = JSON.parse(campo.value || "{}") || {}; } catch(e) { extras = {}; }
+        if(Array.isArray(extras)) extras = {};
+        const somente = {{ $somenteLeitura ? 'true' : 'false' }};
+        const escH = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        const soma = chave => (extras[chave] || []).reduce((t, e) => t + (parseInt(e.valor, 10) || 0), 0);
+        window.extraHabilidade = input => input ? soma(input.name) : 0;
+        const salvar = () => { campo.value = JSON.stringify(extras); };
+        let aberto = null; // { chave, botao, painel }
+        function rotulo(botao, chave){
+            const n = soma(chave), q = (extras[chave] || []).length;
+            botao.textContent = n ? (n > 0 ? "+" : "") + n : "+";
+            botao.classList.toggle("tem", q > 0);
+            botao.title = q ? (extras[chave] || []).map(e => (e.origem || "sem origem") + ": " + ((e.valor > 0 ? "+" : "") + (parseInt(e.valor, 10) || 0))).join("\n") : "Adicionar valores extras a esta habilidade";
+        }
+        function desenhar(){
+            if(!aberto) return;
+            const { chave, painel } = aberto, lista = extras[chave] || [];
+            painel.innerHTML = '<div class="hab-extras-cab"><strong>Extras de ' + escH(aberto.nome) + '</strong><span>Total: <b>' + ((soma(chave) > 0 ? "+" : "") + soma(chave)) + '</b></span></div>' +
+                (lista.length ? lista.map((e, i) =>
+                    '<div class="hab-extras-item" data-i="' + i + '">' +
+                        '<input type="text" class="hab-extras-origem" maxlength="80" placeholder="De onde vem? (talento, item, bênção...)" value="' + escH(e.origem) + '"' + (somente ? " disabled" : "") + '>' +
+                        '<div class="hab-extras-passo">' + (somente ? "" : '<button type="button" data-passo="-1" aria-label="Tirar 1">−</button>') +
+                            '<input type="number" class="hab-extras-valor" value="' + (parseInt(e.valor, 10) || 0) + '"' + (somente ? " disabled" : "") + ' aria-label="Valor">' +
+                            (somente ? "" : '<button type="button" data-passo="1" aria-label="Somar 1">+</button>') + '</div>' +
+                        (somente ? "" : '<button type="button" class="hab-extras-apagar" data-apagar aria-label="Apagar esta origem">✕</button>') +
+                    '</div>').join("") : '<p class="hab-extras-vazio">Nenhum valor extra nesta habilidade.</p>') +
+                (somente ? "" : '<div class="hab-extras-acoes"><button type="button" class="button" data-novo>+ Adicionar origem</button><button type="button" class="button" data-fechar>Fechar</button></div>');
+        }
+        function fechar(){ if(aberto){ aberto.painel.remove(); aberto.botao.classList.remove("aberto"); aberto = null; } }
+        document.querySelectorAll(".habilidade-linha .habilidade-valor").forEach(input => {
+            const linha = input.closest(".habilidade-linha"), chave = input.name;
+            const botao = document.createElement("button");
+            botao.type = "button"; botao.className = "hab-extra-botao";
+            input.insertAdjacentElement("afterend", botao);
+            rotulo(botao, chave);
+            botao.addEventListener("click", ev => {
+                ev.preventDefault();
+                const era = aberto && aberto.chave === chave; fechar(); if(era) return;
+                const painel = document.createElement("div"); painel.className = "hab-extras-painel";
+                linha.insertAdjacentElement("afterend", painel);
+                aberto = { chave, botao, painel, nome: (linha.querySelector(".habilidade-nome") || {}).textContent || chave };
+                botao.classList.add("aberto");
+                if(!somente && !(extras[chave] || []).length){ extras[chave] = [{ origem: "", valor: 1 }]; salvar(); rotulo(botao, chave); }
+                desenhar();
+                const o = painel.querySelector(".hab-extras-origem"); if(o && !o.value) o.focus();
+                painel.addEventListener("input", e => {
+                    const item = e.target.closest(".hab-extras-item"); if(!item) return;
+                    const reg = extras[chave][+item.dataset.i];
+                    if(e.target.classList.contains("hab-extras-origem")) reg.origem = e.target.value;
+                    if(e.target.classList.contains("hab-extras-valor")) { reg.valor = parseInt(e.target.value, 10) || 0; painel.querySelector(".hab-extras-cab b").textContent = (soma(chave) > 0 ? "+" : "") + soma(chave); }
+                    salvar(); rotulo(botao, chave);
+                });
+                painel.addEventListener("click", e => {
+                    const item = e.target.closest(".hab-extras-item");
+                    if(e.target.closest("[data-passo]") && item){ const reg = extras[chave][+item.dataset.i]; reg.valor = (parseInt(reg.valor, 10) || 0) + (+e.target.closest("[data-passo]").dataset.passo); }
+                    else if(e.target.closest("[data-apagar]") && item){ extras[chave].splice(+item.dataset.i, 1); if(!extras[chave].length) delete extras[chave]; }
+                    else if(e.target.closest("[data-novo]")){ (extras[chave] = extras[chave] || []).push({ origem: "", valor: 1 }); }
+                    else if(e.target.closest("[data-fechar]")){ fechar(); return; }
+                    else return;
+                    salvar(); rotulo(botao, chave); desenhar();
+                    const os = painel.querySelectorAll(".hab-extras-origem"); if(e.target.closest("[data-novo]") && os.length) os[os.length - 1].focus();
+                });
+            });
+        });
+        document.addEventListener("keydown", e => { if(e.key === "Escape") fechar(); });
+    })();
+
     // Estado da rolagem aberta. Os listeners do popup são registrados UMA vez, fora do loop:
     // antes, cada abertura acumulava um novo listener e a rolagem somava valores de habilidades antigas.
     let habilidadeRolagem = null; // { input, mod }
@@ -3483,7 +3563,8 @@ window.PastasFicha = (function(){
     function reducaoRolagem(){
         if(!habilidadeRolagem) return 0;
         return numRolagem(habilidadeRolagem.input.value) + numRolagem(habilidadeRolagem.mod()) + numRolagem(vantagensExtras.value)
-            + Math.floor(((window.amaBonus || {})[habilidadeRolagem.chave]) || 0); // estudos na AMA
+            + Math.floor(((window.amaBonus || {})[habilidadeRolagem.chave]) || 0) // estudos na AMA
+            + (window.extraHabilidade ? window.extraHabilidade(habilidadeRolagem.input) : 0); // valores extras da habilidade
     }
     function atualizarReducaoRolagem(){
         aplicacaoFinal.textContent = reducaoRolagem();
@@ -3496,7 +3577,8 @@ window.PastasFicha = (function(){
             const modHabilidade = () => (vinculoHabilidadeAtributo[chave] ? vinculoHabilidadeAtributo[chave]() : 0) * multiplicadorNivel();
             habilidadeRolagem = { input: inputHabilidade, mod: modHabilidade, chave: chave };
             const m = numRolagem(modHabilidade());
-            valorHabilidadePopup.textContent = inputHabilidade.value || "0";
+            const extraH = window.extraHabilidade ? window.extraHabilidade(inputHabilidade) : 0;
+            valorHabilidadePopup.textContent = (inputHabilidade.value || "0") + (extraH ? " (" + (extraH > 0 ? "+" : "") + extraH + " extra)" : "");
             tituloRolagemHabilidade.textContent = "Rolar: " + (nomesHabilidades[chave] || chave);
             tituloModHabilidade.textContent = (m >= 0 ? "+" : "") + m;
             resultadoNatural.textContent = "?";

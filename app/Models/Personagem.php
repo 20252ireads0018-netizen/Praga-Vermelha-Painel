@@ -74,7 +74,7 @@ class Personagem extends Model
 
         // atributos vitais
         'vida_atual', 'vida_maxima', 'sanidade_atual', 'sanidade_maxima', 'aura_atual', 'aura_maxima',
-        'vitais_extras', 'armaduras', 'artes_marciais', 'estudos_ama',
+        'vitais_extras', 'armaduras', 'artes_marciais', 'estudos_ama', 'habilidades_extras',
 
         'anotacoes',
 
@@ -93,6 +93,7 @@ class Personagem extends Model
         'armaduras'        => 'array',
         'artes_marciais'   => 'array',
         'estudos_ama'      => 'array',
+        'habilidades_extras' => 'array',
         'anotacoes'        => 'array',
         'pastas'           => 'array',
         'mods_atributos'   => 'array',
@@ -197,6 +198,7 @@ class Personagem extends Model
         $lista = [];
         foreach (self::chavesHabilidades() as $chave) {
             $valor = (int) ($salvas[$chave] ?? 0);
+            $extra = $this->extraHabilidade($chave);
             $atributos = self::VINCULO_HABILIDADE_ATRIBUTO[$chave] ?? [];
             $mod = $atributos
                 ? max(array_map(fn ($a) => $this->modAtributoEfetivo($a), $atributos)) * $multiplicador
@@ -206,12 +208,21 @@ class Personagem extends Model
                 'chave' => $chave,
                 'nome'  => self::NOMES_HABILIDADES[$chave] ?? $chave,
                 'valor' => $valor,
+                'extra' => $extra,
                 'mod'   => $mod,
-                'total' => $valor + $mod,
+                'total' => $valor + $extra + $mod,
             ];
         }
 
         return $lista;
+    }
+
+    /** Soma dos valores extras de uma habilidade (habilidades_extras: origem e valor de cada um, sem limite). */
+    public function extraHabilidade(string $chave): int
+    {
+        $extras = is_array($this->habilidades_extras) ? ($this->habilidades_extras[$chave] ?? []) : [];
+
+        return (int) array_sum(array_map(fn ($e) => (int) ($e['valor'] ?? 0), is_array($extras) ? $extras : []));
     }
 
     public function pontosAtributosGastos(): int
