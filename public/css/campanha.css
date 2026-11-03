@@ -1032,3 +1032,6 @@
 }
 .camp-wrap input:where([type="search"], [type="number"], [type="url"], [type="email"], [type="password"]):focus,
 .camp-wrap input[type="text"]:focus, .camp-wrap textarea:focus, .camp-wrap select:focus { outline: none; border-color: var(--camp-acento-hover); }
+
+/* mestre: cassino fechado para o jogador */
+.camp-btn-cassino-fechado { border-color: #7a1515; color: #e88; }

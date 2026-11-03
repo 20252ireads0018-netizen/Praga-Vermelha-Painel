@@ -19,6 +19,41 @@ class Campanha extends Model
         'som_em'        => 'datetime',
     ];
 
+    private static ?bool $colunaCassino = null;
+
+    /** A coluna campanha_jogadores.cassino só existe depois do SQL da migração 2026_11_03_000028. */
+    public static function temControleCassino(): bool
+    {
+        if (self::$colunaCassino === null) {
+            try {
+                self::$colunaCassino = \Illuminate\Support\Facades\Schema::hasColumn('campanha_jogadores', 'cassino');
+            } catch (\Throwable $e) {
+                self::$colunaCassino = false;
+            }
+        }
+
+        return self::$colunaCassino;
+    }
+
+    /** Só para os testes, que criam a tabela depois do primeiro acesso. */
+    public static function esquecerControleCassino(): void
+    {
+        self::$colunaCassino = null;
+    }
+
+    /** O cassino (minijogos) está aberto para $userId? O mestre sempre; os jogadores, se o mestre não fechou para eles. */
+    public function cassinoLiberado(?int $userId): bool
+    {
+        if ($userId === null || !$this->temMembro($userId)) {
+            return false;
+        }
+        if ($this->ehMestre($userId) || !self::temControleCassino()) {
+            return true;
+        }
+
+        return (bool) ($this->participantes()->where('user_id', $userId)->where('status', 'ativo')->value('cassino') ?? true);
+    }
+
     public function mestre(): BelongsTo
     {
         return $this->belongsTo(User::class, 'mestre_id');

@@ -23,9 +23,12 @@ class MinijogoController extends Controller
 {
     private const GRACA_AVIAO = 0.2; // segundos descontados no "sacar" do Aviator (atraso da rede)
 
-    public function index(Campanha $campanha): View
+    public function index(Campanha $campanha): View|\Illuminate\Http\RedirectResponse
     {
         $uid = $this->exigirMembro($campanha);
+        if (!$campanha->cassinoLiberado($uid)) {
+            return redirect()->route('campanhas.show', $campanha)->withErrors(['cassino' => 'O mestre fechou o cassino desta campanha para você.']);
+        }
 
         return view('campanhas.minijogos', [
             'campanha' => $campanha,
@@ -44,6 +47,10 @@ class MinijogoController extends Controller
         $uid = $this->exigirMembro($campanha);
         $metodo = $jogo . ucfirst($acao);
         abort_unless(in_array($metodo, ['minesIniciar', 'minesAbrir', 'minesSacar', 'aviatorIniciar', 'aviatorEstado', 'aviatorSacar', 'slotGirar'], true), 404);
+        // cassino fechado pelo mestre: não começa rodada nova (a que já está em jogo ainda termina e paga)
+        if (in_array($metodo, ['minesIniciar', 'aviatorIniciar', 'slotGirar'], true) && !$campanha->cassinoLiberado($uid)) {
+            return response()->json(['ok' => false, 'erro' => 'O mestre fechou o cassino desta campanha para você.'], 403);
+        }
 
         try {
             $r = Cache::lock("minijogo-trava:{$campanha->id}:$uid", 10)->block(5, fn () => $this->$metodo($request, $campanha, $uid));

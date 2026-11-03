@@ -117,6 +117,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/recusar', [CampanhaController::class, 'recusar'])->name('recusar');
         Route::delete('/{campanha}/sair', [CampanhaController::class, 'sair'])->name('sair');
         Route::delete('/{campanha}/jogadores/{user}', [CampanhaController::class, 'removerJogador'])->name('jogadores.remover');
+        Route::post('/{campanha}/jogadores/{user}/cassino', [CampanhaController::class, 'cassino'])->name('jogadores.cassino'); // mestre abre/fecha o cassino para o jogador
 
         // Fichas (e foto da ficha)
         Route::post('/{campanha}/fichas', [CampanhaController::class, 'vincularFicha'])->name('fichas.vincular');

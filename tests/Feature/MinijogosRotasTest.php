@@ -40,6 +40,8 @@ class MinijogosRotasTest extends TestCase
         });
         (require database_path('migrations/2026_10_26_000000_create_campanhas_tables.php'))->up();
         (require database_path('migrations/2026_10_28_000011_create_jogos_da_campanha.php'))->up();
+        (require database_path('migrations/2026_11_03_000028_campanha_jogadores_cassino.php'))->up();
+        Campanha::esquecerControleCassino();
         $u = fn ($n) => User::create(['name' => $n, 'email' => strtolower($n) . '@t.test', 'password' => 'x']);
         $mestre = $u('Mestre');
         $this->ana = $u('Ana');
@@ -63,6 +65,37 @@ class MinijogosRotasTest extends TestCase
     private function rodada(): array
     {
         return Cache::get("minijogo:{$this->camp->id}:{$this->ana->id}");
+    }
+
+    public function test_mestre_fecha_e_abre_o_cassino_para_um_jogador(): void
+    {
+        $mestre = User::find($this->camp->mestre_id);
+        $rota = '/campanhas/' . $this->camp->id . '/jogadores/' . $this->ana->id . '/cassino';
+        // só o mestre mexe
+        $this->actingAs($this->ana)->post($rota, ['liberar' => 0])->assertForbidden();
+        $this->actingAs($mestre)->post($rota, ['liberar' => 0])->assertRedirect();
+        $this->assertFalse($this->camp->fresh()->cassinoLiberado($this->ana->id));
+        $this->assertTrue($this->camp->fresh()->cassinoLiberado($mestre->id), 'o mestre sempre pode');
+
+        // fechado: a página manda de volta para a campanha e nenhuma rodada nova começa
+        $this->actingAs($this->ana)->get($this->url())->assertRedirect(route('campanhas.show', $this->camp))->assertSessionHasErrors('cassino');
+        $this->postJson($this->url('/slot/girar'), ['aposta' => 10, 'ficha' => $this->ficha])->assertForbidden();
+        $this->postJson($this->url('/mines/iniciar'), ['aposta' => 10, 'ficha' => $this->ficha, 'minas' => 3])->assertForbidden();
+        $this->assertSame(1000, $this->dinheiro());
+
+        // aberto de novo
+        $this->actingAs($mestre)->post($rota, ['liberar' => 1])->assertRedirect();
+        $this->actingAs($this->ana)->get($this->url())->assertOk();
+    }
+
+    public function test_rodada_em_andamento_termina_mesmo_com_o_cassino_fechado(): void
+    {
+        $this->actingAs($this->ana)->postJson($this->url('/mines/iniciar'), ['aposta' => 100, 'ficha' => $this->ficha, 'minas' => 3])->assertOk();
+        $this->camp->participantes()->where('user_id', $this->ana->id)->update(['cassino' => false]);
+        $segura = collect(range(0, 24))->diff($this->rodada()['bombas'])->first();
+        $this->postJson($this->url('/mines/abrir'), ['casa' => $segura])->assertOk();
+        $this->postJson($this->url('/mines/sacar'))->assertOk();
+        $this->assertGreaterThan(900, $this->dinheiro(), 'sacou o que já tinha ganhado');
     }
 
     public function test_mines_ganha_sacando_e_perde_na_mina(): void

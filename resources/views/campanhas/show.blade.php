@@ -261,6 +261,9 @@
             {{-- ===== Minijogos: apostas fictícias com o Dinheiro dos personagens ===== --}}
             <section class="camp-card">
                 <div class="camp-card-cab"><h2>Minijogos</h2></div>
+                @if (!$campanha->cassinoLiberado(auth()->id()))
+                <p class="camp-dica">O mestre fechou o cassino desta campanha para você.</p>
+                @else
                 <a href="{{ route('campanhas.minijogos.index', $campanha) }}" class="camp-clicavel">
                     <span class="camp-clicavel-info">
                         <strong>Mines, Aviator e caça-níquel</strong>
@@ -268,6 +271,7 @@
                     </span>
                     <span class="camp-seta" aria-hidden="true">›</span>
                 </a>
+                @endif
             </section>
             @endif
 
@@ -554,6 +558,15 @@
                             <span class="camp-badge {{ $p->status === 'ativo' ? 'camp-badge-on' : '' }}">
                                 {{ $p->status === 'ativo' ? 'jogador' : 'convite pendente' }}
                             </span>
+                            @if ($souMestre && $p->status === 'ativo' && AppModelsCampanha::temControleCassino())
+                                @php $cassinoAberto = (bool) ($p->cassino ?? true); @endphp
+                                <form method="POST" action="{{ route('campanhas.jogadores.cassino', [$campanha, $p->user_id]) }}"
+                                      title="{{ $cassinoAberto ? 'Fechar o cassino (minijogos) para esta pessoa' : 'Liberar o cassino (minijogos) para esta pessoa' }}">
+                                    @csrf
+                                    <input type="hidden" name="liberar" value="{{ $cassinoAberto ? 0 : 1 }}">
+                                    <button class="camp-btn camp-btn-pequeno {{ $cassinoAberto ? '' : 'camp-btn-cassino-fechado' }}">{{ $cassinoAberto ? 'Cassino: liberado' : 'Cassino: fechado' }}</button>
+                                </form>
+                            @endif
                             @if ($souMestre)
                                 <form method="POST" action="{{ route('campanhas.jogadores.remover', [$campanha, $p->user_id]) }}"
                                       onsubmit="return confirm('Remover esta pessoa da campanha? As fichas dela vinculadas aqui também serão desvinculadas.')">

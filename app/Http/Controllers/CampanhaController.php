@@ -199,6 +199,18 @@ class CampanhaController extends Controller
         return back()->with('ok', 'Jogador removido da campanha.');
     }
 
+    /** Mestre abre ou fecha o cassino (minijogos) da campanha para um jogador. */
+    public function cassino(Request $request, Campanha $campanha, User $user)
+    {
+        $this->exigirMestre($campanha);
+        abort_unless(Campanha::temControleCassino(), 503, 'Rode o SQL do controle do cassino antes de usar.');
+        $liberar = $request->boolean('liberar');
+        $n = $campanha->participantes()->where('user_id', $user->id)->update(['cassino' => $liberar]);
+        abort_unless($n, 404);
+
+        return back()->with('ok', ($liberar ? 'Cassino liberado para ' : 'Cassino fechado para ') . $user->name . '.');
+    }
+
     /** Jogador sai da campanha por conta própria. */
     public function sair(Campanha $campanha)
     {
