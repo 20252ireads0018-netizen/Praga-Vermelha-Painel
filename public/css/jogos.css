@@ -882,3 +882,32 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-etiqueta--defendido { background: rgba(37, 99, 235, .85); color: #fff; }
 /* seleção de atacantes arrastando um retângulo no próprio campo */
 .gl-laco { position: fixed; z-index: 1945; border: 2px dashed #f2c230; background: rgba(242, 194, 48, .12); pointer-events: none; border-radius: 4px; }
+
+/* chat e bolão da partida (ao lado da mesa; na tela cheia, flutuando no canto) */
+.gl-social { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+@media (max-width: 760px) { .gl-social { grid-template-columns: minmax(0, 1fr); } }
+.gl-social h3 { margin: 0 0 6px; font-size: 1rem; display: flex; justify-content: space-between; gap: 8px; }
+.gl-social h3 small { font-weight: 400; opacity: .7; }
+.gl-chat, .gl-bolao { background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .1); border-radius: 12px; padding: 10px; min-width: 0; }
+.gl-bolao[hidden] { display: none; }
+.gl-chat-lista { list-style: none; margin: 0 0 8px; padding: 0; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; font-size: .88rem; }
+.gl-chat-lista li { overflow-wrap: anywhere; }
+.gl-chat-lista strong { color: var(--ouro, #c9a45c); }
+.gl-chat-vazio { opacity: .6; }
+.gl-chat-form, .gl-bolao-form { display: flex; gap: 6px; flex-wrap: wrap; }
+.gl-chat-form input { flex: 1; min-width: 0; }
+.gl-bolao-form select { flex: 1 1 120px; min-width: 0; }
+.gl-bolao-form input { width: 90px; }
+.gl-bolao-totais { list-style: none; margin: 0 0 6px; padding: 0; font-size: .88rem; }
+.gl-bolao-totais li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.gl-bolao-meu, .gl-bolao-dica { font-size: .8rem; opacity: .8; margin: 6px 0 0; }
+.gl-balao { position: fixed; z-index: 1960; transform: translate(-50%, -100%); max-width: 240px; padding: 6px 10px; border-radius: 12px 12px 12px 2px;
+    background: #fdf6e3; color: #1a1209; font-size: .85rem; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); pointer-events: none; overflow-wrap: anywhere;
+    animation: gl-balao 5s ease forwards; }
+.gl-balao strong { display: block; font-size: .72rem; opacity: .7; }
+.gl-balao--solto { left: 50%; top: 90px; }
+@keyframes gl-balao { 0% { opacity: 0; transform: translate(-50%, -80%); } 8% { opacity: 1; transform: translate(-50%, -100%); } 85% { opacity: 1; } 100% { opacity: 0; } }
+.gl-foco .gl-social { position: fixed; left: 12px; bottom: 12px; z-index: 1210; width: min(340px, calc(100vw - 24px)); grid-template-columns: minmax(0, 1fr); margin: 0; }
+.gl-foco .gl-social .gl-bolao { display: none; }
+.gl-foco .gl-chat-lista { max-height: 110px; }
+@media (prefers-reduced-motion: reduce) { .gl-balao { animation: none; } }

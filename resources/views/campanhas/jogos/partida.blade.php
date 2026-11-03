@@ -19,6 +19,20 @@
     </header>
     <p class="jg-msg" id="jg-msg" hidden></p>
     <div id="jg-jogo" class="{{ $partida->jogo === 'gladio' ? 'gl' : 'pd' }}"></div>
+    @if ($partida->jogo === 'gladio')
+        {{-- chat da partida e bolão de quem assiste (fora da mesa: a mesa redesenha a cada jogada) --}}
+        <aside class="gl-social" id="gl-social">
+            <section class="gl-chat" aria-label="Chat da partida">
+                <h3>Chat</h3>
+                <ol class="gl-chat-lista" id="gl-chat-lista"></ol>
+                <form class="gl-chat-form" id="gl-chat-form" autocomplete="off">
+                    <input type="text" name="texto" maxlength="200" placeholder="Escreva para a mesa…" aria-label="Mensagem">
+                    <button class="camp-btn camp-btn-pequeno">Enviar</button>
+                </form>
+            </section>
+            <section class="gl-bolao" id="gl-bolao" hidden aria-label="Bolão de quem assiste"></section>
+        </aside>
+    @endif
 </div>
 
 <script type="application/json" id="jg-partida-dados">{!! json_encode([
@@ -30,6 +44,8 @@
     'url'     => [
         'estado' => route('campanhas.jogos.estado', [$campanha, $partida]),
         'acao'   => route('campanhas.jogos.acao', [$campanha, $partida]),
+        'chat'   => route('campanhas.jogos.chat', [$campanha, $partida]),
+        'bolao'  => route('campanhas.jogos.bolao', [$campanha, $partida]),
         'lobby'  => route('campanhas.jogos.index', $campanha),
     ],
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>

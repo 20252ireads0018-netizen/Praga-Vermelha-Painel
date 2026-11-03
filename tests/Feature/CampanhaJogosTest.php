@@ -162,6 +162,43 @@ class CampanhaJogosTest extends TestCase
         $this->assertSame([20, 20, 0, 0], [$this->dinheiro($this->ana), $this->dinheiro($caio), $this->dinheiro($this->bia), $this->dinheiro($this->mestre)]);
     }
 
+    public function test_chat_e_bolao_de_quem_assiste(): void
+    {
+        $caio = User::create(['name' => 'Caio', 'email' => 'caio2@t.test', 'password' => 'x']);
+        $this->camp->participantes()->create(['user_id' => $caio->id, 'status' => 'ativo']);
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'G', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        foreach ([$this->mestre, $caio] as $u) {
+            JogoCarteira::create(['campanha_id' => $this->camp->id, 'user_id' => $u->id, 'dinheiro' => 30]);
+        }
+        $this->actingAs($this->ana)->postJson($this->url('/partidas'), ['jogo' => 'gladio'])->assertOk();
+        $p = JogoPartida::firstOrFail();
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/aceitar"))->assertOk();
+        $this->manterTodos($p);
+
+        // chat: jogador e espectador escrevem
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/chat"), ['texto' => 'boa sorte'])->assertOk();
+        $r = $this->actingAs($caio)->postJson($this->url("/partidas/{$p->id}/chat"), ['texto' => 'vai Ana'])->assertOk();
+        $this->assertSame([['Bia', 'b'], ['Caio', null]], array_map(fn ($m) => [$m['nome'], $m['lado']], $r->json('chat')));
+
+        // bolão: só quem assiste, até o turno 3, com saldo
+        $aposta = fn (User $u, string $alvo, int $v) => $this->actingAs($u)->postJson($this->url("/partidas/{$p->id}/bolao"), ['alvo' => $alvo, 'valor' => $v]);
+        $aposta($this->ana, 'a', 5)->assertStatus(422);
+        $aposta($caio, 'a', 99)->assertStatus(422);
+        $aposta($this->mestre, 'a', 10)->assertOk();
+        $r = $aposta($caio, 'b', 20)->assertOk();
+        $this->assertSame(30, $r->json('bolao.pote'));
+        $this->assertSame([20, 10], [$this->dinheiro($this->mestre), $this->dinheiro($caio)]);
+        $e = $p->fresh()->estado;
+        $e['turno'] = 4;
+        $p->fresh()->forceFill(['estado' => $e])->save();
+        $aposta($this->mestre, 'a', 1)->assertStatus(422); // fechou depois do turno 3
+
+        // Bia desiste: Ana vence; o mestre (único acerto) leva o bolão inteiro
+        $this->actingAs($this->bia)->postJson($this->url("/partidas/{$p->id}/acao"), ['acao' => 'desistir'])->assertOk();
+        $this->assertSame('fim', $p->fresh()->status);
+        $this->assertSame([50, 10], [$this->dinheiro($this->mestre), $this->dinheiro($caio)]);
+    }
+
     public function test_so_a_conta_dona_cria_cartas_e_elas_valem_em_todas_as_campanhas(): void
     {
         GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Oficial', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);

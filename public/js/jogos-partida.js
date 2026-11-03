@@ -1074,6 +1074,68 @@
             seta(de, para, 'gl-seta--efeito', 1700);
         }, 250 + k * 200));
     }
+    /* ---------- chat da partida (caixa + balões sobre o assento) e bolão de quem assiste ---------- */
+    let chatVisto = null; // última mensagem já mostrada como balão
+    function renderSocial() {
+        const lista = document.getElementById('gl-chat-lista');
+        if (!lista) return;
+        const chat = D.chat || [];
+        const embaixo = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 30;
+        lista.innerHTML = chat.map(m => `<li><strong>${esc(m.nome)}${m.lado ? '' : ' <small>(assistindo)</small>'}</strong> ${esc(m.texto)}</li>`).join('')
+            || '<li class="gl-chat-vazio">Ninguém escreveu ainda.</li>';
+        if (embaixo || chatVisto === null) lista.scrollTop = lista.scrollHeight;
+        const ultima = chat.length ? chat[chat.length - 1].n : 0;
+        if (chatVisto !== null) chat.filter(m => m.n > chatVisto).slice(-4).forEach(balao);
+        chatVisto = ultima;
+        renderBolao();
+    }
+    function balao(m) {
+        const alvo = m.lado && box.querySelector(`[data-heroi="${m.lado}"]`);
+        const b = document.createElement('div');
+        b.className = 'gl-balao' + (alvo ? '' : ' gl-balao--solto');
+        b.innerHTML = `<strong>${esc(m.nome)}</strong>${esc(m.texto)}`;
+        if (alvo) {
+            const r = alvo.getBoundingClientRect();
+            Object.assign(b.style, { left: (r.left + Math.min(r.width / 2, 120)) + 'px', top: (r.top - 6) + 'px' });
+        }
+        camada().appendChild(b);
+        setTimeout(() => b.remove(), 5000);
+    }
+    function renderBolao() {
+        const caixa = document.getElementById('gl-bolao');
+        const B = D.bolao;
+        if (!caixa || !B || !Object.keys(B.alvos || {}).length) { if (caixa) caixa.hidden = true; return; }
+        caixa.hidden = false;
+        if (caixa.contains(document.activeElement)) return; // não atrapalha quem está digitando
+        const fmtN = n => Number(n || 0).toLocaleString('pt-BR');
+        caixa.innerHTML = `<h3>Bolão <small>${fmtN(B.pote)} em jogo</small></h3>` +
+            `<ul class="gl-bolao-totais">${Object.entries(B.alvos).map(([k, nome]) => `<li><span>${esc(nome)}</span><b>${fmtN((B.totais || {})[k])}</b></li>`).join('')}</ul>` +
+            (B.meu.length ? `<p class="gl-bolao-meu">Suas apostas: ${B.meu.map(a => esc(B.alvos[a.alvo] || a.alvo) + ' ' + fmtN(a.v)).join(', ')}</p>` : '') +
+            (B.aberto
+                ? `<form class="gl-bolao-form" id="gl-bolao-form"><select name="alvo" aria-label="Em quem apostar">${Object.entries(B.alvos).map(([k, nome]) => `<option value="${esc(k)}">${esc(nome)}</option>`).join('')}</select>` +
+                  `<input type="number" name="valor" min="1" max="${B.saldo}" placeholder="Valor" aria-label="Valor"><button class="camp-btn camp-btn-pequeno camp-btn-primario">Apostar</button></form>` +
+                  `<p class="gl-bolao-dica">Até o fim do turno ${B.ate}. Sai da carteira da campanha (você tem ${fmtN(B.saldo)}). Quem acertar divide o bolão na proporção do que apostou; sem acertos, todos recebem de volta.</p>`
+                : `<p class="gl-bolao-dica">${D.lado ? 'Quem está jogando não aposta no bolão.' : (B.pago ? 'Bolão acertado.' : 'Apostas encerradas (até o turno ' + B.ate + ').')}</p>`);
+    }
+    document.addEventListener('submit', async ev => {
+        const f = ev.target;
+        if (f.id !== 'gl-chat-form' && f.id !== 'gl-bolao-form') return;
+        ev.preventDefault();
+        try {
+            if (f.id === 'gl-chat-form') {
+                const texto = f.texto.value.trim();
+                if (!texto) return;
+                f.texto.value = '';
+                D = await post(C.url.chat, { texto }, C.csrf);
+            } else {
+                D = await post(C.url.bolao, { alvo: f.alvo.value, valor: f.valor.value }, C.csrf);
+                msg('Aposta feita no bolão.');
+            }
+            document.activeElement && document.activeElement.blur && f.id === 'gl-bolao-form' && document.activeElement.blur();
+            render();
+        } catch (e) { msg(e.message, true); }
+    });
+
     /* ---------- setas: de quem para quem ---------- */
     const SVGNS = 'http://www.w3.org/2000/svg';
     function centro(el) { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
@@ -1166,6 +1228,7 @@
         if (foto) animar(estadoAnterior, D.estado, foto);
         estadoAnterior = D.estado;
         desenharCombate();
+        renderSocial();
         tique();
     }
     box.addEventListener('click', ev => (D.jogo === 'gladio' ? cliqueGladio(ev) : cliquePelaDama(ev)));

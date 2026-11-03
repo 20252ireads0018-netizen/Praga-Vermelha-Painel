@@ -29,6 +29,9 @@ use Illuminate\View\View;
  */
 class CampanhaJogoController extends Controller
 {
+    /** O bolão de quem assiste aceita apostas até o fim deste turno. */
+    private const BOLAO_ATE_TURNO = 3;
+
     /** Letras das equipes do Gladio (índice da equipe => letra). */
     private const LETRAS = ['A', 'B', 'C'];
 
@@ -569,6 +572,138 @@ class CampanhaJogoController extends Controller
             + ($comecou ? [] : $this->dadosLobby($campanha)));
     }
 
+    /** Chat da partida: jogadores e quem assiste escrevem; a tela mostra a caixa e um balão sobre o assento de quem jogou. */
+    public function chat(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $this->daCampanha($campanha, $partida);
+        $uid = (int) auth()->id();
+        $texto = trim((string) $request->validate(['texto' => ['required', 'string', 'max:200']])['texto']);
+        if ($texto === '') {
+            return $this->erro('Escreva alguma coisa.');
+        }
+        $p = DB::transaction(function () use ($partida, $uid, $texto) {
+            $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
+            $cfg = (array) ($p->config ?? []);
+            $chat = (array) ($cfg['chat'] ?? []);
+            $n = (int) ($cfg['chat_n'] ?? 0) + 1;
+            $chat[] = ['n' => $n, 'u' => $uid, 'nome' => (string) (User::whereKey($uid)->value('name') ?? 'Alguém'),
+                       'lado' => $p->ladoDe($uid), 'texto' => $texto, 't' => time()];
+            $cfg['chat'] = array_slice($chat, -60);
+            $cfg['chat_n'] = $n;
+            $p->config = $cfg;
+            $p->versao = (int) $p->versao + 1;
+            $p->save();
+
+            return $p;
+        });
+
+        return response()->json($this->dadosPartida($p));
+    }
+
+    /**
+     * Bolão de quem assiste: aposta Dinheiro da carteira da campanha num jogador (ou equipe) até o fim do turno 3.
+     * Quem acertar divide o bolão na proporção do que apostou; sem acertos, ou partida cancelada, todos recebem de volta.
+     */
+    public function apostarBolao(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $this->daCampanha($campanha, $partida);
+        $uid = (int) auth()->id();
+        $d = $request->validate(['alvo' => ['required', 'string', 'max:2'], 'valor' => ['required', 'integer', 'min:1', 'max:1000000000']]);
+        try {
+            $p = DB::transaction(function () use ($campanha, $partida, $uid, $d) {
+                $p = JogoPartida::lockForUpdate()->findOrFail($partida->id);
+                $e = $p->estado;
+                if ($p->jogo !== 'gladio' || $p->status !== 'andamento' || !$e || !empty($e['fim'])) {
+                    throw new \InvalidArgumentException('O bolão só vale com a partida em andamento.');
+                }
+                if ($p->ladoDe($uid)) {
+                    throw new \InvalidArgumentException('Quem está jogando não aposta no bolão.');
+                }
+                if ((int) ($e['turno'] ?? 1) > self::BOLAO_ATE_TURNO) {
+                    throw new \InvalidArgumentException('O bolão fechou: as apostas valem até o turno ' . self::BOLAO_ATE_TURNO . '.');
+                }
+                $alvos = $this->alvosDoBolao($p);
+                if (!isset($alvos[$d['alvo']])) {
+                    throw new \InvalidArgumentException('Escolha em quem apostar.');
+                }
+                $c = $this->carteira($campanha, $uid, true);
+                if ($c->dinheiro < (int) $d['valor']) {
+                    throw new \InvalidArgumentException('Você não tem Dinheiro suficiente na carteira da campanha.');
+                }
+                $c->dinheiro -= (int) $d['valor'];
+                $c->save();
+                $cfg = (array) ($p->config ?? []);
+                $cfg['bolao'][] = ['u' => $uid, 'alvo' => $d['alvo'], 'v' => (int) $d['valor']];
+                $p->config = $cfg;
+                $p->versao = (int) $p->versao + 1;
+                $p->save();
+
+                return $p;
+            });
+        } catch (\InvalidArgumentException $x) {
+            return $this->erro($x->getMessage());
+        }
+
+        return response()->json($this->dadosPartida($p));
+    }
+
+    /** Em quem dá para apostar: os lados (todos contra todos) ou as equipes. alvo => nome. */
+    private function alvosDoBolao(JogoPartida $p): array
+    {
+        $e = $p->estado ?? [];
+        if (!empty($e['equipes'])) {
+            $r = [];
+            foreach (array_unique(array_values($e['equipes'])) as $letra) {
+                $r[$letra] = 'Equipe ' . $letra;
+            }
+
+            return $r;
+        }
+        $r = [];
+        foreach ($p->jogadores() as $k => $id) {
+            $r[Gladio::LADOS[$k]] = (string) (User::whereKey($id)->value('name') ?? 'Jogador');
+        }
+
+        return $r;
+    }
+
+    /** Paga o bolão (fim da partida) ou devolve tudo (cancelada, ou ninguém acertou). Uma vez só. */
+    private function acertarBolao(Campanha $campanha, JogoPartida $p, ?string $vencedor): void
+    {
+        $cfg = (array) ($p->config ?? []);
+        $apostas = (array) ($cfg['bolao'] ?? []);
+        if (!$apostas || !empty($cfg['bolao_pago'])) {
+            return;
+        }
+        $pote = array_sum(array_column($apostas, 'v'));
+        $certas = $vencedor === null ? [] : array_values(array_filter($apostas, fn ($a) => $a['alvo'] === $vencedor));
+        $somaCertas = array_sum(array_column($certas, 'v'));
+        $pagar = function (int $uid, int $valor) use ($campanha) {
+            $c = $this->carteira($campanha, $uid, true);
+            $c->dinheiro += $valor;
+            $c->save();
+        };
+        if (!$certas) {
+            foreach ($apostas as $a) {
+                $pagar((int) $a['u'], (int) $a['v']); // ninguém acertou ou cancelou: cada um recebe de volta
+            }
+        } else {
+            $pago = 0;
+            foreach ($certas as $a) {
+                $parte = intdiv($pote * (int) $a['v'], $somaCertas);
+                $pago += $parte;
+                $pagar((int) $a['u'], $parte);
+            }
+            if ($pote > $pago) {
+                $pagar((int) $certas[0]['u'], $pote - $pago); // o que sobra da divisão
+            }
+        }
+        $cfg['bolao_pago'] = true;
+        $p->config = $cfg;
+    }
+
     /** Gladio em equipes: quem já está na mesa muda de equipe enquanto ela espera começar (se houver vaga na outra). */
     public function trocarEquipe(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
     {
@@ -753,6 +888,9 @@ class CampanhaJogoController extends Controller
                         foreach ($p->jogadores() as $quem) {
                             $this->moverAposta($campanha, $p, (int) $quem, (int) $p->aposta);
                         }
+                    }
+                    if ($p->jogo === 'gladio') {
+                        $this->acertarBolao($campanha, $p, null); // cancelada: o bolão volta para quem apostou
                     }
                 } else {
                     throw new \InvalidArgumentException('Essa partida já terminou.');
@@ -985,6 +1123,7 @@ class CampanhaJogoController extends Controller
                         $time = $e['fim']['equipe'] ?? null;
                         $ganham = $time === null ? array_filter([$vencedorId]) : array_values(array_filter($p->jogadores(),
                             fn ($id, $k) => ($e['equipes'][Gladio::LADOS[$k]] ?? null) === $time, ARRAY_FILTER_USE_BOTH));
+                        $this->acertarBolao($campanha, $p, $time ?? $venceu); // bolão de quem assistiu
                         if ($p->aposta > 0 && $ganham) { // para a ficha que cada um vinculou ou para a carteira
                             $pote = (int) $p->aposta * count($p->jogadores());
                             foreach ($ganham as $n => $id) { // em equipe, divide igual (o que sobra da divisão vai para o primeiro)
@@ -1282,6 +1421,28 @@ class CampanhaJogoController extends Controller
         ];
     }
 
+    /** O bolão para a tela: em quem dá para apostar, o total em cada um, as apostas da pessoa e se ainda aceita apostas. */
+    private function resumoBolao(JogoPartida $p, int $uid): array
+    {
+        $apostas = (array) (($p->config ?? [])['bolao'] ?? []);
+        $alvos = $p->estado ? $this->alvosDoBolao($p) : [];
+        $totais = [];
+        foreach ($apostas as $a) {
+            $totais[$a['alvo']] = ($totais[$a['alvo']] ?? 0) + (int) $a['v'];
+        }
+
+        return [
+            'alvos'  => $alvos,
+            'totais' => (object) $totais,
+            'pote'   => array_sum($totais),
+            'meu'    => array_values(array_map(fn ($a) => ['alvo' => $a['alvo'], 'v' => (int) $a['v']], array_filter($apostas, fn ($a) => (int) $a['u'] === $uid))),
+            'aberto' => $p->status === 'andamento' && empty(($p->estado ?? [])['fim']) && (int) (($p->estado ?? [])['turno'] ?? 1) <= self::BOLAO_ATE_TURNO && !$p->ladoDe($uid),
+            'ate'    => self::BOLAO_ATE_TURNO,
+            'pago'   => !empty(($p->config ?? [])['bolao_pago']),
+            'saldo'  => $p->campanha_id ? $this->saldo(Campanha::find($p->campanha_id), $uid) : 0,
+        ];
+    }
+
     /** Estado que o navegador recebe: no Gladio cada um só vê a própria mão; no Pela Dama vão os lances possíveis de quem joga. */
     private function dadosPartida(JogoPartida $p): array
     {
@@ -1312,6 +1473,8 @@ class CampanhaJogoController extends Controller
                 'j2' => (string) optional($p->jogador2)->name,
             ],
             'jogadores' => $roda,
+            'chat'      => array_values((array) (($p->config ?? [])['chat'] ?? [])),
+            'bolao'     => $p->jogo === 'gladio' ? $this->resumoBolao($p, $uid) : null,
             'vencedor'  => $p->vencedor_id ? ((int) $p->vencedor_id === (int) $p->jogador1_id ? 'j1' : 'j2') : null,
             'estado'    => $e,
         ];
