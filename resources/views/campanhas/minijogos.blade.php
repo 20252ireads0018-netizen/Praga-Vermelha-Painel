@@ -9,7 +9,8 @@
 <div class="camp-wrap camp-wrap-larga mj" id="mj">
     <a href="{{ route('campanhas.show', $campanha) }}" class="camp-voltar">← {{ $campanha->nome }}</a>
     <h1>Minijogos</h1>
-    <p class="camp-sub">Apostas fictícias com o Dinheiro dos seus personagens. Tudo aqui vale só dentro do RPG.</p>
+    <p class="camp-sub">Cassino da Rua Escarlate. Apostas fictícias com o Dinheiro dos seus personagens: tudo aqui vale só dentro do RPG.</p>
+    <div class="mj-letreiro" aria-live="off"><span class="mj-letreiro-rotulo">Ganhando agora</span><span class="mj-letreiro-texto" id="mj-letreiro"></span></div>
 
     <div class="mj-topo">
         <label class="mj-com">Apostar com
@@ -18,6 +19,7 @@
         <div class="mj-saldo" aria-live="polite"><span>Dinheiro</span><strong id="mj-saldo">R$ 0</strong></div>
     </div>
     <p class="jg-msg" id="mj-msg" hidden></p>
+    <div class="mj-tentacao" id="mj-tentacao" hidden></div>
 
     <div class="mj-abas" role="tablist">
         <button type="button" role="tab" data-aba="mines" aria-selected="true"><span class="mj-ico" data-ico="gema"></span>Mines<small>Campo amaldiçoado</small></button>

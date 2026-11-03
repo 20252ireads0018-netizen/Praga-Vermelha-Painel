@@ -69,11 +69,48 @@
 
     /* ---------- abas ---------- */
     function abrirAba(nome) {
+        const t = document.getElementById('mj-tentacao');
+        if (t && !t.hidden && ls.get(D.chave + '-aba') !== nome) t.hidden = true;
         $$('[data-aba]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.aba === nome)));
         $$('[data-painel]').forEach(p => { p.hidden = p.dataset.painel !== nome; });
         ls.set(D.chave + '-aba', nome);
     }
     $$('[data-aba]').forEach(b => b.addEventListener('click', () => abrirAba(b.dataset.aba)));
+
+    /* ---------- o letreiro da Casa (ganhadores) e a tentação depois de cada rodada ---------- */
+    const NOMES = ['Barão Lúcio Vane', 'Irmã Véspera', 'Cabo Rufino', 'a Dama de Cinza', 'Ozias, o Cego', 'Doutora Hale', 'Tenente Morrow',
+        'Velha Ingrid', 'o Contador da AMA', 'Kael do Porto', 'Madame Sorel', 'um Hexomante sem nome', 'Bispo Aurelian', 'a Viúva Teixeira'];
+    const JOGOS_NOME = { mines: 'Mines', aviator: 'Aviator', slot: 'Caça-níquel' };
+    function letreiro() {
+        const jogo = Object.keys(JOGOS_NOME)[Math.floor(Math.random() * 3)];
+        const mult = jogo === 'slot' ? [5, 10, 20, 40, 120][Math.floor(Math.random() * 5)] : +(1.5 + Math.random() ** 3 * 40).toFixed(2);
+        const valor = Math.round((50 + Math.random() ** 2 * 2950) * mult / 10) * 10; // aposta plausível × multiplicador
+        const el = $('#mj-letreiro');
+        el.classList.remove('entra'); void el.offsetWidth; el.classList.add('entra');
+        el.innerHTML = `<b>${esc(NOMES[Math.floor(Math.random() * NOMES.length)])}</b> ganhou <b class="mj-ouro">${reais(valor)}</b> no ${JOGOS_NOME[jogo]} (${jogo === 'slot' ? mult + '×' : xis(mult)})`;
+    }
+    letreiro();
+    setInterval(letreiro, 4200);
+    const FRASES_PERDA = ['A Casa agradece a sua contribuição.', 'Quem desiste nunca ganha.', 'A sorte gira. A próxima é sua.',
+        'O Conselho lembra: só perde quem para.', 'Faltou pouco. Muito pouco.'];
+    const FRASES_GANHO = ['A sorte está com você esta noite.', 'A Casa está generosa hoje.', 'Uma noite assim não se repete. Aproveite.'];
+    const sorteia = l => l[Math.floor(Math.random() * l.length)];
+    /** Depois da rodada: na perda, oferece recuperar tudo com o dobro; no ganho, convida a dobrar. */
+    function tentar(jogo, ganhou, texto) {
+        const caixa = $('#mj-tentacao');
+        const campo = $(`.mj-aposta[data-jogo="${jogo}"]`);
+        const dobro = Math.min(Math.max(1, (+campo.value || 1) * 2), Math.max(1, saldo()));
+        caixa.className = 'mj-tentacao ' + (ganhou ? 'ganhou' : 'perdeu');
+        caixa.innerHTML = `<span>${texto ? texto + ' ' : ''}${esc(sorteia(ganhou ? FRASES_GANHO : FRASES_PERDA))}</span>` +
+            (saldo() > 0 ? `<button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" data-dobro="${jogo}">${ganhou ? 'Dobrar a aposta' : 'Recuperar tudo'} · ${reais(dobro)}</button>` : '');
+        caixa.hidden = false;
+        caixa.querySelector('[data-dobro]') && caixa.querySelector('[data-dobro]').addEventListener('click', () => {
+            campo.value = dobro;
+            caixa.hidden = true;
+            abrirAba(jogo);
+            $(`#mj-${jogo}-botao`).click(); // já começa a próxima rodada com o dobro
+        });
+    }
 
     /* ================= Mines ================= */
     let mines = null; // rodada em andamento
@@ -132,7 +169,9 @@
     function fimMines(f) {
         mines = null;
         desenharGrade(f);
-        $('#mj-mines-info').innerHTML = f.ganhou ? `<span class="mj-ganhou">Sacou ${xis(f.mult)}: +${reais(f.premio)}</span>` : '<span class="mj-perdeu">Um Kuro! A aposta foi perdida.</span>';
+        $('#mj-mines-info').innerHTML = f.ganhou ? `<span class="mj-ganhou">Sacou ${xis(f.mult)}: +${reais(f.premio)}</span>`
+            : `<span class="mj-perdeu">Um Kuro! Você estava a uma casa de ${xis(f.faltou || 1)}.</span>`;
+        tentar('mines', f.ganhou, f.ganhou ? '' : 'Tão perto.');
         if (!f.ganhou) $('#mj-grade').classList.add('tremendo'), setTimeout(() => $('#mj-grade').classList.remove('tremendo'), 600);
     }
 
@@ -203,6 +242,7 @@
         $('#mj-mult').innerHTML = f.ganhou
             ? `${xis(f.mult)}<small>Sacou: +${reais(f.premio)} · a maldição viria em ${xis(f.queda)}</small>`
             : `${xis(f.queda)}<small>A maldição derrubou o corvo</small>`;
+        tentar('aviator', f.ganhou, f.ganhou && f.queda > f.mult * 1.5 ? `Quem ficou mais um pouco levou ${xis(f.queda)}.` : '');
     }
     $('#mj-aviator-botao').addEventListener('click', async e => {
         const b = e.currentTarget;
@@ -253,7 +293,10 @@
             })));
             fitas.forEach((fita, i) => { preencherFita(fita, f.rolos[i], 0); fita.style.transition = 'none'; fita.style.transform = 'translateY(0)'; });
             if (f.ganhou) $('#mj-rolos').classList.add('ganhou');
-            $('#mj-slot-resultado').innerHTML = f.ganhou ? `<span class="mj-ganhou">${f.vezes}× · +${reais(f.premio)}</span>` : '<span class="mj-perdeu">Nada desta vez.</span>';
+            $('#mj-slot-resultado').innerHTML = f.ganhou ? `<span class="mj-ganhou">${f.vezes}× · +${reais(f.premio)}</span>`
+                : (f.quase ? '<span class="mj-perdeu mj-triz">Por um triz!</span>' : '<span class="mj-perdeu">Nada desta vez.</span>');
+            if (f.quase) $('#mj-rolos').classList.add('quase'), setTimeout(() => $('#mj-rolos').classList.remove('quase'), 1600);
+            tentar('slot', f.ganhou, f.quase ? 'Faltou um símbolo.' : '');
         } catch (err) { msg(err.message, true); }
         b.disabled = false;
     });

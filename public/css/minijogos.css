@@ -99,3 +99,23 @@
 @media (prefers-reduced-motion: reduce) {
     .mj *, .mj *::before { animation: none !important; transition: none !important; }
 }
+
+/* letreiro da Casa e a tentação depois de cada rodada */
+.mj-letreiro { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; padding: 6px 12px; border-radius: 999px; overflow: hidden; white-space: nowrap;
+    background: linear-gradient(90deg, rgba(165, 30, 30, .35), rgba(0, 0, 0, .4)); border: 1px solid var(--mj-borda); font-size: .85rem; }
+.mj-letreiro-rotulo { flex: none; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: #ff8a8a; display: inline-flex; align-items: center; gap: 6px; }
+.mj-letreiro-rotulo::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; animation: mj-pisca 1.2s infinite; }
+@keyframes mj-pisca { 50% { opacity: .25; } }
+.mj-letreiro-texto { overflow: hidden; text-overflow: ellipsis; }
+.mj-letreiro-texto.entra { animation: mj-letreiro-entra .5s ease-out; }
+@keyframes mj-letreiro-entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.mj-ouro { color: #f2d7a0; }
+.mj-tentacao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--mj-borda); animation: mj-letreiro-entra .35s ease-out; }
+.mj-tentacao.perdeu { background: linear-gradient(90deg, rgba(122, 21, 21, .45), rgba(0, 0, 0, .3)); }
+.mj-tentacao.ganhou { background: linear-gradient(90deg, rgba(201, 164, 92, .25), rgba(0, 0, 0, .3)); }
+.mj-tentacao .camp-btn { animation: mj-chama 1.6s ease-in-out infinite; }
+@keyframes mj-chama { 50% { box-shadow: 0 0 0 4px rgba(214, 60, 60, .35); } }
+.mj-rolos.quase .mj-rolo:nth-child(odd), .mj-rolos.quase .mj-rolo:nth-child(2) { animation: mj-quase .25s ease-in-out 4 alternate; }
+@keyframes mj-quase { to { transform: translateY(-4px); box-shadow: inset 0 10px 14px rgba(0, 0, 0, .3), 0 0 16px 2px rgba(214, 60, 60, .7); } }
+.mj-triz { font-size: 1.2rem; }

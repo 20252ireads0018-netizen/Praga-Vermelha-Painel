@@ -124,6 +124,28 @@ class MinijogosRotasTest extends TestCase
         $this->assertSame(499, (int) JogoCarteira::first()->dinheiro);
     }
 
+    public function test_mines_pelas_rotas_nunca_passa_do_teto_da_noite(): void
+    {
+        $this->actingAs($this->ana); // a ficha começa a noite com 1000: o teto é 1500
+        for ($rodada = 0; $rodada < 12; $rodada++) {
+            $saldo = $this->dinheiro();
+            if ($saldo < 1) {
+                break;
+            }
+            $this->postJson($this->url('/mines/iniciar'), ['aposta' => max(1, intdiv($saldo, 2)), 'ficha' => $this->ficha, 'minas' => 3])->assertOk();
+            foreach (range(0, 24) as $casa) { // vai abrindo até a Casa pôr uma mina (ou acabar a grade)
+                $r = $this->postJson($this->url('/mines/abrir'), ['casa' => $casa])->assertOk();
+                if ($r->json('fim')) {
+                    break;
+                }
+            }
+            if (!$r->json('fim')) {
+                $this->postJson($this->url('/mines/sacar'))->assertOk();
+            }
+            $this->assertLessThanOrEqual(1500, $this->dinheiro(), "rodada $rodada");
+        }
+    }
+
     public function test_caca_niquel_tira_a_aposta_e_paga_o_premio(): void
     {
         $this->actingAs($this->ana);

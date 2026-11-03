@@ -60,9 +60,9 @@ class MinijogoController extends Controller
     {
         $d = $request->validate(['minas' => ['required', 'integer', 'min:1', 'max:24']] + $this->regrasAposta());
         $this->semRodada($campanha, $uid);
-        $ficha = $this->apostar($campanha, $uid, $d);
+        [$ficha, $casa] = $this->apostar($campanha, $uid, $d);
         $r = ['jogo' => 'mines', 'aposta' => (int) $d['aposta'], 'ficha' => $ficha, 'minas' => (int) $d['minas'],
-            'bombas' => Minijogos::sortearMinas((int) $d['minas']), 'abertas' => []];
+            'bombas' => Minijogos::sortearMinas((int) $d['minas']), 'abertas' => [], 'casa' => $casa];
         $this->guardar($campanha, $uid, $r);
 
         return ['rodada' => $this->publica($r)];
@@ -75,10 +75,26 @@ class MinijogoController extends Controller
         if (in_array($casa, $r['abertas'], true)) {
             return ['rodada' => $this->publica($r)];
         }
-        if (in_array($casa, $r['bombas'], true)) { // mina: perde a aposta
+        $eraMina = in_array($casa, $r['bombas'], true);
+        $mina = Minijogos::minaDaCasa($eraMina, count($r['abertas']), $r['minas'], $r['aposta'], $r['casa'] ?? ['premio_max' => PHP_INT_MAX, 'isca' => false, 'lucro' => 0]);
+        if ($eraMina !== $mina) { // a Casa troca uma mina de lugar (a contagem de minas não muda)
+            $livres = array_values(array_diff(range(0, Minijogos::CASAS - 1), $r['bombas'], $r['abertas'], [$casa]));
+            if ($mina) {
+                $r['bombas'] = array_values(array_diff($r['bombas'], [$r['bombas'][array_rand($r['bombas'])]]));
+                $r['bombas'][] = $casa;
+            } elseif ($livres) {
+                $r['bombas'] = array_values(array_diff($r['bombas'], [$casa]));
+                $r['bombas'][] = $livres[array_rand($livres)];
+            } else {
+                $mina = true;
+            }
+            sort($r['bombas']);
+        }
+        if ($mina) { // mina: perde a aposta
             $this->encerrar($campanha, $uid);
+            $faltou = Minijogos::multMines($r['minas'], count($r['abertas']) + 1);
 
-            return ['fim' => ['ganhou' => false, 'premio' => 0, 'casa' => $casa, 'bombas' => $r['bombas'], 'abertas' => $r['abertas']]];
+            return ['fim' => ['ganhou' => false, 'premio' => 0, 'casa' => $casa, 'bombas' => $r['bombas'], 'abertas' => $r['abertas'], 'faltou' => $faltou]];
         }
         $r['abertas'][] = $casa;
         if (count($r['abertas']) === Minijogos::CASAS - $r['minas']) { // abriu todas as seguras: saca sozinho
@@ -115,8 +131,8 @@ class MinijogoController extends Controller
     {
         $d = $request->validate(['auto' => ['nullable', 'numeric', 'min:1.01', 'max:' . Minijogos::TETO_AVIAO]] + $this->regrasAposta());
         $this->semRodada($campanha, $uid);
-        $ficha = $this->apostar($campanha, $uid, $d);
-        $r = ['jogo' => 'aviator', 'aposta' => (int) $d['aposta'], 'ficha' => $ficha, 'queda' => Minijogos::sortearQueda(),
+        [$ficha, $casa] = $this->apostar($campanha, $uid, $d);
+        $r = ['jogo' => 'aviator', 'aposta' => (int) $d['aposta'], 'ficha' => $ficha, 'queda' => Minijogos::quedaDaCasa(Minijogos::sortearQueda(), $casa, (int) $d['aposta']),
             'inicio' => microtime(true), 'auto' => isset($d['auto']) ? round((float) $d['auto'], 2) : null];
         $this->guardar($campanha, $uid, $r);
 
@@ -170,15 +186,15 @@ class MinijogoController extends Controller
     {
         $d = $request->validate($this->regrasAposta());
         $this->semRodada($campanha, $uid);
-        $ficha = $this->apostar($campanha, $uid, $d);
-        $rolos = Minijogos::girar();
+        [$ficha, $casa] = $this->apostar($campanha, $uid, $d);
+        [$rolos, $quase] = Minijogos::rolosDaCasa(Minijogos::girar(), (int) $d['aposta'], $casa);
         $vezes = Minijogos::premioSlot($rolos);
         $premio = (int) $d['aposta'] * $vezes;
         if ($premio > 0) {
             $this->pagar($campanha, $uid, $ficha, $premio);
         }
 
-        return ['fim' => ['ganhou' => $premio > 0, 'premio' => $premio, 'vezes' => $vezes, 'rolos' => $rolos]];
+        return ['fim' => ['ganhou' => $premio > 0, 'premio' => $premio, 'vezes' => $vezes, 'rolos' => $rolos, 'quase' => $quase]];
     }
 
     /* ---------- rodada no cache ---------- */
@@ -264,16 +280,30 @@ class MinijogoController extends Controller
         ];
     }
 
-    /** Tira a aposta do personagem escolhido (ou da carteira). Devolve a ficha usada (null = carteira). */
-    private function apostar(Campanha $campanha, int $uid, array $d): ?int
+    /**
+     * Tira a aposta do personagem escolhido (ou da carteira). Devolve [ficha usada (null = carteira), condições da Casa].
+     * A "noite de cassino" de cada personagem/carteira guarda quanto ele tinha ao começar (a base do teto) e quantas
+     * rodadas já jogou; dura NOITE_HORAS e recomeça se o saldo passar do teto por fora (o mestre deu Dinheiro, por exemplo).
+     */
+    private function apostar(Campanha $campanha, int $uid, array $d): array
     {
         $ficha = (int) ($d['ficha'] ?? 0) ?: null;
-        if ($ficha !== null && !in_array($ficha, array_column($this->fichas($campanha, $uid), 'id'), true)) {
+        $fichas = $this->fichas($campanha, $uid);
+        if ($ficha !== null && !in_array($ficha, array_column($fichas, 'id'), true)) {
             throw new \InvalidArgumentException('Escolha um personagem seu vinculado a esta campanha.');
         }
+        $saldo = $ficha !== null ? (int) collect($fichas)->firstWhere('id', $ficha)['dinheiro'] : $this->saldos($campanha, $uid)['carteira'];
+        $chave = "minijogo-noite:{$campanha->id}:$uid:" . ($ficha ?? 'carteira');
+        $noite = Cache::get($chave);
+        if (!is_array($noite) || ($noite['ate'] ?? 0) < time() || $saldo > Minijogos::teto((int) $noite['base'])) {
+            $noite = ['base' => $saldo, 'rodadas' => 0, 'ate' => time() + Minijogos::NOITE_HORAS * 3600];
+        }
+        $casa = Minijogos::casa($saldo, (int) $d['aposta'], (int) $noite['base'], (int) $noite['rodadas']);
         $this->mover($campanha, $uid, $ficha, -(int) $d['aposta']);
+        $noite['rodadas']++;
+        Cache::put($chave, $noite, now()->addHours(Minijogos::NOITE_HORAS + 1));
 
-        return $ficha;
+        return [$ficha, $casa];
     }
 
     private function pagar(Campanha $campanha, int $uid, ?int $ficha, int $premio): void
