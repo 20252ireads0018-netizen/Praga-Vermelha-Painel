@@ -2837,6 +2837,7 @@ class Gladio
                         array_splice($L['mesa'], $k, 1);
                         unset($L);
                         self::log($e, "$fonte: $quem sacrificou " . self::nomeLenda($e, $m) . '.');
+                        $e['fila'][0]['sacrificou'] = true; // "sacrifique… compre": o resto do efeito confere isso
                         $e = self::saiDaMesa($e, $l, $m);
                     }
                     break;

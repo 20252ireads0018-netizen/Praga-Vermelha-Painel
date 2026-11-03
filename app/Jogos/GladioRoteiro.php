@@ -111,6 +111,8 @@ class GladioRoteiro
             'Invoque uma ficha de mão 1/1' => ['hab' => [['g' => 'entrar', 'passos' => [self::ficha('Mão', 1, 1)]]]],
             'Quando Amir atacar, crie X fichas de lança 1/1 atacando, onde X é o número de vezes que Amir já atacou' => ['hab' => [['g' => 'atacar', 'passos' => [
                 self::ficha('Lança', 1, 1, [], ['n' => '#ataques', 'atacando' => true])]]]],
+            'Quando invocado, sacrifique uma lenda, compre duas cartas' => ['hab' => [['g' => 'entrar', 'passos' => [ // Barill: sem sacrifício, sem compra
+                ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu'], ['a' => 'se', 'c' => 'sacrificou', 'passos' => [['a' => 'comprar', 'n' => 2, 'alvo' => 'eu']]]]]]],
             'Quando Aporium atacar, ele se torna posse do jogador defensor. Se Aporium terminou seu turno em seu campo, perca 10$' => ['hab' => [
                 ['g' => 'atacar', 'passos' => [['a' => 'posse']]], ['g' => 'fim_meu', 'passos' => [['a' => 'perder', 'n' => 10, 'alvo' => 'eu']]]]],
             'Toda vez que uma lenda for invocada para você, você pode transformá-la em um cara-lata' => ['hab' => [['g' => 'entra_minha', 'passos' => [

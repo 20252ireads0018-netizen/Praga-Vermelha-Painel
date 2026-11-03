@@ -415,6 +415,9 @@ trait GladioRegras
             return preg_match('/^' . $prefixo . ':([\w@]+)(>=|>)(\d+)$/', $c, $m) ? [$m[1], $m[2], (int) $m[3]] : null;
         };
         $cmp = fn (int $v, string $op, int $x) => $op === '>' ? $v > $x : $v >= $x;
+        if ($c === 'sacrificou') { // Barill: o efeito só segue se o sacrifício pedido antes aconteceu
+            return !empty($ef['sacrificou']);
+        }
         if ($q = $num($c, 'cont')) {
             return $cmp((int) ($fonte['mk'][$q[0]] ?? 0), $q[1], $q[2]);
         }

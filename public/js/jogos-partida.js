@@ -254,7 +254,10 @@
                 attrs = `data-lenda="${x.i}" data-dono="${lado}"${ver(x.c, x.i, lado)}`;
             }
             const bloqueia = !feitico && bloqueios[x.i] != null ? L[e.vez].mesa.find(a => a.i === +bloqueios[x.i]) : null;
-            const etiqueta = feitico ? '' : atacando.includes(x.i) ? '<span class="gl-etiqueta gl-etiqueta--ataque">atacando</span>'
+            const bloqueadoPor = !feitico && atacando.includes(x.i) ? Object.keys(bloqueios).filter(b => +bloqueios[b] === x.i)
+                .map(b => (L[M.ataque.defensor] || { mesa: [] }).mesa.find(m => m.i === +b)).filter(Boolean) : [];
+            const etiqueta = feitico ? '' : bloqueadoPor.length ? `<span class="gl-etiqueta gl-etiqueta--defendido" title="Já foi bloqueada">defendido por ${bloqueadoPor.map(m => esc(nomeLenda(m))).join(', ')}</span>`
+                : atacando.includes(x.i) ? '<span class="gl-etiqueta gl-etiqueta--ataque">atacando</span>'
                 : (bloqueia ? `<span class="gl-etiqueta">bloqueia ${esc(nomeLenda(bloqueia))}</span>`
                 : (x.virada ? '<span class="gl-etiqueta gl-etiqueta--cansada" title="Atacou: só volta a bloquear no próximo turno de quem a controla">virada</span>'
                 : (!x.pode && meu && minhaVez ? '<span class="gl-etiqueta gl-etiqueta--cansada" title="Entrou neste turno ou já atacou">cansada</span>' : '')));
@@ -277,18 +280,19 @@
             const l = L[lado];
             const lendas = l.mesa.map(x => naMesa(x, lado, false)).join('');
             const feiticos = (l.feiticos || []).filter(x => !x.em || !l.mesa.some(m => m.i === x.em)).map(x => naMesa(x, lado, true)).join('');
-            const pm = (C.playmats || {})[lado]; // playmat que o dono escolheu para o campo dele
-            return `<div class="gl-campo${pm ? ' gl-campo--playmat' : ''}" data-campo="${lado}"${lado === D.lado ? ' data-zona="campo"' : ''}${pm ? ` style="--playmat:url('${esc(pm)}')"` : ''}>` +
+            return `<div class="gl-campo" data-campo="${lado}"${lado === D.lado ? ' data-zona="campo"' : ''}>` +
                 (lendas || feiticos ? lendas + (feiticos ? `<div class="gl-feiticos" title="Feitiços em jogo">${feiticos}</div>` : '')
                     : `<p class="gl-vazio">${lado === D.lado && M.jogo ? 'Arraste uma carta da mão para cá' : 'Sem cartas em jogo'}</p>`) + '</div>';
         };
 
+        // playmat: a imagem que o dono escolheu cobre o lado inteiro dele (campo, barra e mão)
+        const playmat = lado => { const pm = (C.playmats || {})[lado]; return pm ? { cls: ' gl-playmat', st: ` style="--playmat:url('${esc(pm)}')"` } : { cls: '', st: '' }; };
         // assento de um adversário (no alto da mesa)
         const assento = lado => {
             const l = L[lado];
             const mao = Array.isArray(l.mao) ? l.mao : Array.from({ length: l.mao || 0 }, () => ({ oculta: true }));
             const reveladas = mao.filter(c => c.rev);
-            return `<section class="gl-assento${e.vez === lado && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === lado ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}">` +
+            return `<section class="gl-assento${playmat(lado).cls}${e.vez === lado && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === lado ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}"${playmat(lado).st}>` +
                 `<div class="gl-assento-cab${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
                     `<span class="gl-avatar">${inicialDe(lado)}</span>` +
                     `<div class="gl-assento-info"><strong>${nomeDe(lado)}${selo(lado)}</strong>${vida(lado)}</div>` +
@@ -382,7 +386,7 @@
             `<div class="gl-mesa${defendo || esperoDefesa ? ' gl-em-combate' : ''}">` +
                 `<div class="gl-oponentes gl-op-${outros.length}">${outros.map(assento).join('')}</div>` +
                 centro +
-                `<div class="gl-meu-lado">${campo(eu)}${minhaBarra}${maoHtml}</div>` +
+                `<div class="gl-meu-lado${playmat(eu).cls}"${playmat(eu).st}>${campo(eu)}${minhaBarra}${maoHtml}</div>` +
             `</div>` +
             (e.pausa && D.status === 'andamento' ? `<div class="gl-pausa" role="status"><b>⏸ Partida pausada</b><span>O mestre pausou o jogo. O relógio parou e ninguém pode agir até ele retomar.</span></div>` : '') +
             `<aside class="gl-log"><h3>Acontecimentos</h3><ol>${e.log.slice().reverse().map(t => `<li>${esc(t)}</li>`).join('')}</ol></aside>` +
@@ -724,6 +728,48 @@
     });
 
     /* ---------- arrastar da mão: para o campo joga, para o cemitério descarta ---------- */
+    /* ---------- escolher vários atacantes de uma vez: arrastar um retângulo no próprio campo ---------- */
+    box.addEventListener('pointerdown', ev => {
+        if (D.jogo !== 'gladio' || ev.button > 0) return;
+        const M = momento();
+        const campoEu = ev.target.closest(`.gl-campo[data-campo="${M.eu}"]`);
+        if (!campoEu || !M.minhaVez || M.e.atacou || alvo || modal || ev.target.closest('[data-lenda], [data-feitico], button')) return;
+        const x0 = ev.clientX, y0 = ev.clientY;
+        let laco = null;
+        const mover = e2 => {
+            if (!laco) {
+                if (Math.hypot(e2.clientX - x0, e2.clientY - y0) < 8) return;
+                laco = document.createElement('div');
+                laco.className = 'gl-laco';
+                camada().appendChild(laco);
+            }
+            const r = { l: Math.min(x0, e2.clientX), t: Math.min(y0, e2.clientY), r: Math.max(x0, e2.clientX), b: Math.max(y0, e2.clientY) };
+            Object.assign(laco.style, { left: r.l + 'px', top: r.t + 'px', width: (r.r - r.l) + 'px', height: (r.b - r.t) + 'px' });
+            laco.dataset.r = JSON.stringify(r);
+        };
+        const fim = () => {
+            document.removeEventListener('pointermove', mover);
+            document.removeEventListener('pointerup', fim);
+            document.removeEventListener('pointercancel', fim);
+            if (!laco) return;
+            const r = JSON.parse(laco.dataset.r || 'null');
+            laco.remove();
+            if (!r) return;
+            // as Lendas prontas que o retângulo tocou entram no ataque (as que já estavam continuam)
+            box.querySelectorAll(`.gl-campo[data-campo="${M.eu}"] [data-lenda].gl-pode`).forEach(el => {
+                const c = el.getBoundingClientRect();
+                const i = +el.dataset.lenda;
+                if (c.right > r.l && c.left < r.r && c.bottom > r.t && c.top < r.b && !atacantes.includes(i)) atacantes.push(i);
+            });
+            engolirClique = true;
+            setTimeout(() => { engolirClique = false; }, 0);
+            render();
+        };
+        document.addEventListener('pointermove', mover);
+        document.addEventListener('pointerup', fim);
+        document.addEventListener('pointercancel', fim);
+    });
+
     box.addEventListener('pointerdown', ev => {
         if (D.jogo !== 'gladio' || ev.button > 0) return;
         const carta = ev.target.closest('.gl-mao [data-mao], .gl-eu-barra [data-comando]');

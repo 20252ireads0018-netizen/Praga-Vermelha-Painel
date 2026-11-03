@@ -875,3 +875,10 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 @keyframes gl-seta-some { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes gl-seta-marcha { to { stroke-dashoffset: -18; } }
 @media (prefers-reduced-motion: reduce) { .gl-seta--efeito, .gl-seta--ataque, .gl-seta--bloqueio { animation: none; stroke-dashoffset: 0; } }
+
+/* playmat cobrindo o lado inteiro do jogador (campo, barra e mão) */
+.gl-playmat { background-image: linear-gradient(rgba(10, 6, 6, .45), rgba(10, 6, 6, .45)), var(--playmat); background-size: cover; background-position: center; border-radius: 14px; }
+.gl-meu-lado.gl-playmat { padding: .35rem; }
+.gl-etiqueta--defendido { background: rgba(37, 99, 235, .85); color: #fff; }
+/* seleção de atacantes arrastando um retângulo no próprio campo */
+.gl-laco { position: fixed; z-index: 1945; border: 2px dashed #f2c230; background: rgba(242, 194, 48, .12); pointer-events: none; border-radius: 4px; }
