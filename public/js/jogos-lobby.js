@@ -454,10 +454,10 @@
         renderPaginacao(todas.length);
         $('#jg-cartas').innerHTML = lista.length ? lista.map(c =>
             `<div class="jg-carta-item">${window.JG.carta(c)}${selo(c) ? `<div class="jg-ban-linha">${selo(c)}</div>` : ''}` +
-            (D.souMestre ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-carta="${c.id}">Editar</button>` +
+            (D.podeCartas ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-carta="${c.id}">Editar</button>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-carta="${c.id}">Excluir</button></div>` : '') +
             `</div>`).join('')
-            : `<p class="camp-vazio">${cartas.length ? 'Nenhuma carta com esses filtros.' : (D.souMestre ? 'Crie a primeira carta do Gladio.' : 'O mestre ainda não criou cartas.')}</p>`;
+            : `<p class="camp-vazio">${cartas.length ? 'Nenhuma carta com esses filtros.' : (D.podeCartas ? 'Crie a primeira carta do Gladio.' : 'Ainda não há cartas oficiais do Gladio.')}</p>`;
     }
     barraFiltros.addEventListener('input', () => { pagina = 1; renderCartas(); });
     barraFiltros.addEventListener('click', e => {

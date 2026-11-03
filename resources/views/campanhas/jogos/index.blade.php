@@ -131,7 +131,7 @@
                         <span class="camp-contagem" id="jg-cont-cartas">0</span>
                     </div>
                     <p class="camp-dica"><strong>Lenda</strong>: fica na mesa e ataca a partir do turno seguinte. <strong>Feitiço</strong>: efeito de uso único (resolve e vai para o cemitério). <strong>Encantamento</strong>: fica no campo com o efeito ativo. <strong>Equipamento</strong>: fica preso a uma Lenda sua, com bônus de ataque/vida e palavras-chave, e cai junto com ela. Cada um monta um baralho com as cartas abaixo.</p>
-                    @if ($souMestre)
+                    @if ($podeCartas)
                         <button type="button" class="camp-btn camp-btn-primario" id="jg-nova-carta">+ Nova carta</button>
                         <form class="jg-criador" id="jg-criador-carta" hidden>
                             <div class="jg-criador-campos">
@@ -216,7 +216,7 @@
                     <nav class="jg-paginacao" id="jg-paginacao-cartas" aria-label="Páginas de cartas" hidden></nav>
                 </section>
 
-                @if ($souMestre)
+                @if ($podeCartas)
                     <section class="camp-card">
                         <div class="camp-card-cab">
                             <h2>Galeria de imagens</h2>
@@ -328,6 +328,7 @@
     'eu'        => (int) auth()->id(),
     'campanha'  => $campanha->id,
     'souMestre' => $souMestre,
+    'podeCartas' => $podeCartas,
     'csrf'      => csrf_token(),
     'membros'   => $membros,
     'cartas'    => $cartas->map(fn ($c) => ['id' => $c->id] + $c->paraJogo() + ['imagem' => $c->imagem])->values(),

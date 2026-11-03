@@ -32,6 +32,9 @@ class CampanhaJogoController extends Controller
     /** Letras das equipes do Gladio (índice da equipe => letra). */
     private const LETRAS = ['A', 'B', 'C'];
 
+    /** Campanhas do catálogo oficial de cartas (calculado uma vez por requisição). */
+    private ?array $oficiais = null;
+
     public const JOGOS = ['gladio', 'pela_dama'];
 
     /* ================================================================== */
@@ -46,8 +49,9 @@ class CampanhaJogoController extends Controller
         return view('campanhas.jogos.index', [
             'campanha'  => $campanha,
             'souMestre' => $campanha->ehMestre($uid),
+            'podeCartas' => $this->donoDasCartas(), // só a conta dona do Gladio cria e edita cartas
             'membros'   => $this->membros($campanha),
-            'cartas'    => GladioCarta::where('campanha_id', $campanha->id)->orderBy('tipo')->orderBy('custo')->orderBy('nome')->get(),
+            'cartas'    => GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->orderBy('tipo')->orderBy('custo')->orderBy('nome')->get(),
             'pecas'     => PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get(),
             'imagens'   => $this->listaImagens($campanha),
             'decks'     => $this->listaDecks($campanha, $uid),
@@ -70,7 +74,7 @@ class CampanhaJogoController extends Controller
         $this->daCampanha($campanha, $partida);
 
         $cartas = $partida->jogo === 'gladio'
-            ? GladioCarta::where('campanha_id', $campanha->id)->get(['id', 'imagem', 'descricao'])
+            ? GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->get(['id', 'imagem', 'descricao'])
                 ->mapWithKeys(fn ($c) => [(string) $c->id => ['imagem' => $c->imagem, 'descricao' => (string) $c->descricao]])
             : collect();
 
@@ -118,7 +122,7 @@ class CampanhaJogoController extends Controller
     /** Criador de cartas (só o mestre): cria ou edita. */
     public function salvarCarta(Request $request, Campanha $campanha): JsonResponse
     {
-        $this->exigirMestre($campanha);
+        $this->exigirDonoDasCartas();
         $d = $request->validate([
             'id'        => ['nullable', 'integer'],
             'nome'      => ['required', 'string', 'max:60'],
@@ -141,8 +145,8 @@ class CampanhaJogoController extends Controller
             return response()->json(['ok' => false, 'erro' => 'Uma Lenda precisa de pelo menos 1 de vida.'], 422);
         }
         $carta = !empty($d['id'])
-            ? GladioCarta::where('campanha_id', $campanha->id)->findOrFail((int) $d['id'])
-            : new GladioCarta(['campanha_id' => $campanha->id]);
+            ? GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->findOrFail((int) $d['id'])
+            : new GladioCarta(['campanha_id' => $this->campanhasOficiais($campanha)[0] ?? $campanha->id]); // carta nova entra no catálogo oficial
 
         $lenda = $d['tipo'] === 'lenda';
         $equipo = $d['tipo'] === 'equipo'; // Equipamento: ataque/vida são o bônus que a Lenda equipada recebe
@@ -190,8 +194,8 @@ class CampanhaJogoController extends Controller
 
     public function excluirCarta(Campanha $campanha, GladioCarta $carta): JsonResponse
     {
-        $this->exigirMestre($campanha);
-        abort_unless((int) $carta->campanha_id === (int) $campanha->id, 404);
+        $this->exigirDonoDasCartas();
+        abort_unless(in_array((int) $carta->campanha_id, $this->campanhasOficiais($campanha), true), 404);
         $carta->delete(); // partidas em andamento guardam uma cópia da carta
 
         return response()->json(['ok' => true]);
@@ -289,7 +293,7 @@ class CampanhaJogoController extends Controller
     /** Envia uma ou várias imagens (o navegador já reduz e converte para JPEG). */
     public function enviarImagens(Request $request, Campanha $campanha): JsonResponse
     {
-        $this->exigirMestre($campanha);
+        $this->exigirDonoDasCartas();
         if (!Schema::hasTable('gladio_imagens')) {
             return $this->erro('A galeria ainda não existe no banco: rode o SQL da migração 2026_10_28_000012.');
         }
@@ -388,7 +392,7 @@ class CampanhaJogoController extends Controller
 
     public function excluirImagem(Campanha $campanha, GladioImagem $imagem): JsonResponse
     {
-        $this->exigirMestre($campanha);
+        $this->exigirDonoDasCartas();
         abort_unless((int) $imagem->campanha_id === (int) $campanha->id, 404);
         // cartas já criadas guardam a própria cópia da imagem; o arquivo só sai se nenhuma outra entrada da galeria usa
         if (!GladioImagem::where('caminho', $imagem->caminho)->whereKeyNot($imagem->id)->exists()) {
@@ -435,7 +439,7 @@ class CampanhaJogoController extends Controller
         $aposta = 0;
         $config = null;
         if ($d['jogo'] === 'gladio') {
-            if (!GladioCarta::where('campanha_id', $campanha->id)->exists()) {
+            if (!GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->exists()) {
                 return $this->erro('O mestre ainda não criou nenhuma carta de Gladio.');
             }
             $aposta = (int) ($d['aposta'] ?? 0);
@@ -1024,6 +1028,33 @@ class CampanhaJogoController extends Controller
         abort_unless($campanha->ehMestre(auth()->id()), 403, 'Apenas o mestre pode fazer isso.');
     }
 
+    /** A conta dona do Gladio (config gladio.dono_cartas): só ela cria e edita cartas, a banlist e a galeria. */
+    private function donoDasCartas(): bool
+    {
+        $email = mb_strtolower(trim((string) config('gladio.dono_cartas')));
+
+        return $email !== '' && mb_strtolower((string) auth()->user()?->email) === $email;
+    }
+
+    private function exigirDonoDasCartas(): void
+    {
+        abort_unless($this->donoDasCartas(), 403, 'Só a conta oficial do Gladio cria e edita cartas.');
+    }
+
+    /**
+     * Campanhas cujas cartas formam o catálogo oficial (as que a conta dona mestra). O catálogo vale para todas as
+     * campanhas; sem conta dona cadastrada, cada campanha usa as próprias cartas.
+     */
+    private function campanhasOficiais(Campanha $campanha): array
+    {
+        if ($this->oficiais === null) {
+            $dono = User::where('email', (string) config('gladio.dono_cartas'))->value('id');
+            $this->oficiais = $dono ? Campanha::where('mestre_id', $dono)->orderBy('id')->pluck('id')->map(fn ($i) => (int) $i)->all() : [];
+        }
+
+        return $this->oficiais ?: [(int) $campanha->id];
+    }
+
     private function daCampanha(Campanha $campanha, JogoPartida $partida): void
     {
         abort_unless((int) $partida->campanha_id === (int) $campanha->id, 404);
@@ -1128,7 +1159,7 @@ class CampanhaJogoController extends Controller
     /** Cartas de Gladio da campanha no formato do motor: [id => carta]. */
     private function catalogo(Campanha $campanha): array
     {
-        return GladioCarta::where('campanha_id', $campanha->id)->get()
+        return GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->get()
             ->mapWithKeys(fn ($c) => [(string) $c->id => $c->paraJogo()])->all();
     }
 

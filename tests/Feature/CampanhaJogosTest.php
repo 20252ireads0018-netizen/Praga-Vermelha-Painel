@@ -65,6 +65,7 @@ class CampanhaJogosTest extends TestCase
         $this->bia = $u('Bia');
         $this->estranho = $u('Estranho');
         $this->camp = Campanha::create(['nome' => 'Teste', 'mestre_id' => $this->mestre->id]);
+        config(['gladio.dono_cartas' => $this->mestre->email]); // o mestre da campanha de teste é a conta dona das cartas
         foreach ([$this->ana, $this->bia] as $j) {
             $this->camp->participantes()->create(['user_id' => $j->id, 'status' => 'ativo']);
         }
@@ -159,6 +160,23 @@ class CampanhaJogosTest extends TestCase
         $p = $p->fresh();
         $this->assertSame(['fim', 'A'], [$p->status, $p->estado['fim']['equipe']]);
         $this->assertSame([20, 20, 0, 0], [$this->dinheiro($this->ana), $this->dinheiro($caio), $this->dinheiro($this->bia), $this->dinheiro($this->mestre)]);
+    }
+
+    public function test_so_a_conta_dona_cria_cartas_e_elas_valem_em_todas_as_campanhas(): void
+    {
+        GladioCarta::create(['campanha_id' => $this->camp->id, 'nome' => 'Oficial', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1]);
+        $outra = Campanha::create(['nome' => 'Outra', 'mestre_id' => $this->ana->id]);
+        $outra->participantes()->create(['user_id' => $this->bia->id, 'status' => 'ativo']);
+        $url = '/campanhas/' . $outra->id . '/jogos';
+        // o mestre da outra campanha não cria nem edita cartas
+        $this->actingAs($this->ana)->postJson($url . '/cartas', ['nome' => 'Minha', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1])->assertStatus(403);
+        $this->assertSame(1, GladioCarta::count());
+        // mas a página dele mostra as cartas oficiais e o jogo começa com elas
+        $this->actingAs($this->ana)->get($url)->assertOk()->assertSee('Oficial')->assertDontSee('id="jg-nova-carta"', false);
+        $this->actingAs($this->ana)->postJson($url . '/partidas', ['jogo' => 'gladio'])->assertOk();
+        // a conta dona cria a partir de qualquer campanha dela
+        $this->actingAs($this->mestre)->postJson($this->url('/cartas'), ['nome' => 'Nova', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 1])->assertOk();
+        $this->assertSame(2, GladioCarta::where('campanha_id', $this->camp->id)->count());
     }
 
     private function manterTodos($p): void
