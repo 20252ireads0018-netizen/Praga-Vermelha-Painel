@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Jogos\Minijogos;
 use App\Models\Campanha;
 use App\Models\CampanhaFicha;
@@ -270,7 +271,7 @@ class MinijogoController extends Controller
     /** Fichas do jogador vinculadas à campanha que têm Dinheiro: [{ id, nome, dinheiro }]. */
     private function fichas(Campanha $campanha, int $uid): array
     {
-        if (!Schema::hasColumn('fichas', 'dinheiro')) {
+        if (!Esquema::coluna('fichas', 'dinheiro')) {
             return [];
         }
         $ids = CampanhaFicha::where('campanha_id', $campanha->id)->pluck('ficha_id');

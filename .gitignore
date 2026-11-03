@@ -32,3 +32,6 @@ Thumbs.db
 /deploy/videos/out/
 /deploy/videos/*.wav
 /deploy/videos/linha.json
+
+# backups do banco e dos arquivos de produção (deploy/backup-arquivos.sh e storage/app/backups): dados de usuários, nunca no git
+/backups/

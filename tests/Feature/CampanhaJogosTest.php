@@ -84,6 +84,8 @@ class CampanhaJogosTest extends TestCase
         $r = $this->actingAs($this->ana)->getJson('/campanhas/jogos/ativas')->assertOk();
         $this->assertSame([$p->id, $vez === 'a'], [$r->json('partidas.0.id'), $r->json('partidas.0.minha')]);
         $this->assertStringContainsString("/partidas/{$p->id}", $r->json('partidas.0.url'));
+        $this->assertSame($this->camp->nome, $r->json('partidas.0.campanha'));
+        $this->assertSame($vez === 'a' ? $this->ana->name : $this->bia->name, $r->json('partidas.0.espera'));
         $this->actingAs($this->mestre)->getJson('/campanhas/jogos/ativas')->assertOk()->assertJson(['partidas' => []]); // só quem joga
         // a miniatura aparece nas páginas do site, mas não na própria mesa
         $this->actingAs($this->ana)->get($this->url())->assertSee('id="jg-mini"', false);

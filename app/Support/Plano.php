@@ -28,7 +28,7 @@ class Plano
     {
         if (self::$colunas === null) {
             try {
-                self::$colunas = Schema::hasColumn('users', 'livro_comprado_em') && Schema::hasColumn('users', 'objetivo');
+                self::$colunas = Esquema::coluna('users', 'livro_comprado_em') && Esquema::coluna('users', 'objetivo');
             } catch (\Throwable $e) {
                 self::$colunas = false;
             }

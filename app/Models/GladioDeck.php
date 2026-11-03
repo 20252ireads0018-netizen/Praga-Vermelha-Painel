@@ -20,7 +20,7 @@ class GladioDeck extends Model
     /** A coluna comandante_id só existe depois do SQL da migração 2026_10_29_000014. */
     public static function temComandante(): bool
     {
-        return self::$temComandante ??= \Illuminate\Support\Facades\Schema::hasColumn('gladio_decks', 'comandante_id');
+        return self::$temComandante ??= \App\Support\Esquema::coluna('gladio_decks', 'comandante_id');
     }
 
     protected $casts = ['cartas' => 'array'];

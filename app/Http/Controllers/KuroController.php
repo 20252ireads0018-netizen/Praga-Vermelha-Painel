@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use App\Models\Kuro;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ class KuroController extends Controller
         return view('campanhas.kuros', [
             'campanha' => $campanha,
             'souMestre' => $mestre,
-            'tabela'   => Schema::hasTable('kuros'),
+            'tabela'   => Esquema::tabela('kuros'),
             'kuros'    => $this->lista($campanha, $uid, $mestre),
             'membros'  => $mestre ? $this->jogadores($campanha) : [],
         ]);
@@ -33,7 +34,7 @@ class KuroController extends Controller
     public function salvar(Request $request, Campanha $campanha): JsonResponse
     {
         $this->exigirMestre($campanha);
-        abort_unless(Schema::hasTable('kuros'), 422, 'A tabela de Kuros ainda não existe: rode o SQL da migração 2026_11_02_000021.');
+        abort_unless(Esquema::tabela('kuros'), 422, 'A tabela de Kuros ainda não existe: rode o SQL da migração 2026_11_02_000021.');
         $d = $this->validar($request, true);
         $kuro = !empty($d['id']) ? Kuro::where('campanha_id', $campanha->id)->findOrFail((int) $d['id']) : new Kuro(['campanha_id' => $campanha->id]);
         $kuro->fill(['nome' => trim($d['nome']), 'dados' => $d['dados'], 'notas' => $d['notas'] ?? $kuro->notas]);
@@ -132,7 +133,7 @@ class KuroController extends Controller
 
     private function lista(Campanha $campanha, int $uid, bool $mestre): array
     {
-        if (!Schema::hasTable('kuros')) {
+        if (!Esquema::tabela('kuros')) {
             return [];
         }
         $q = Kuro::where('campanha_id', $campanha->id)->orderBy('nome');

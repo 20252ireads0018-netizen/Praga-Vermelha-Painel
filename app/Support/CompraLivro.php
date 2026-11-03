@@ -19,7 +19,7 @@ class CompraLivro
         if (self::$colunas === null) {
             try {
                 self::$colunas = Plano::temColunas()
-                    && Schema::hasColumn('users', 'cpf_cnpj') && Schema::hasColumn('users', 'asaas_cobranca_id');
+                    && Esquema::coluna('users', 'cpf_cnpj') && Esquema::coluna('users', 'asaas_cobranca_id');
             } catch (\Throwable $e) {
                 self::$colunas = false;
             }

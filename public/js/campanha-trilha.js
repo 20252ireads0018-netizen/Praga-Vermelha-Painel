@@ -137,7 +137,8 @@
         if (mudou) aplicar(); else desenharStatus();
     }
     consultar();
-    setInterval(() => { if (!document.hidden) consultar(); }, 3000);
+    // depois da primeira consulta, usa o polling que a página já faz (campanha.js dispara campanha:estado a cada 2 s)
+    window.addEventListener('campanha:estado', ev => { if (ev.detail && 'trilha' in ev.detail) receber(ev.detail.trilha); });
     setInterval(() => { if (estado && estado.tocando) aplicar(); }, 15000); // corrige pequenos desvios
 
     /* ---------- volume e liberação do som ---------- */

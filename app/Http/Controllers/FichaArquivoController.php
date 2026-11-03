@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Support\Plano;
 use App\Models\Personagem;
 use Illuminate\Http\Request;
@@ -238,7 +239,7 @@ class FichaArquivoController extends Controller
 
         // Colunas que podem não existir na tabela são descartadas.
         foreach (['itens', 'anotacoes', 'vitais_extras', 'niveis_profissao'] as $coluna) {
-            if (array_key_exists($coluna, $dados) && !Schema::hasColumn($tabela, $coluna)) {
+            if (array_key_exists($coluna, $dados) && !Esquema::coluna($tabela, $coluna)) {
                 unset($dados[$coluna]);
             }
         }
@@ -263,7 +264,7 @@ class FichaArquivoController extends Controller
     {
         if (
             auth()->check()
-            && Schema::hasColumn($personagem->getTable(), 'usuario_id')
+            && Esquema::coluna($personagem->getTable(), 'usuario_id')
             && $personagem->usuario_id !== null
             && (int) $personagem->usuario_id !== (int) auth()->id()
         ) {

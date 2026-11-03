@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use App\Models\CampanhaIniciativa;
 use Illuminate\Http\JsonResponse;
@@ -62,7 +63,7 @@ class CampanhaIniciativaController extends Controller
         $uid       = (int) auth()->id();
         $souMestre = $campanha->ehMestre($uid);
 
-        if (!Schema::hasTable('campanha_iniciativas')) {
+        if (!Esquema::tabela('campanha_iniciativas')) {
             return response()->json(['itens' => [], 'fichas' => [], 'mestre' => $souMestre]);
         }
 
@@ -85,7 +86,7 @@ class CampanhaIniciativaController extends Controller
         $uid       = (int) auth()->id();
         $souMestre = $campanha->ehMestre($uid);
 
-        if (!Schema::hasTable('campanha_iniciativas')) {
+        if (!Esquema::tabela('campanha_iniciativas')) {
             return $this->semTabela();
         }
 
@@ -149,7 +150,7 @@ class CampanhaIniciativaController extends Controller
         $uid = (int) auth()->id();
 
         // sem binding de model: sem a tabela o binding estouraria 500 antes de chegar aqui
-        if (!Schema::hasTable('campanha_iniciativas')) {
+        if (!Esquema::tabela('campanha_iniciativas')) {
             return $this->semTabela();
         }
         $iniciativa = CampanhaIniciativa::findOrFail($iniciativa);
@@ -167,7 +168,7 @@ class CampanhaIniciativaController extends Controller
         $this->autorizar($campanha);
         abort_unless($campanha->ehMestre(auth()->id()), 403, 'Apenas o mestre pode fazer isso.');
 
-        if (!Schema::hasTable('campanha_iniciativas')) {
+        if (!Esquema::tabela('campanha_iniciativas')) {
             return $this->semTabela();
         }
 

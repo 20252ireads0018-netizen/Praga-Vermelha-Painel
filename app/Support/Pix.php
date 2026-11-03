@@ -27,7 +27,7 @@ class Pix
         }
         if (self::$tabela === null) {
             try {
-                self::$tabela = Schema::hasTable('pix_pedidos');
+                self::$tabela = Esquema::tabela('pix_pedidos');
             } catch (\Throwable $e) {
                 self::$tabela = false;
             }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use App\Models\CampanhaCatalogo;
 use App\Models\User;
@@ -91,7 +92,7 @@ class CampanhaCatalogoController extends Controller
         $this->autorizar($campanha);
         $user = auth()->user();
 
-        if (!Schema::hasTable('campanha_catalogos')) {
+        if (!Esquema::tabela('campanha_catalogos')) {
             return response()->json(['itens' => [], 'espera' => 0, 'disponiveis' => self::disponiveis($user, $campanha->ehMestre($user->id)), 'mestre' => $campanha->ehMestre($user->id)]);
         }
 
@@ -122,7 +123,7 @@ class CampanhaCatalogoController extends Controller
         if (!$campanha->ehMestre(auth()->id())) {
             return response()->json(['erro' => 'Só o mestre pode recalcular as notas.'], 403);
         }
-        if (!Schema::hasTable('campanha_catalogos')) {
+        if (!Esquema::tabela('campanha_catalogos')) {
             return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
         }
 
@@ -145,7 +146,7 @@ class CampanhaCatalogoController extends Controller
     public function dica(Campanha $campanha, string $catalogo): JsonResponse
     {
         $this->autorizar($campanha);
-        if (!Schema::hasTable('campanha_catalogos')) {
+        if (!Esquema::tabela('campanha_catalogos')) {
             return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
         }
         $registro = CampanhaCatalogo::where('campanha_id', $campanha->id)->where('id', (int) $catalogo)->first();
@@ -169,7 +170,7 @@ class CampanhaCatalogoController extends Controller
         if (!$campanha->ehMestre(auth()->id())) {
             return response()->json(['erro' => 'Só o mestre pode apagar propostas.'], 403);
         }
-        if (!Schema::hasTable('campanha_catalogos')) {
+        if (!Esquema::tabela('campanha_catalogos')) {
             return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
         }
 
@@ -187,7 +188,7 @@ class CampanhaCatalogoController extends Controller
         $this->autorizar($campanha);
         $user = auth()->user();
 
-        if (!Schema::hasTable('campanha_catalogos')) {
+        if (!Esquema::tabela('campanha_catalogos')) {
             return response()->json(['erro' => 'A disputa de catálogo ainda não está disponível.'], 503);
         }
 

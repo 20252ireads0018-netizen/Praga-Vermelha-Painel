@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Support\Plano;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -47,7 +48,7 @@ class PersonagemController extends Controller
      */
     public function dinheiro(Request $request, string $id)
     {
-        if (!Schema::hasColumn('fichas', 'dinheiro')) {
+        if (!Esquema::coluna('fichas', 'dinheiro')) {
             return response()->json(['ok' => false, 'erro' => 'O Dinheiro das fichas ainda não existe no banco: rode o SQL da migração 2026_10_29_000019.'], 422);
         }
         $d = $request->validate([
@@ -368,7 +369,7 @@ class PersonagemController extends Controller
         $dados['pontos_extras_habilidades'] = (int) ($dados['pontos_extras_habilidades'] ?? 0);
 
         // Ajuste manual dos pontos de habilidade: só grava se a migration que cria a coluna já rodou
-        if (Schema::hasColumn('fichas', 'pontos_habilidade_ajuste')) {
+        if (Esquema::coluna('fichas', 'pontos_habilidade_ajuste')) {
             $dados['pontos_habilidade_ajuste'] = (int) ($dados['pontos_habilidade_ajuste'] ?? 0);
         } else {
             unset($dados['pontos_habilidade_ajuste']);
@@ -376,7 +377,7 @@ class PersonagemController extends Controller
 
         // Propriedades fisiomantes: só grava se a migration que cria a coluna já rodou
         // Níveis por profissão: só grava se a coluna existir e se o formulário enviou o campo
-        if (!Schema::hasColumn('fichas', 'niveis_profissao') || !$veio['niveis_profissao']) {
+        if (!Esquema::coluna('fichas', 'niveis_profissao') || !$veio['niveis_profissao']) {
             unset($dados['niveis_profissao']);
         } elseif (isset($dados['niveis_profissao'])) {
             $dados['niveis_profissao'] = array_values($dados['niveis_profissao']);
@@ -384,7 +385,7 @@ class PersonagemController extends Controller
 
         // Valores extras das habilidades: só grava se a coluna existir (SQL da migração 2026_11_03_000024) e se veio no
         // formulário; ficam só habilidades conhecidas e, em cada uma, a origem (texto) e o valor (inteiro, sem limite de pontos)
-        if (!Schema::hasColumn('fichas', 'habilidades_extras') || !$veio['habilidades_extras']) {
+        if (!Esquema::coluna('fichas', 'habilidades_extras') || !$veio['habilidades_extras']) {
             unset($dados['habilidades_extras']);
         } else {
             $limpos = [];
@@ -409,17 +410,17 @@ class PersonagemController extends Controller
         }
 
         // Estudos na AMA: só grava se a coluna existir (rode o SQL da migração 2026_11_02_000020) e se veio no formulário
-        if (!Schema::hasColumn('fichas', 'estudos_ama') || !$veio['estudos_ama']) {
+        if (!Esquema::coluna('fichas', 'estudos_ama') || !$veio['estudos_ama']) {
             unset($dados['estudos_ama']);
         }
 
         // Armaduras: só grava se a coluna existir e se o formulário enviou o campo
-        if (!Schema::hasColumn('fichas', 'armaduras') || !$veio['armaduras']) {
+        if (!Esquema::coluna('fichas', 'armaduras') || !$veio['armaduras']) {
             unset($dados['armaduras']);
         }
 
         // Artes marciais: só as artes conhecidas e só se a coluna existir e o formulário enviou o campo
-        if (!Schema::hasColumn('fichas', 'artes_marciais') || !$veio['artes_marciais']) {
+        if (!Esquema::coluna('fichas', 'artes_marciais') || !$veio['artes_marciais']) {
             unset($dados['artes_marciais']);
         } else {
             $artes = [];
@@ -439,12 +440,12 @@ class PersonagemController extends Controller
             $dados['artes_marciais'] = $artes;
         }
 
-        if (!Schema::hasColumn('fichas', 'propriedades_fisiomantes')) {
+        if (!Esquema::coluna('fichas', 'propriedades_fisiomantes')) {
             unset($dados['propriedades_fisiomantes']);
         }
 
         // Mods de atributo ajustados à mão: só os atributos conhecidos, só se a coluna existir
-        if (Schema::hasColumn('fichas', 'mods_atributos')) {
+        if (Esquema::coluna('fichas', 'mods_atributos')) {
             $mods = [];
             foreach (Personagem::ATRIBUTOS as $atributo) {
                 if (isset($dados['mods_atributos'][$atributo]) && $dados['mods_atributos'][$atributo] !== '') {

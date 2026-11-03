@@ -21,6 +21,9 @@
         @if ($pixAdmin)
             <a href="{{ route('admin.pix') }}" class="pl-alerta px-admin-link">Pagamentos Pix: {{ $pixParaConferir ? $pixParaConferir . ' para conferir' : 'nenhum para conferir' }} →</a>
         @endif
+        @if (\App\Support\Pix::admin(auth()->user()))
+            <a href="{{ route('admin.backup') }}" class="pl-alerta px-admin-link">Backups do banco →</a>
+        @endif
 
         @auth
             <div class="pl-atual">

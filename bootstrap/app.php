@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // O webhook do Asaas chega sem sessão: a autenticação é o token no header "asaas-access-token"
         $middleware->validateCsrfTokens(except: ['webhooks/asaas']);
+        // cada rota com o próprio contador de limite (app/Http/Middleware/LimitePorRota.php)
+        $middleware->alias(['throttle' => \App\Http\Middleware\LimitePorRota::class]);
+        $middleware->append(\App\Http\Middleware\CabecalhosSeguranca::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // JSON também para requisições AJAX que pedem JSON (ex.: salvamento automático da ficha).

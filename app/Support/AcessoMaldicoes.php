@@ -29,7 +29,7 @@ class AcessoMaldicoes
             return self::$cacheChave[$u->id];
         }
         $ok = false;
-        if (Schema::hasColumn('users', 'chave_maldicoes') && Schema::hasColumn('campanhas', 'chave_maldicoes')) {
+        if (Esquema::coluna('users', 'chave_maldicoes') && Esquema::coluna('campanhas', 'chave_maldicoes')) {
             $chave = mb_strtolower(trim((string) $u->chave_maldicoes));
             if ($chave !== '') {
                 $ok = Campanha::whereNotNull('chave_maldicoes')->pluck('chave_maldicoes')

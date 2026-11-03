@@ -22,7 +22,7 @@ class LivroMestre
     {
         if (self::$tabela === null) {
             try {
-                self::$tabela = Schema::hasTable('livro_mestre_pedidos');
+                self::$tabela = Esquema::tabela('livro_mestre_pedidos');
             } catch (\Throwable $e) {
                 self::$tabela = false;
             }

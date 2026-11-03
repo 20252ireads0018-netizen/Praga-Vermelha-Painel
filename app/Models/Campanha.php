@@ -26,7 +26,7 @@ class Campanha extends Model
     {
         if (self::$colunaCassino === null) {
             try {
-                self::$colunaCassino = \Illuminate\Support\Facades\Schema::hasColumn('campanha_jogadores', 'cassino');
+                self::$colunaCassino = \App\Support\Esquema::coluna('campanha_jogadores', 'cassino');
             } catch (\Throwable $e) {
                 self::$colunaCassino = false;
             }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Jogos\Gladio;
 use App\Jogos\GladioBot;
 use App\Jogos\PelaDama;
@@ -166,17 +167,17 @@ class CampanhaJogoController extends Controller
             'valor'     => 0,
             'descricao' => trim((string) ($d['descricao'] ?? '')) ?: null,
         ]);
-        if (Schema::hasColumn('gladio_cartas', 'palavras')) {
+        if (Esquema::coluna('gladio_cartas', 'palavras')) {
             $palavras = implode(',', array_unique($d['palavras'] ?? [])); // qualquer tipo de carta pode ter palavras-chave
             if (strlen($palavras) > 100) { // tamanho da coluna
                 return response()->json(['ok' => false, 'erro' => 'Palavras-chave demais numa carta só: escolha menos.'], 422);
             }
             $carta->palavras = $palavras ?: null;
         }
-        if (Schema::hasColumn('gladio_cartas', 'limite')) {
+        if (Esquema::coluna('gladio_cartas', 'limite')) {
             $carta->limite = isset($d['limite']) && $d['limite'] !== '' && (int) $d['limite'] < GladioDeck::COPIAS ? (int) $d['limite'] : null;
         }
-        if (Schema::hasColumn('gladio_cartas', 'subtipos')) {
+        if (Esquema::coluna('gladio_cartas', 'subtipos')) {
             $carta->subtipos = trim(preg_replace('/\s*,\s*/', ', ', (string) ($d['subtipos'] ?? '')), ' ,') ?: null;
         }
         if ($request->hasFile('imagem_arquivo')) {
@@ -253,7 +254,7 @@ class CampanhaJogoController extends Controller
     public function salvarDeck(Request $request, Campanha $campanha): JsonResponse
     {
         $this->exigirMembro($campanha);
-        if (!Schema::hasTable('gladio_decks')) {
+        if (!Esquema::tabela('gladio_decks')) {
             return $this->erro('Os decks ainda não existem no banco: rode o SQL da migração 2026_10_28_000013.');
         }
         $uid = (int) auth()->id();
@@ -309,7 +310,7 @@ class CampanhaJogoController extends Controller
     public function enviarImagens(Request $request, Campanha $campanha): JsonResponse
     {
         $this->exigirDonoDasCartas();
-        if (!Schema::hasTable('gladio_imagens')) {
+        if (!Esquema::tabela('gladio_imagens')) {
             return $this->erro('A galeria ainda não existe no banco: rode o SQL da migração 2026_10_28_000012.');
         }
         $d = $request->validate([
@@ -849,7 +850,7 @@ class CampanhaJogoController extends Controller
     /** Deck sorteado para o bot entre os decks de todos os jogadores: [lista de ids | null, nome, comandante]. */
     private function deckDoBot(array $catalogo): array
     {
-        if (!Schema::hasTable('gladio_decks')) {
+        if (!Esquema::tabela('gladio_decks')) {
             return [null, null, null];
         }
         $ids = GladioDeck::query()->pluck('id')->shuffle();
@@ -1077,23 +1078,35 @@ class CampanhaJogoController extends Controller
     {
         $uid = (int) auth()->id();
         $lista = [];
-        foreach (JogoPartida::where('jogo', 'gladio')->where('status', 'andamento')->latest('updated_at')->limit(50)->get() as $p) {
+        // roda em todas as páginas a cada poucos segundos: primeiro só as colunas leves para achar as partidas do
+        // usuário; o estado (JSON grande), as campanhas e os nomes são lidos de uma vez, e só dessas partidas
+        $minhas = JogoPartida::where('jogo', 'gladio')->where('status', 'andamento')->latest('updated_at')->limit(50)
+            ->get(['id', 'campanha_id', 'jogo', 'jogador1_id', 'jogador2_id', 'config', 'versao', 'updated_at'])
+            ->filter(fn (JogoPartida $p) => $p->ladoDe($uid) !== null);
+        if ($minhas->isEmpty()) {
+            return response()->json(['partidas' => []])->header('Cache-Control', 'no-store');
+        }
+        $estados = JogoPartida::whereIn('id', $minhas->modelKeys())->get(['id', 'estado'])->pluck('estado', 'id');
+        $campanhas = Campanha::whereIn('id', $minhas->pluck('campanha_id')->unique())->pluck('nome', 'id');
+        $usuarios = User::whereIn('id', $minhas->flatMap(fn (JogoPartida $p) => $p->jogadores())->unique()->values())->pluck('name', 'id');
+        foreach ($minhas as $p) {
             $lado = $p->ladoDe($uid);
-            $e = $p->estado;
-            if (!$lado || !$e || !empty($e['lados'][$lado]['fora'])) {
+            $e = $estados[$p->id] ?? null;
+            if (!$e || !empty($e['lados'][$lado]['fora'])) {
                 continue;
             }
             $e = Gladio::completar($e);
             $nomes = [];
             foreach ($p->jogadores() as $k => $id) {
-                $nomes[Gladio::LADOS[$k]] = $this->nomeJogador($p, (int) $id);
+                $nomes[Gladio::LADOS[$k]] = (int) $id === GladioBot::ID && !empty(($p->config ?? [])['bot'])
+                    ? (string) $p->config['bot']['nome']
+                    : (string) ($usuarios[(int) $id] ?? 'Jogador');
             }
             $espera = Gladio::esperando($e);
-            $campanha = Campanha::find($p->campanha_id);
             $lista[] = [
                 'id'       => (int) $p->id,
                 'v'        => (int) $p->versao,
-                'campanha' => (string) ($campanha->nome ?? ''),
+                'campanha' => (string) ($campanhas[$p->campanha_id] ?? ''),
                 'url'      => route('campanhas.jogos.partida', [$p->campanha_id, $p->id]),
                 'minha'    => $espera === $lado && empty($e['pausa']) && ($e['fase'] ?? '') !== 'mulligan',
                 'espera'   => $nomes[$espera] ?? '',
@@ -1109,15 +1122,17 @@ class CampanhaJogoController extends Controller
         return response()->json(['partidas' => $lista])->header('Cache-Control', 'no-store');
     }
 
-    public function estado(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
+    public function estado(Request $request, Campanha $campanha, int $partidaId): JsonResponse
     {
         $this->exigirMembro($campanha);
-        $this->daCampanha($campanha, $partida);
-        if ((int) $request->query('v', 0) === (int) $partida->versao) {
-            return response()->json(['v' => (int) $partida->versao])->header('Cache-Control', 'no-store');
+        // polling de 1 s: sem novidade, lê só a versão (sem o JSON do estado)
+        $leve = JogoPartida::whereKey($partidaId)->firstOrFail(['id', 'campanha_id', 'versao']);
+        $this->daCampanha($campanha, $leve);
+        if ((int) $request->query('v', 0) === (int) $leve->versao) {
+            return response()->json(['v' => (int) $leve->versao])->header('Cache-Control', 'no-store');
         }
 
-        return response()->json($this->dadosPartida($partida))->header('Cache-Control', 'no-store');
+        return response()->json($this->dadosPartida(JogoPartida::findOrFail($partidaId)))->header('Cache-Control', 'no-store');
     }
 
     public function acao(Request $request, Campanha $campanha, JogoPartida $partida): JsonResponse
@@ -1332,7 +1347,7 @@ class CampanhaJogoController extends Controller
     /** As fichas de $uid vinculadas à campanha que podem apostar o Dinheiro delas: [{ id, nome, dinheiro }]. */
     private function fichasApostaveis(Campanha $campanha, int $uid): array
     {
-        if (!Schema::hasColumn('fichas', 'dinheiro')) {
+        if (!Esquema::coluna('fichas', 'dinheiro')) {
             return [];
         }
         $ids = CampanhaFicha::where('campanha_id', $campanha->id)->pluck('ficha_id');
@@ -1366,7 +1381,7 @@ class CampanhaJogoController extends Controller
     private function moverAposta(Campanha $campanha, JogoPartida $p, int $uid, int $quanto, bool $exigir = false): void
     {
         $ficha = (($p->config ?? [])['fichas'] ?? [])[(string) $uid] ?? null;
-        if ($ficha !== null && Schema::hasColumn('fichas', 'dinheiro')
+        if ($ficha !== null && Esquema::coluna('fichas', 'dinheiro')
             && ($f = Personagem::withoutGlobalScopes()->lockForUpdate()->find((int) $ficha))) {
             if ($exigir && (int) $f->dinheiro + $quanto < 0) {
                 throw new \InvalidArgumentException("{$f->nome} não tem mais Dinheiro suficiente para a aposta.");
@@ -1431,7 +1446,7 @@ class CampanhaJogoController extends Controller
      */
     private function deckDe(Campanha $campanha, int $uid, mixed $deckId, array $catalogo): ?array
     {
-        if (!$deckId || !Schema::hasTable('gladio_decks')) {
+        if (!$deckId || !Esquema::tabela('gladio_decks')) {
             return null;
         }
         $deck = GladioDeck::where('campanha_id', $campanha->id)->where('user_id', $uid)->find((int) $deckId);
@@ -1459,7 +1474,7 @@ class CampanhaJogoController extends Controller
 
     private function listaDecks(Campanha $campanha, int $uid): array
     {
-        if (!Schema::hasTable('gladio_decks')) {
+        if (!Esquema::tabela('gladio_decks')) {
             return [];
         }
 
@@ -1470,7 +1485,7 @@ class CampanhaJogoController extends Controller
     /** Galeria da campanha (vazia enquanto a tabela não existir no banco). */
     private function listaImagens(Campanha $campanha): array
     {
-        if (!Schema::hasTable('gladio_imagens')) {
+        if (!Esquema::tabela('gladio_imagens')) {
             return [];
         }
 

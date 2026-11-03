@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use App\Support\AcessoMaldicoes;
 use Illuminate\Http\Request;
@@ -47,7 +48,7 @@ class MaldicaoController extends Controller
         $dados = $request->validate(['chave' => 'nullable|string|max:60']);
         $chave = trim((string) ($dados['chave'] ?? ''));
 
-        if (!Schema::hasColumn('users', 'chave_maldicoes')) {
+        if (!Esquema::coluna('users', 'chave_maldicoes')) {
             return back()->with('chave_status', 'invalida');
         }
 
@@ -58,7 +59,7 @@ class MaldicaoController extends Controller
             return back()->with('chave_status', 'removida');
         }
 
-        $bate = Schema::hasColumn('campanhas', 'chave_maldicoes')
+        $bate = Esquema::coluna('campanhas', 'chave_maldicoes')
             && Campanha::whereNotNull('chave_maldicoes')->pluck('chave_maldicoes')
                 ->contains(fn ($c) => mb_strtolower(trim((string) $c)) === mb_strtolower($chave));
 

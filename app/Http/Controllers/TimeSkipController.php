@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use App\Models\CampanhaFicha;
 use App\Models\TimeSkip;
@@ -23,7 +24,7 @@ class TimeSkipController extends Controller
         $uid = (int) auth()->id();
         abort_unless($campanha->temMembro($uid), 403, 'Você não participa desta campanha.');
         $mestre = $campanha->ehMestre($uid);
-        $tabela = Schema::hasTable('time_skips') && Schema::hasTable('time_skip_respostas');
+        $tabela = Esquema::tabela('time_skips') && Esquema::tabela('time_skip_respostas');
 
         $skips = [];
         $respostas = [];
@@ -56,7 +57,7 @@ class TimeSkipController extends Controller
     public function salvar(Request $request, Campanha $campanha): JsonResponse
     {
         $this->exigirMestre($campanha);
-        abort_unless(Schema::hasTable('time_skips'), 422, 'As tabelas de time skip ainda não existem: rode o SQL da migração 2026_11_02_000023.');
+        abort_unless(Esquema::tabela('time_skips'), 422, 'As tabelas de time skip ainda não existem: rode o SQL da migração 2026_11_02_000023.');
         $d = $request->validate([
             'id'     => ['nullable', 'integer'],
             'nome'   => ['required', 'string', 'max:80'],

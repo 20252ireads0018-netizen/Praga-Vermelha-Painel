@@ -19,6 +19,7 @@ use App\Http\Controllers\MinijogoController;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\CompraLivroController;
 use App\Http\Controllers\PixController;
+use App\Http\Controllers\BackupController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -56,6 +57,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/pix', [PixController::class, 'admin'])->name('admin.pix');
     Route::post('/admin/pix/{id}', [PixController::class, 'decidir'])->whereNumber('id')->middleware('throttle:60,1')->name('admin.pix.decidir');
 
+    // Backups do banco (só administradores): um automático por dia, mais o botão "Fazer backup agora"
+    Route::get('/admin/backup', [BackupController::class, 'index'])->name('admin.backup');
+    Route::post('/admin/backup', [BackupController::class, 'gerar'])->middleware('throttle:6,10')->name('admin.backup.gerar');
+    Route::get('/admin/backup/{arquivo}', [BackupController::class, 'baixar'])
+        ->where('arquivo', 'banco-\d{8}-\d{6}\.sql\.gz')->middleware('throttle:20,10')->name('admin.backup.baixar');
+
 
     // Fichas
     Route::get('/fichas', [PersonagemController::class, 'fichas'])->name('fichas.create');
@@ -78,9 +85,9 @@ Route::middleware('auth')->group(function () {
 
     // Tabletop (mesa virtual) -> resources/views/tabletop/{index,show}.blade.php
     Route::get('/tabletop', [TabletopController::class, 'index'])->name('tabletop.index');
-    Route::post('/tabletop', [TabletopController::class, 'store'])->name('tabletop.store');
+    Route::post('/tabletop', [TabletopController::class, 'store'])->middleware('throttle:20,1')->name('tabletop.store');
     Route::get('/tabletop/{mesa}', [TabletopController::class, 'show'])->name('tabletop.show');
-    Route::put('/tabletop/{mesa}', [TabletopController::class, 'update'])->name('tabletop.update'); // autosave (JSON)
+    Route::put('/tabletop/{mesa}', [TabletopController::class, 'update'])->middleware('throttle:120,1')->name('tabletop.update'); // autosave (JSON)
     Route::delete('/tabletop/{mesa}', [TabletopController::class, 'destroy'])->name('tabletop.destroy');
 
     // Salas online do Tabletop: o dono abre/encerra a sala; qualquer pessoa logada com o código entra e joga junto
@@ -96,7 +103,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/tabletop/sala/{codigo}/pesado', [TabletopController::class, 'salaPesado'])
         ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala.pesado');   // fundo do mapa e imagens das peças
     Route::post('/tabletop/sala/{codigo}/alterar', [TabletopController::class, 'salaAlterar'])
-        ->where('codigo', '[A-Za-z0-9]{1,20}')->name('tabletop.sala.alterar');  // manda só o que mudou
+        ->where('codigo', '[A-Za-z0-9]{1,20}')->middleware('throttle:240,1')->name('tabletop.sala.alterar');  // manda só o que mudou
 
     // Chave de acesso às maldições não catalogadas (registrada antes de /maldicoes/{slug})
     Route::post('/maldicoes/chave', [MaldicaoController::class, 'salvarChave'])
@@ -188,7 +195,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'partida'])->name('jogos.partida');
         Route::delete('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'excluirPartida'])->name('jogos.partidas.excluir'); // tirar do histórico
         Route::post('/{campanha}/jogos/limpar-partidas', [CampanhaJogoController::class, 'limparPartidas'])->name('jogos.partidas.limpar'); // todas as terminadas
-        Route::get('/{campanha}/jogos/partidas/{partida}/estado', [CampanhaJogoController::class, 'estado'])->name('jogos.estado'); // polling
+        Route::get('/{campanha}/jogos/partidas/{partidaId}/estado', [CampanhaJogoController::class, 'estado'])->whereNumber('partidaId')->name('jogos.estado'); // polling (sem carregar a partida inteira)
         Route::post('/{campanha}/jogos/partidas/{partida}/aceitar', [CampanhaJogoController::class, 'aceitar'])->name('jogos.aceitar');
         Route::post('/{campanha}/jogos/partidas/{partida}/cancelar', [CampanhaJogoController::class, 'cancelar'])->name('jogos.cancelar');
         Route::post('/{campanha}/jogos/partidas/{partida}/comecar', [CampanhaJogoController::class, 'comecar'])->name('jogos.comecar'); // Gladio: começar antes de encher as vagas

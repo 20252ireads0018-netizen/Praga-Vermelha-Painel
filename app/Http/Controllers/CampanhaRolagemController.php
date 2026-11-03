@@ -14,6 +14,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Campanha;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class CampanhaRolagemController extends Controller
     private function doPote(Campanha $campanha, ?int $pote)
     {
         $q = DB::table('campanha_rolagens')->where('campanha_id', $campanha->id);
-        if (Schema::hasColumn('campanha_rolagens', 'pote_id')) {
+        if (Esquema::coluna('campanha_rolagens', 'pote_id')) {
             $pote ? $q->where('pote_id', $pote) : $q->whereNull('pote_id');
         }
         return $q;
@@ -77,7 +78,7 @@ class CampanhaRolagemController extends Controller
         $this->autorizarPote($campanha, $pote);
 
         $q = $this->consulta($campanha->id);
-        if (Schema::hasColumn('campanha_rolagens', 'pote_id')) {
+        if (Esquema::coluna('campanha_rolagens', 'pote_id')) {
             $pote ? $q->where('r.pote_id', $pote) : $q->whereNull('r.pote_id');
         }
 
@@ -147,7 +148,7 @@ class CampanhaRolagemController extends Controller
             'created_at'  => $agora,
             'updated_at'  => $agora,
         ];
-        if (Schema::hasColumn('campanha_rolagens', 'pote_id')) {
+        if (Esquema::coluna('campanha_rolagens', 'pote_id')) {
             $linha['pote_id'] = $pote;
         }
         $id = DB::table('campanha_rolagens')->insertGetId($linha);
@@ -198,7 +199,7 @@ class CampanhaRolagemController extends Controller
     /** Potes que a pessoa pode ver: o mestre vê todos; o jogador, os que criou ou de que participa. */
     public static function potesVisiveis(Campanha $campanha, int $uid): array
     {
-        if (!Schema::hasTable('campanha_potes')) {
+        if (!Esquema::tabela('campanha_potes')) {
             return [];
         }
 
@@ -234,7 +235,7 @@ class CampanhaRolagemController extends Controller
         if (!$poteId) {
             return;
         }
-        abort_unless(Schema::hasTable('campanha_potes'), 404);
+        abort_unless(Esquema::tabela('campanha_potes'), 404);
 
         $uid = auth()->id();
         $q = DB::table('campanha_potes')->where('id', $poteId)->where('campanha_id', $campanha->id);
@@ -251,7 +252,7 @@ class CampanhaRolagemController extends Controller
     {
         $this->autorizar($campanha);
 
-        if (!Schema::hasTable('campanha_potes')) {
+        if (!Esquema::tabela('campanha_potes')) {
             return back()->withErrors(['pote' => 'As tabelas dos potes secretos ainda não existem no banco: rode a migration 2026_10_28_000003.']);
         }
 
@@ -289,7 +290,7 @@ class CampanhaRolagemController extends Controller
     public function excluirPote(Campanha $campanha, int $pote)
     {
         $this->autorizar($campanha);
-        abort_unless(Schema::hasTable('campanha_potes'), 404);
+        abort_unless(Esquema::tabela('campanha_potes'), 404);
 
         $uid   = auth()->id();
         $linha = DB::table('campanha_potes')->where('id', $pote)->where('campanha_id', $campanha->id)->first();
@@ -297,7 +298,7 @@ class CampanhaRolagemController extends Controller
         abort_unless($campanha->ehMestre($uid) || (int) $linha->user_id === (int) $uid, 403, 'Só quem criou o pote (ou o mestre) pode excluí-lo.');
 
         DB::transaction(function () use ($pote) {
-            if (Schema::hasColumn('campanha_rolagens', 'pote_id')) {
+            if (Esquema::coluna('campanha_rolagens', 'pote_id')) {
                 DB::table('campanha_rolagens')->where('pote_id', $pote)->delete();
             }
             DB::table('campanha_pote_membros')->where('pote_id', $pote)->delete();

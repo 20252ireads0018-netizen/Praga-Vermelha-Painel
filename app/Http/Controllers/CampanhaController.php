@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Support\LivroMestre;
 use App\Support\Plano;
 use App\Models\Campanha;
@@ -295,7 +296,8 @@ class CampanhaController extends Controller
         $souMestre = $campanha->ehMestre($uid);
 
         $vinculos = $this->vinculosVisiveis($campanha, $uid, $souMestre)->get();
-        $this->carregarFichas($vinculos);
+        // polling de 4 s: só as colunas das barras e da assinatura (a ficha inteira tem vários JSON grandes)
+        $this->carregarFichas($vinculos, ['id', 'nome', 'updated_at', 'vida_atual', 'vida_maxima', 'aura_atual', 'aura_maxima', 'sanidade_atual', 'sanidade_maxima']);
 
         $fichas = $vinculos->map(function (CampanhaFicha $v) {
             $ficha = $v->ficha;
@@ -403,7 +405,7 @@ class CampanhaController extends Controller
     {
         $this->exigirMembro($campanha);
 
-        $relativo = Schema::hasColumn('campanhas', 'banner_path') ? $campanha->banner_path : null;
+        $relativo = Esquema::coluna('campanhas', 'banner_path') ? $campanha->banner_path : null;
         abort_unless($relativo, 404);
 
         $caminho = Storage::disk('local')->path($relativo);
@@ -420,7 +422,7 @@ class CampanhaController extends Controller
     {
         $this->exigirMestre($campanha);
 
-        if (!Schema::hasColumn('campanhas', 'banner_path')) {
+        if (!Esquema::coluna('campanhas', 'banner_path')) {
             return back()->withErrors(['banner' => 'A coluna banner_path ainda não existe no banco: rode a migration 2026_10_28_000001.']);
         }
 
@@ -448,7 +450,7 @@ class CampanhaController extends Controller
         $dados = $request->validate(['chave_maldicoes' => 'nullable|string|max:60']);
         $chave = trim((string) ($dados['chave_maldicoes'] ?? ''));
 
-        if (Schema::hasColumn('campanhas', 'chave_maldicoes')) {
+        if (Esquema::coluna('campanhas', 'chave_maldicoes')) {
             $campanha->chave_maldicoes = $chave === '' ? null : $chave;
             $campanha->save();
         }
@@ -460,7 +462,7 @@ class CampanhaController extends Controller
     {
         $this->exigirMestre($campanha);
 
-        if (Schema::hasColumn('campanhas', 'banner_path')) {
+        if (Esquema::coluna('campanhas', 'banner_path')) {
             $this->apagarBanner($campanha);
             $campanha->banner_path = null;
             $campanha->save();
@@ -538,7 +540,7 @@ class CampanhaController extends Controller
         $this->exigirMestre($campanha);
 
         $campanha->forceFill(['sessao_ativa' => false, 'sessao_inicio' => null])->save();
-        if (Schema::hasColumn('campanhas', 'som_seq')) {
+        if (Esquema::coluna('campanhas', 'som_seq')) {
             $this->emitirSom($campanha, null, 'parar'); // corta qualquer som em andamento
         }
 
@@ -618,7 +620,7 @@ class CampanhaController extends Controller
     /** O que os jogadores precisam para tocar junto (null sem a coluna). */
     private function trilhaPublica(Campanha $campanha): ?array
     {
-        if (!Schema::hasColumn('campanhas', 'trilha')) {
+        if (!Esquema::coluna('campanhas', 'trilha')) {
             return null;
         }
         $t = (array) ($campanha->trilha ?? []);
@@ -638,7 +640,7 @@ class CampanhaController extends Controller
     public function trilha(Request $request, Campanha $campanha)
     {
         $this->exigirMestre($campanha);
-        if (!Schema::hasColumn('campanhas', 'trilha')) {
+        if (!Esquema::coluna('campanhas', 'trilha')) {
             return response()->json(['erro' => 'O banco ainda não tem a coluna da Trilha: rode o SQL da migração 2026_11_02_000022.'], 422);
         }
         $d = $request->validate([
@@ -801,7 +803,7 @@ class CampanhaController extends Controller
         if (!$campanha->sessao_ativa) {
             return response()->json(['erro' => 'Inicie a sessão antes de tocar sons.'], 422);
         }
-        if (!Schema::hasColumn('campanhas', 'som_seq')) {
+        if (!Esquema::coluna('campanhas', 'som_seq')) {
             return response()->json(['erro' => 'O banco ainda não tem as colunas de som (som_seq, som_id, som_acao): rode a migration 2026_10_28_000004.'], 422);
         }
 
@@ -855,7 +857,7 @@ class CampanhaController extends Controller
     public function pararSom(Campanha $campanha)
     {
         $this->exigirMestre($campanha);
-        if (!Schema::hasColumn('campanhas', 'som_seq')) {
+        if (!Esquema::coluna('campanhas', 'som_seq')) {
             return response()->json(['erro' => 'O banco ainda não tem as colunas de som: rode a migration 2026_10_28_000004.'], 422);
         }
         $this->emitirSom($campanha, null, 'parar');
@@ -935,13 +937,13 @@ class CampanhaController extends Controller
      * Assim o mestre enxerga fichas de outros jogadores mesmo que a relação do model esteja
      * com outra chave estrangeira ou que o Personagem tenha escopo global por usuário.
      */
-    private function carregarFichas($vinculos): void
+    private function carregarFichas($vinculos, array $colunas = ['*']): void
     {
         $ids = $vinculos->pluck('ficha_id')->filter()->unique()->values();
 
         $mapa = $ids->isEmpty()
             ? collect()
-            : Personagem::withoutGlobalScopes()->whereIn('id', $ids)->get()->keyBy('id');
+            : Personagem::withoutGlobalScopes()->whereIn('id', $ids)->get($colunas)->keyBy('id');
 
         foreach ($vinculos as $v) {
             $v->setRelation('ficha', $mapa->get($v->ficha_id));

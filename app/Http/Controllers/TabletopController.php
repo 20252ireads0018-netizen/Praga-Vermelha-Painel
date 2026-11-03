@@ -30,6 +30,7 @@ class TabletopController extends Controller
         $mesas = Mesa::where(function ($q) {
                 $q->whereNull('codigo')->orWhere('sala_dono', Auth::id());
             })
+            ->when($this->temDono(), fn ($q) => $q->where(fn ($d) => $d->where('user_id', Auth::id())->orWhereNull('user_id')))
             ->orderByDesc('updated_at')
             ->get(['id', 'nome', 'updated_at', 'codigo', 'sala_dono']);
 
@@ -42,10 +43,14 @@ class TabletopController extends Controller
             'nome' => ['required', 'string', 'max:80'],
         ]);
 
-        $mesa = Mesa::create([
+        $mesa = new Mesa([
             'nome'   => trim($dados['nome']),
             'estado' => $this->estadoPadrao(),
         ]);
+        if ($this->temDono()) {
+            $mesa->user_id = Auth::id();
+        }
+        $mesa->save();
 
         return redirect()->route('tabletop.show', $mesa);
     }
@@ -57,6 +62,7 @@ class TabletopController extends Controller
             return redirect()->route('tabletop.index')
                 ->withErrors(['codigo' => 'Essa mesa tem uma sala aberta. Entre usando o código da sala.']);
         }
+        $this->exigirDono($mesa);
 
         return $this->renderizar($mesa, false);
     }
@@ -64,6 +70,7 @@ class TabletopController extends Controller
     /** Autosave: o JS manda o estado inteiro (string JSON) e o servidor valida tudo antes de gravar. */
     public function update(Request $request, Mesa $mesa): JsonResponse
     {
+        $this->exigirDono($mesa);
         // Com sala aberta quem manda é a sincronização por patches; gravar o estado inteiro apagaria o que os outros fizeram.
         if ($mesa->codigo) {
             return response()->json(['ok' => false, 'erro' => 'Sala aberta.'], 409);
@@ -93,6 +100,7 @@ class TabletopController extends Controller
 
     public function destroy(Mesa $mesa): RedirectResponse
     {
+        $this->exigirDono($mesa);
         if ($mesa->codigo && !$this->ehDono($mesa)) {
             abort(403);
         }
@@ -112,6 +120,7 @@ class TabletopController extends Controller
     /** O dono da mesa abre a sala: gera um código para os outros entrarem. */
     public function abrirSala(Mesa $mesa): JsonResponse
     {
+        $this->exigirDono($mesa);
         if ($mesa->codigo) {
             if (!$this->ehDono($mesa)) {
                 return response()->json(['ok' => false, 'erro' => 'Essa mesa já tem uma sala aberta por outra pessoa.'], 403);
@@ -131,6 +140,7 @@ class TabletopController extends Controller
     /** Só o dono encerra. A mesa continua como estava; quem estava dentro é mandado para a lista. */
     public function encerrarSala(Mesa $mesa): JsonResponse
     {
+        $this->exigirDono($mesa);
         if ($mesa->codigo && !$this->ehDono($mesa)) {
             return response()->json(['ok' => false, 'erro' => 'Só quem abriu a sala pode encerrá-la.'], 403);
         }
@@ -283,6 +293,20 @@ class TabletopController extends Controller
     /* ------------------------------------------------------------------ */
     /*  Sala: auxiliares                                                  */
     /* ------------------------------------------------------------------ */
+
+    /**
+     * Só o dono abre, salva, apaga e abre/encerra a sala da própria mesa (os outros entram pelo código da sala).
+     * Mesas antigas, criadas antes de a mesa guardar o dono (user_id vazio), continuam abertas como sempre foram.
+     */
+    private function exigirDono(Mesa $mesa): void
+    {
+        abort_unless(!$this->temDono() || $mesa->user_id === null || (int) $mesa->user_id === (int) Auth::id(), 404);
+    }
+
+    private function temDono(): bool
+    {
+        return \App\Support\Esquema::coluna('mesas', 'user_id');
+    }
 
     private function ehDono(Mesa $mesa): bool
     {

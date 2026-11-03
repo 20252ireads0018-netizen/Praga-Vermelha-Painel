@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Esquema;
 use App\Models\Reclamacao;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +25,7 @@ class ReclamacaoController extends Controller
     private function temTabela(): bool
     {
         try {
-            return Schema::hasTable('reclamacoes');
+            return Esquema::tabela('reclamacoes');
         } catch (\Throwable $e) {
             return false;
         }

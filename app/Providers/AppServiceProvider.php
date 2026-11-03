@@ -19,11 +19,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Backup diário do banco depois que a resposta já foi entregue (a HostGator não tem cron configurado aqui)
+        if (!$this->app->runningInConsole() && !$this->app->runningUnitTests()) {
+            $this->app->terminating(fn () => \App\Support\Backup::automatico());
+        }
+
         // Atalho do menu (layout): campanhas em que a pessoa está, como mestre ou jogador ativo
         \Illuminate\Support\Facades\View::composer('layout', function ($view) {
             $campanhas = collect();
             try {
-                if (auth()->check() && \Illuminate\Support\Facades\Schema::hasTable('campanhas')) {
+                if (auth()->check() && \App\Support\Esquema::tabela('campanhas')) {
                     $uid = auth()->id();
                     $campanhas = \App\Models\Campanha::query()
                         ->where(function ($q) use ($uid) {
