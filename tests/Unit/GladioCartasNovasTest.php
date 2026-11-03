@@ -183,6 +183,36 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([(string) $eq], array_map('strval', $e['escolha']['opcoes']), 'o encantamento protegido nem aparece');
     }
 
+    public function test_hexo_imune_so_contra_feiticos_encantamentos_e_equipamentos_inimigos(): void
+    {
+        $e = $this->mesa([
+            'hexo'     => $this->c('Guarda', 'lenda', '', ['palavras' => 'resistencia', 'vida' => 9]),
+            'chuva'    => $this->c('Chuva de pedras', 'feitico', 'Cause 2 de dano a todas as lendas'),
+            'atirador' => $this->c('Atirador', 'lenda', 'Quando entrar, cause 1 de dano a uma lenda alvo'),
+        ]);
+        [$e, $guarda] = $this->poe($e, 'b', 'hexo');
+        [$e, $soldado] = $this->poe($e, 'b', 'x');
+        $vida = fn ($e, $i) => array_values(array_filter($e['lados']['b']['mesa'], fn ($m) => (int) $m['i'] === $i))[0]['vida'] ?? null;
+
+        // feitiço inimigo com alvo: a Guarda nem aparece
+        $f = $this->joga($e, 'a', 'tiro');
+        $this->assertNotContains($guarda, $f['escolha']['opcoes']);
+        // feitiço inimigo em área: a Guarda não sofre, o Soldado cai
+        $f = $this->joga($e, 'a', 'chuva');
+        $this->assertSame(9, $vida($f, $guarda));
+        $this->assertNull($vida($f, $soldado));
+        // efeito de Lenda inimiga: a Guarda pode ser escolhida e sofre
+        $f = $this->joga($e, 'a', 'atirador');
+        $this->assertContains($guarda, $f['escolha']['opcoes']);
+        $f = Gladio::escolher($f, 'a', $guarda);
+        $this->assertSame(8, $vida($f, $guarda));
+        // o próprio dono mexe livremente: o feitiço dele mira e a área dele atinge a Guarda
+        $f = $this->joga($e, 'b', 'tiro');
+        $this->assertContains($guarda, $f['escolha']['opcoes']);
+        $f = $this->joga($e, 'b', 'chuva');
+        $this->assertSame(7, $vida($f, $guarda));
+    }
+
     public function test_imbuir_deixa_escolher_as_proprias_cartas(): void
     {
         $e = $this->mesa([

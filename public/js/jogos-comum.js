@@ -65,7 +65,7 @@ window.JG = (function () {
         defensor:      { nome: 'Defensor', desc: 'Não pode atacar.' },
         ameaca:        { nome: 'Ameaça', desc: 'Só pode ser bloqueada por duas ou mais Lendas.' },
         indestrutivel: { nome: 'Indestrutível', desc: 'Não cai por dano nem por Toque mortal: a vida não baixa de 1. Ainda pode ser sacrificada.' },
-        resistencia:   { nome: 'Hexo-Imune', desc: 'Não pode ser alvo de feitiços do adversário.' },
+        resistencia:   { nome: 'Hexo-Imune', desc: 'Feitiços, encantamentos e equipamentos dos adversários não a afetam (nem com alvo, nem em área). Efeitos de Lendas inimigas, o combate e as suas próprias cartas continuam valendo.' },
         desafiador:    { nome: 'Desafiador', desc: 'Ao atacar, chama uma Lenda do atacado para o combate: ela é obrigada a bloqueá-la.' },
         imbloqueavel:  { nome: 'Imbloqueável', desc: 'Não pode ser bloqueada.' },
         sombra:        { nome: 'Sombra', desc: 'Só pode ser bloqueada por Lendas com Sombra, e só bloqueia Lendas com Sombra.' },

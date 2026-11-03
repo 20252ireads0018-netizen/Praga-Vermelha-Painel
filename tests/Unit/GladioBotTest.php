@@ -43,6 +43,8 @@ class GladioBotTest extends TestCase
         $e = Gladio::passar($e, 'a', true); // vez do bot
         $this->assertSame('b', Gladio::esperando($e));
         $e['lados']['b']['mao'] = [['i' => 800, 'c' => '4'], ['i' => 801, 'c' => '1']]; // Lucas (3) não cabe; Gladiador (1) sim
+        $e['lados']['b']['comando'] = []; // sem comandante sorteado (ele também poderia ser invocado com 1 de energia)
+        $e['lados']['b']['cmd'] = null;
         $e = GladioBot::agir($e, 'b');
         $this->assertSame('a', $e['vez'], 'o bot jogou o que pôde e passou a vez');
         $this->assertSame([801], array_column($e['lados']['b']['mesa'], 'i'), 'pôs na mesa a Lenda que a energia pagava');

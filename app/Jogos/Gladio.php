@@ -802,7 +802,7 @@ class Gladio
                 [$dono, $ki] = $onde;
                 $ok = $precisa === 'inimigo' ? $dono !== $lado : $dono === $lado;
                 if ($ok && $dono !== $lado && self::tem($e['lados'][$dono]['mesa'][$ki], 'resistencia')) {
-                    throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$dono]['mesa'][$ki]) . ' tem Hexo-Imune: não pode ser alvo dos seus feitiços.');
+                    throw new \InvalidArgumentException(self::nomeLenda($e, $e['lados'][$dono]['mesa'][$ki]) . ' tem Hexo-Imune: seus feitiços, encantamentos e equipamentos não a afetam.');
                 }
                 if ($ok) {
                     $alvoLenda = [$dono, $ki];
@@ -846,7 +846,9 @@ class Gladio
             case 'dano_todos':
                 foreach (self::inimigos($e, $lado) as $ini) {
                     foreach ($e['lados'][$ini]['mesa'] as $i => $m) {
-                        $e['lados'][$ini]['mesa'][$i]['vida'] -= $valor;
+                        if (!self::tem($m, 'resistencia')) { // Hexo-Imune: o feitiço inimigo não a afeta
+                            $e['lados'][$ini]['mesa'][$i]['vida'] -= $valor;
+                        }
                     }
                 }
                 self::log($e, "$quem conjurou $nome: $valor de dano em todas as Lendas inimigas$semCusto.");
@@ -2300,7 +2302,22 @@ class Gladio
         };
     }
 
-    /** Lendas que $dono pode escolher (filtro meu | inimigo | qualquer); Hexo-Imune protege das escolhas dos adversários. */
+    /**
+     * Hexo-Imune: a Lenda ignora o efeito em resolução (com alvo ou em área) quando ele vem de um feitiço, encantamento
+     * ou equipamento de um adversário. Efeitos de Lendas inimigas, o combate e tudo o que o próprio dono (ou um aliado)
+     * fizer continuam valendo.
+     */
+    private static function imuneAoEfeito(array $e, string $dono, string $lado, array $m): bool
+    {
+        if ($lado === $dono || self::aliados($e, $lado, $dono) || !self::tem($m, 'resistencia')) {
+            return false;
+        }
+        $c = $e['fila'][0]['c'] ?? null;
+
+        return $c !== null && in_array($e['cartas'][(string) $c]['tipo'] ?? 'lenda', ['feitico', 'encanto', 'equipo'], true);
+    }
+
+    /** Lendas que $dono pode escolher (filtro meu | inimigo | qualquer); a Hexo-Imune inimiga fica de fora dos feitiços dele. */
     private static function lendasEscolhiveis(array $e, string $dono, ?string $filtro): array
     {
         $ops = [];
@@ -2313,7 +2330,7 @@ class Gladio
                 continue;
             }
             foreach ($e['lados'][$lado]['mesa'] as $m) {
-                if ($lado !== $dono && self::tem($m, 'resistencia')) {
+                if (self::imuneAoEfeito($e, $dono, $lado, $m)) {
                     continue;
                 }
                 $ops[] = (int) $m['i'];
@@ -2439,6 +2456,11 @@ class Gladio
                     $lendas[] = $onde;
                     $e['fila'][0]['ult'] = (int) substr($alvo, 5); // "e sofre 3 de dano": a mesma Lenda
                     $m = $e['lados'][$onde[0]]['mesa'][$onde[1]];
+                    if ($a !== 'marcar_lenda' && self::imuneAoEfeito($e, $dono, $onde[0], $m)) {
+                        self::log($e, "$fonte: " . self::nomeLenda($e, $m) . ' é Hexo-Imune e não foi afetada.');
+
+                        return $e;
+                    }
                     if ($a !== 'marcar_lenda' && self::fl($m, 'moeda') && !self::coroa()) { // Dificuldade de interação
                         self::log($e, "$fonte: a moeda deu cara, " . self::nomeLenda($e, $m) . ' não foi afetada.');
 
@@ -2450,19 +2472,9 @@ class Gladio
                     $lendas[] = $onde;
                 }
             } elseif ($alvo === 'lendas') {
+                // efeitos "em todas": a Hexo-Imune inimiga também fica de fora dos feitiços, encantamentos e equipamentos
                 foreach (self::lendasEscolhiveis($e, $dono, $p['filtro'] ?? null) as $i) {
                     $lendas[] = self::acharLenda($e, $i);
-                }
-                // efeitos "em todas" não miram: Hexo-Imune não protege
-                foreach (self::vivos($e) as $l) {
-                    if ((($p['filtro'] ?? null) === 'meu' && $l !== $dono) || (($p['filtro'] ?? null) === 'inimigo' && $l === $dono)) {
-                        continue;
-                    }
-                    foreach ($e['lados'][$l]['mesa'] as $k => $m) {
-                        if ($l !== $dono && self::tem($m, 'resistencia')) {
-                            $lendas[] = [$l, $k];
-                        }
-                    }
                 }
                 // "todos os outros hexomantes", "hexomantes e fisiomantes inimigos", as Lendas da foto (Bando Demoníaco)
                 $lendas = array_values(array_filter($lendas, function ($o) use ($e, $p, $ef) {
