@@ -10,7 +10,8 @@ class User extends Authenticatable
 {
     use Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'chave_maldicoes', 'objetivo', 'livro_comprado_em', 'cpf_cnpj'];
+    // livro_comprado_em, cpf_cnpj e asaas_cobranca_id só mudam por forceFill no fluxo de compra (nunca por formulário)
+    protected $fillable = ['name', 'email', 'password', 'chave_maldicoes', 'objetivo'];
 
     protected $hidden = ['password', 'remember_token', 'cpf_cnpj'];
 

@@ -170,6 +170,11 @@ class PlanosTest extends TestCase
         $this->postJson('/webhooks/asaas', ['event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_1', 'externalReference' => "livro:user:{$u->id}"]],
             ['asaas-access-token' => 'errado'])->assertStatus(401);
         $this->assertSame(Plano::GRATIS, Plano::de($u->fresh()));
+        // aviso forjado (com o token, mas a cobrança ainda está pendente no Asaas): não libera
+        $this->postJson('/webhooks/asaas', ['event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_1', 'status' => 'RECEIVED', 'externalReference' => "livro:user:{$u->id}"]],
+            ['asaas-access-token' => 'token-webhook'])->assertOk();
+        $this->assertSame(Plano::GRATIS, Plano::de($u->fresh()), 'o webhook confere o status na API do Asaas');
+        $status = 'RECEIVED'; // agora o Asaas recebeu de verdade
         $this->postJson('/webhooks/asaas', ['event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_1', 'status' => 'RECEIVED', 'externalReference' => "livro:user:{$u->id}"]],
             ['asaas-access-token' => 'token-webhook'])->assertOk();
         $u = $u->fresh();
@@ -189,6 +194,27 @@ class PlanosTest extends TestCase
         $this->get('/livro')->assertOk();
         $this->get('/livro/pdf/completo?baixar=1')->assertOk()->assertDownload('praga-vermelha.pdf'); // o PDF comprado
         $this->get('/planos')->assertOk()->assertSee('Vitalício')->assertSee('Baixar o PDF do livro');
+    }
+
+    public function test_webhook_sem_conferir_no_asaas_pede_reenvio_e_campos_do_plano_nao_entram_por_formulario(): void
+    {
+        $this->prepararCompra();
+        Carbon::setTestNow('2027-06-01 12:00');
+        $u = $this->usuario('2026-11-01 00:00');
+        Http::fake(['*/payments/pay_x' => Http::response(['errors' => [['description' => 'fora do ar']]], 500)]);
+        $this->postJson('/webhooks/asaas', ['event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_x', 'status' => 'RECEIVED', 'externalReference' => "livro:user:{$u->id}"]],
+            ['asaas-access-token' => 'token-webhook'])->assertStatus(503);
+        $this->assertSame(Plano::GRATIS, Plano::de($u->fresh()));
+        // evento de outra coisa (sem referência do livro) é ignorado sem consultar o Asaas
+        $this->postJson('/webhooks/asaas', ['event' => 'PAYMENT_RECEIVED', 'payment' => ['id' => 'pay_y', 'externalReference' => 'outra']],
+            ['asaas-access-token' => 'token-webhook'])->assertOk();
+
+        // livro_comprado_em não entra por create/fill (só pelo fluxo de compra)
+        $v = User::create(['name' => 'Bia', 'email' => 'bia@t.test', 'password' => 'x', 'livro_comprado_em' => now(), 'cpf_cnpj' => '52998224725']);
+        $this->assertNull($v->fresh()->livro_comprado_em);
+        // conta sem data de criação não ganha teste eterno
+        $v->forceFill(['created_at' => null])->saveQuietly();
+        $this->assertNotSame(Plano::TESTE, Plano::de($v->fresh()));
     }
 
     public function test_volta_da_fatura_confere_o_pagamento_sem_webhook(): void

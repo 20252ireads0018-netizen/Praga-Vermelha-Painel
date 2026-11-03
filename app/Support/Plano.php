@@ -63,7 +63,8 @@ class Plano
     /** Fim do teste: 45 dias a partir da criação da conta, nunca antes de 45 dias do lançamento dos planos. */
     public static function testeAte(User $user): Carbon
     {
-        $inicio     = $user->created_at ? Carbon::parse($user->created_at) : Carbon::now();
+        // sem data de criação (conta inserida à mão), o teste conta do lançamento: nunca vira teste eterno
+        $inicio     = $user->created_at ? Carbon::parse($user->created_at) : Carbon::createFromTimestamp(0);
         $lancamento = Carbon::parse((string) config('planos.lancamento', '2026-10-29'))->startOfDay();
 
         return $inicio->max($lancamento)->copy()->addDays((int) config('planos.dias_teste', 45));
