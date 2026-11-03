@@ -932,16 +932,26 @@
 
         // legenda das peças customizadas desta partida
         const custom = Object.keys(e.tipos).filter(id => CUSTOM.test(id));
+        const prot = e.protecao || {};
+        const jog = (c, j) => {
+            const vez = e.vez === c && !e.fim && D.status === 'andamento';
+            const escudo = prot[c] > 0 && !e.fim
+                ? ` <span class="pd-escudo" title="Rei protegido: ninguém pode dar xeque nele até ${c === 'b' ? 'as brancas' : 'as pretas'} completarem 3 jogadas (faltam ${prot[c]})">${icone('escudo')}${prot[c]}</span>` : '';
+            const venceu = e.fim && e.fim.vencedor === c;
+            return `<div class="pd-jog${vez ? ' pd-vez' : ''}${venceu ? ' pd-venceu' : ''}${e.fim && e.fim.vencedor && !venceu ? ' pd-perdeu' : ''}" data-heroi="${c}">` +
+                `<span class="pd-peca pd-${c}">♚</span> <span class="pd-jog-nome">${nomeJ(c === 'b' ? 'j1' : 'j2')}${D.lado === c ? ' <small>(você)</small>' : ''}</span>${escudo}` +
+                (vez ? `<span class="pd-pensando">${D.lado === c ? 'sua vez' : 'pensando…'}</span>` : '') + (venceu ? ` <span class="pd-coroa">${icone('trofeu')}</span>` : '') + '</div>';
+        };
         const lateral =
             `<aside class="pd-lateral">` +
-                `<div class="pd-jogadores"><div class="pd-jog${e.vez === 'b' && !e.fim ? ' pd-vez' : ''}"><span class="pd-peca pd-b">♚</span> ${nomeJ('j1')}</div>` +
-                `<div class="pd-jog${e.vez === 'p' && !e.fim ? ' pd-vez' : ''}"><span class="pd-peca pd-p">♚</span> ${nomeJ('j2')}</div></div>` +
+                `<div class="pd-jogadores">${jog('b')}${jog('p')}</div>` +
                 `<p class="camp-dica">Lances: ${e.lances}</p>` +
                 (D.lado && D.status === 'andamento' ? `<button type="button" class="camp-btn camp-btn-pequeno" data-pd="desistir">Desistir</button>` : '') +
                 (custom.length ? `<h3>Peças customizadas</h3>` + custom.map(id => `<div class="pd-legenda">${window.JG.peca(e.tipos[id], 'b', true)}` +
                     `<div><strong>${esc(e.tipos[id].nome)}</strong>${window.JG.diagrama(e.tipos[id], 8)}</div></div>`).join('') : '') +
             `</aside>`;
-        box.innerHTML = `<div class="pd-area">${h}${lateral}</div>`;
+        box.innerHTML = `<div class="pd-area${minhaVez ? ' pd-minha-vez' : ''}${D.status === 'andamento' && D.lado && !minhaVez ? ' pd-espera' : ''}${e.fim ? ' pd-acabou' : ''}">${h}${lateral}</div>`;
+        anunciarPelaDama(e);
 
         const corNome = c => (c === 'b' ? 'Brancas' : 'Pretas');
         const nomeCor = c => (c === 'b' ? nomeJ('j1') : nomeJ('j2'));
@@ -956,10 +966,48 @@
         }
     }
 
+    let pdAntes = null; // { vez, xeque, fim, lances } do último desenho: os avisos só aparecem quando algo muda
+    function faixa(html, classe, ms = 1800) {
+        const f = document.createElement('div');
+        f.className = 'pd-faixa ' + classe;
+        f.innerHTML = html;
+        camada().appendChild(f);
+        setTimeout(() => f.remove(), ms);
+    }
+    function anunciarPelaDama(e) {
+        const agora = { vez: e.vez, xeque: !!e.xeque, fim: e.fim ? e.fim.motivo + ':' + e.fim.vencedor : null, lances: e.lances, status: D.status };
+        const antes = pdAntes;
+        pdAntes = agora;
+        document.title = (D.status === 'andamento' && D.lado && e.vez === D.lado && !e.fim ? '(Sua vez) ' : '') + document.title.replace(/^\(Sua vez\) /, '');
+        if (!antes) return; // abrir a página não anuncia nada
+        if (agora.fim && agora.fim !== antes.fim) return fimPelaDama(e);
+        if (D.status === 'cancelada' && antes.status !== 'cancelada') return faixa('Partida cancelada pelo mestre', 'pd-faixa--neutra', 2600);
+        if (agora.lances === antes.lances) return;
+        if (agora.xeque) faixa((D.lado === e.vez ? 'Seu Rei está em ' : '') + '<strong>Xeque!</strong>', 'pd-faixa--xeque');
+        else if (D.lado && e.vez === D.lado) faixa('<strong>Sua vez</strong>', 'pd-faixa--vez', 1300);
+    }
+    function fimPelaDama(e) {
+        const v = e.fim.vencedor;
+        const motivo = { 'xeque-mate': 'por xeque-mate', desistencia: 'por desistência', afogamento: 'afogamento' }[e.fim.motivo] || '';
+        const nomeV = v ? (v === 'b' ? nomeJ('j1') : nomeJ('j2')) : '';
+        const perdedor = v ? (v === 'b' ? nomeJ('j2') : nomeJ('j1')) : '';
+        let titulo, texto, classe;
+        if (!v) { titulo = 'Empate'; texto = 'Afogamento: quem tinha a vez não tinha lance e não estava em xeque.'; classe = 'pd-fim--empate'; }
+        else if (D.lado === v) { titulo = icone('trofeu') + ' Vitória!'; texto = `Você venceu ${motivo}${e.fim.motivo === 'desistencia' ? `: ${perdedor} desistiu` : ''}.`; classe = 'pd-fim--vitoria'; }
+        else if (D.lado) { titulo = 'Derrota'; texto = e.fim.motivo === 'desistencia' ? 'Você desistiu da partida.' : `${nomeV} venceu ${motivo}.`; classe = 'pd-fim--derrota'; }
+        else { titulo = 'Fim de partida'; texto = `${nomeV} venceu ${motivo}${e.fim.motivo === 'desistencia' ? ` (${perdedor} desistiu)` : ''}.`; classe = 'pd-fim--neutra'; }
+        const f = document.createElement('div');
+        f.className = 'pd-fim ' + classe;
+        f.innerHTML = `<div class="pd-fim-card" role="alertdialog" aria-label="Fim de partida"><h2>${titulo}</h2><p>${texto}</p>` +
+            `<div class="pd-fim-acoes"><a class="camp-btn camp-btn-primario" href="${esc(C.url.lobby)}">Voltar aos jogos</a><button type="button" class="camp-btn" data-fechar>Ver o tabuleiro</button></div></div>`;
+        f.addEventListener('click', ev => { if (ev.target === f || ev.target.closest('[data-fechar]')) f.remove(); });
+        camada().appendChild(f);
+    }
+
     function cliquePelaDama(ev) {
         const b = ev.target.closest('[data-pd]');
         if (b && b.dataset.pd === 'desistir') {
-            if (confirm('Desistir da partida?')) acao({ acao: 'desistir' });
+            if (confirm('Desistir da partida? O adversário vence na hora.')) acao({ acao: 'desistir' });
             return;
         }
         const c = ev.target.closest('.pd-casa');
@@ -1313,7 +1361,7 @@
             box.innerHTML = `<p class="camp-vazio"><a href="${esc(C.url.lobby)}">Voltar aos jogos</a></p>`;
             return;
         }
-        if (D.jogo !== 'gladio') { renderPelaDama(); return; }
+        if (D.jogo !== 'gladio') { renderPelaDama(); renderSocial(); return; }
         if (D.estado.agora) difRelogio = D.estado.agora - Date.now() / 1000;
         const foto = estadoAnterior && estadoAnterior !== D.estado ? fotografar() : null;
         renderGladio();

@@ -22,9 +22,8 @@
     </header>
     <p class="jg-msg" id="jg-msg" hidden></p>
     <div id="jg-jogo" class="{{ $partida->jogo === 'gladio' ? 'gl' : 'pd' }}"></div>
-    @if ($partida->jogo === 'gladio')
-        {{-- chat da partida e bolão de quem assiste (fora da mesa: a mesa redesenha a cada jogada) --}}
-        <aside class="gl-social" id="gl-social">
+    {{-- chat da partida e bolão de quem assiste (fora da mesa: a mesa redesenha a cada jogada); no Pela Dama, só o chat --}}
+        <aside class="gl-social{{ $partida->jogo === 'gladio' ? '' : ' gl-social--so-chat' }}" id="gl-social">
             <section class="gl-chat" aria-label="Chat da partida">
                 <h3>Chat</h3>
                 <ol class="gl-chat-lista" id="gl-chat-lista"></ol>
@@ -35,7 +34,6 @@
             </section>
             <section class="gl-bolao" id="gl-bolao" hidden aria-label="Bolão de quem assiste"></section>
         </aside>
-    @endif
 </div>
 
 <script type="application/json" id="jg-partida-dados">{!! json_encode([

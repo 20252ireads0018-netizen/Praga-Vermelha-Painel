@@ -1577,6 +1577,8 @@ class CampanhaJogoController extends Controller
             $e = Gladio::visao(Gladio::completar($e), $lado);
         } elseif ($e && $p->jogo === 'pela_dama') {
             $e['legais'] = $lado && $p->status === 'andamento' && ($e['vez'] ?? null) === $lado ? PelaDama::mapaLegais($e) : (object) [];
+            // Rei protegido de xeque: jogadas que ainda faltam a cada cor para a proteção acabar
+            $e['protecao'] = ['b' => max(0, PelaDama::PROTECAO - PelaDama::jogadas($e, 'b')), 'p' => max(0, PelaDama::PROTECAO - PelaDama::jogadas($e, 'p'))];
         }
         $p->loadMissing(['jogador1', 'jogador2']);
         // Gladio: os jogadores em roda ({ lado, nome }), na mesma ordem dos lados do motor

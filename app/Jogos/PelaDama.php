@@ -17,12 +17,16 @@ namespace App\Jogos;
  * Estado (JSON da partida):
  *   tab[y][x] = null | { t: tipo, c: 'b'|'p', m: já moveu? }
  *   tipos, vez, ep ([x,y] da casa de en passant), ultimo, lances, fim
+ *
+ * Rei protegido: enquanto um jogador não completar PROTECAO jogadas, o adversário não pode dar xeque no Rei dele
+ * (nada de mate rápido no começo). As jogadas de cada cor saem de "lances" (as brancas começam).
  */
 class PelaDama
 {
     public const LADO = 8;
     public const MAX_REGRAS = 64;
     public const MODOS = ['ambos', 'mover', 'capturar'];
+    public const PROTECAO = 3; // jogadas que cada jogador faz com o Rei protegido de xeque
 
     /** Peças padrão do xadrez, já no formato de regras. */
     public static function tiposPadrao(): array
@@ -314,18 +318,38 @@ class PelaDama
         return $e;
     }
 
-    /** Lances legais da peça em (x, y): os que não deixam o próprio Rei em xeque. */
+    /** Jogadas que a cor $cor já fez (as brancas começam). */
+    public static function jogadas(array $e, string $cor): int
+    {
+        $n = (int) ($e['lances'] ?? 0);
+
+        return $cor === 'b' ? intdiv($n + 1, 2) : intdiv($n, 2);
+    }
+
+    /** O Rei de $cor ainda está protegido de xeque (o dono não completou PROTECAO jogadas)? */
+    public static function protegido(array $e, string $cor): bool
+    {
+        return self::jogadas($e, $cor) < self::PROTECAO;
+    }
+
+    /**
+     * Lances legais da peça em (x, y): os que não deixam o próprio Rei em xeque e, enquanto o Rei adversário estiver
+     * protegido, os que não dão xeque nele.
+     */
     public static function legais(array $e, int $x, int $y): array
     {
         $p = $e['tab'][$y][$x] ?? null;
         if (!$p) {
             return [];
         }
+        $outra = self::outra($p['c']);
+        $protegido = self::protegido($e, $outra);
 
-        return array_values(array_filter(
-            self::pseudo($e, $x, $y),
-            fn ($mv) => !self::emXeque(self::aplicar($e, $x, $y, $mv), $p['c'])
-        ));
+        return array_values(array_filter(self::pseudo($e, $x, $y), function ($mv) use ($e, $x, $y, $p, $outra, $protegido) {
+            $depois = self::aplicar($e, $x, $y, $mv);
+
+            return !self::emXeque($depois, $p['c']) && !($protegido && self::emXeque($depois, $outra));
+        }));
     }
 
     public static function temLance(array $e, string $cor): bool

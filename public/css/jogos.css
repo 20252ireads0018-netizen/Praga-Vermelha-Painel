@@ -968,3 +968,43 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 /* Gladio contra o bot */
 .jg .jg-bot { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--linha, rgba(255,255,255,.12)); }
 .jg .jg-bot .camp-dica { flex: 1 1 220px; margin: 0; }
+
+
+/* ---------- Pela Dama: de quem é a vez, xeque e fim de partida ---------- */
+.pd-area.pd-minha-vez .pd-tabuleiro { box-shadow: 0 0 0 3px var(--pv-gold, #c9a45c), 0 0 26px rgba(201, 164, 92, .55); }
+.pd-area.pd-espera .pd-tabuleiro { filter: saturate(.75) brightness(.92); }
+.pd-jog { flex-wrap: wrap; transition: border-color .2s, box-shadow .2s; }
+.pd-jog small { opacity: .65; }
+.pd-jog.pd-vez { background: rgba(201, 164, 92, .14); }
+.pd-pensando { margin-left: auto; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--pv-gold, #c9a45c); }
+.pd-jog.pd-vez .pd-pensando { animation: pd-pisca 1.2s ease-in-out infinite; }
+.pd-escudo { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 999px; border: 1px solid #4a7bb7; color: #9cc2ee; font-size: .75rem; font-weight: 700; }
+.pd-escudo .ico { width: 13px; height: 13px; }
+.pd-jog.pd-venceu { border-color: #2f6b3a; box-shadow: 0 0 0 1px #2f6b3a; background: rgba(47, 107, 58, .18); }
+.pd-jog.pd-perdeu { opacity: .55; }
+.pd-coroa { margin-left: auto; color: var(--pv-gold, #c9a45c); }
+.pd-faixa { position: fixed; left: 50%; top: 38%; z-index: 1990; transform: translate(-50%, -50%); pointer-events: none; padding: 14px 34px; border-radius: 14px;
+    font-family: 'Cinzel', serif; font-size: clamp(1.4rem, 5vw, 2.4rem); color: #fff; background: rgba(12, 6, 8, .9); border: 2px solid var(--pv-gold, #c9a45c);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .6); animation: pd-faixa 1.8s ease both; white-space: nowrap; }
+.pd-faixa--xeque { border-color: #dc2626; color: #fecaca; box-shadow: 0 0 40px rgba(220, 38, 38, .55); }
+.pd-faixa--neutra { border-color: var(--camp-borda, #472020); }
+.pd-fim { position: fixed; inset: 0; z-index: 1995; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .62); animation: pd-surge .35s ease both; }
+.pd-fim-card { width: min(420px, 100%); text-align: center; padding: 26px 22px; border-radius: 16px; background: var(--pv-surface, #1a0f10); border: 2px solid var(--camp-borda, #472020);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .7); animation: pd-cresce .45s cubic-bezier(.2, 1.4, .4, 1) both; }
+.pd-fim-card h2 { margin: 0 0 8px; font-family: 'Cinzel', serif; font-size: 2rem; display: flex; justify-content: center; align-items: center; gap: 8px; }
+.pd-fim-card p { margin: 0 0 18px; }
+.pd-fim-acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pd-fim--vitoria .pd-fim-card { border-color: var(--pv-gold, #c9a45c); box-shadow: 0 0 60px rgba(201, 164, 92, .45); }
+.pd-fim--vitoria h2 { color: var(--pv-gold, #c9a45c); }
+.pd-fim--derrota .pd-fim-card { border-color: #7a1515; }
+.pd-fim--derrota h2 { color: #e88; }
+@keyframes pd-faixa { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } 25% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+@keyframes pd-pisca { 50% { opacity: .35; } }
+@keyframes pd-surge { from { opacity: 0; } }
+@keyframes pd-cresce { from { opacity: 0; transform: scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .pd-faixa, .pd-fim, .pd-fim-card, .pd-jog.pd-vez .pd-pensando { animation: none; } }
+.gl-social--so-chat { grid-template-columns: minmax(0, 1fr); max-width: 720px; }
+.pd-fim-acoes .camp-btn { display: inline-flex; align-items: center; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--pv-gold, #c9a45c); background: transparent;
+    color: var(--pv-text, #f5ecec); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.pd-fim-acoes .camp-btn-primario { background: var(--pv-red-dark, #7a1515); border-color: var(--pv-red-bright, #b62525); }
+.pd-fim-acoes .camp-btn:hover { filter: brightness(1.15); }

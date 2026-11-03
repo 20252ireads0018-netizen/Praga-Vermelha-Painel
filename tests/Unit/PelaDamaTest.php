@@ -50,10 +50,10 @@ class PelaDamaTest extends TestCase
 
     public function test_lance_que_deixa_o_rei_em_xeque_e_proibido(): void
     {
-        // 1.e4 f6 2.Dh5+: a diagonal h5-e8 está aberta
-        $e = $this->jogar($this->novo(), 'e2e4', 'f7f6', 'd1h5');
+        // 1.e4 f6 2.a3 a6 3.b3 b6 4.Dh5+: a diagonal h5-e8 está aberta (as pretas já fizeram 3 jogadas: o Rei não está mais protegido)
+        $e = $this->jogar($this->novo(), 'e2e4', 'f7f6', 'a2a3', 'a7a6', 'b2b3', 'b7b6', 'd1h5');
         $this->assertTrue($e['xeque']);
-        $this->assertArrayNotHasKey('0,6', PelaDama::mapaLegais($e), 'a7-a6 não tira do xeque');
+        $this->assertArrayNotHasKey('7,6', PelaDama::mapaLegais($e), 'h7-h6 não tira do xeque');
         $this->assertSame([[6, 5]], PelaDama::mapaLegais($e)['6,6'], 'g7-g6 bloqueia (g7-g5 não)');
         // as pretas só podem sair do xeque: todo lance legal resolve o xeque
         foreach (PelaDama::mapaLegais($e) as $de => $destinos) {
@@ -63,6 +63,25 @@ class PelaDamaTest extends TestCase
                 $this->assertFalse(PelaDama::emXeque($n, 'p'));
             }
         }
+    }
+
+    public function test_rei_protegido_de_xeque_nas_3_primeiras_jogadas_do_dono(): void
+    {
+        // mate do louco: 1.f3 e5 2.g4 Dh4# — as brancas só fizeram 2 jogadas, então a Dama não pode dar xeque
+        $e = $this->jogar($this->novo(), 'f2f3', 'e7e5', 'g2g4');
+        $this->assertTrue(PelaDama::protegido($e, 'b'));
+        $this->assertNotContains([7, 3], PelaDama::mapaLegais($e)['3,7'] ?? [], 'Dd8-h4 daria xeque: proibido');
+        $this->expectExceptionMessage('não pode ir');
+        PelaDama::mover($e, 'p', 3, 7, 7, 3);
+    }
+
+    public function test_depois_da_terceira_jogada_o_xeque_vale(): void
+    {
+        $e = $this->jogar($this->novo(), 'f2f3', 'e7e5', 'g2g4', 'a7a6', 'a2a3');
+        $this->assertSame(3, PelaDama::jogadas($e, 'b'));
+        $this->assertFalse(PelaDama::protegido($e, 'b'));
+        $e = $this->jogar($e, 'd8h4');
+        $this->assertSame(['motivo' => 'xeque-mate', 'vencedor' => 'p'], $e['fim']);
     }
 
     public function test_roque_curto_move_a_torre(): void
