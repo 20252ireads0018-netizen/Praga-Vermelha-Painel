@@ -257,6 +257,20 @@
             </section>
             @endif
 
+            @if (Route::has('campanhas.timeskips.index'))
+            {{-- ===== Time skips: o mestre monta as regras; cada jogador escolhe ramo, atividades e propriedades ===== --}}
+            <section class="camp-card">
+                <div class="camp-card-cab"><h2>Time skips</h2></div>
+                <a href="{{ route('campanhas.timeskips.index', $campanha) }}" class="camp-clicavel">
+                    <span class="camp-clicavel-info">
+                        <strong>Passagem de tempo</strong>
+                        <span class="camp-dica">{{ $souMestre ? 'Monte time skips com escolhas, ramos, atividades e propriedades (ou comece do modelo de 10 anos) e veja o que cada jogador escolheu.' : 'Escolha o ramo, gaste as escolhas e compre propriedades quando o mestre abrir um time skip.' }}</span>
+                    </span>
+                    <span class="camp-seta" aria-hidden="true">›</span>
+                </a>
+            </section>
+            @endif
+
             @if (Route::has('campanhas.rolagens.index'))
             {{-- ===== Pote de dados (público + potes secretos) — na coluna principal para aproveitar a largura ===== --}}
             <section class="camp-card" id="camp-dados" data-mestre="{{ $souMestre ? 1 : 0 }}">
