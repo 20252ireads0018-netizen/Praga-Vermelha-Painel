@@ -54,6 +54,13 @@ class GladioRoteiro
 
         return [
             /* ---------------- feitiços, encantamentos e equipamentos ---------------- */
+            // Propriedade: Forte
+            'A lenda alvo ganha +4/+4 ou sobrepujar' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'ou', 'ops' => [['+4/+4', [$buff(4, 4, $lenda())]], ['Sobrepujar', [['a' => 'palavra', 'pal' => 'sobrepujar', 'temp' => false] + $lenda()]]]]]]]],
+            // Propriedade: Moeda
+            'Você pode pagar +1 em aura adicional quantas vezes quiser. Para cada aura adicional que pagou, adicione uma palavra chave adicional a uma lenda sua' => ['hab' => [['g' => 'conjurar', 'passos' => [
+                ['a' => 'laco', 'energia' => 1, 'texto' => 'pagar 1 de energia e dar uma palavra-chave a uma Lenda sua',
+                    'passos' => [['a' => 'palavra', 'pal' => '?', 'temp' => false] + $lenda('meu')]]]]]],
             'A lenda alvo se torna hexo-imune até o fim do seu próximo turno' => ['hab' => [['g' => 'conjurar', 'passos' => [
                 ['a' => 'palavra', 'pal' => 'resistencia', 'temp' => false, 'dura' => 'prox_fim'] + $lenda()]]]],
             'Vire a lenda alvo de cabeça para baixo. Enquanto estiver assim, ela é hexo-imune e indestrutível e não pode atacar. O dono dela pode pagar 1 em aura para desvirá-la'

@@ -2151,6 +2151,22 @@ trait GladioRegras
             self::cem($e, $l, $c);
             self::log($e, "$fonte: $nome foi do baralho para o cemitério.");
         } elseif ($destino === 'fichas') { // Fisiomancia animal: a propriedade afeta as fichas criadas pelo efeito
+            $criadas = array_values(array_filter($e['fila'][0]['criadas'] ?? [], fn ($i) => self::acharLenda($e, (int) $i)));
+            // o que a propriedade faz numa Lenda alvo (Forte, Moeda, Frio…) acontece em cada ficha, logo em seguida
+            $passos = [];
+            foreach ($criadas as $i) {
+                foreach ($e['cartas'][$c['c']]['hab'] ?? [] as $h) {
+                    if ($h['g'] !== 'conjurar') {
+                        continue;
+                    }
+                    foreach ($h['passos'] as $p) {
+                        if ($p['a'] !== 'equipar' && self::miraLenda($p)) {
+                            $passos[] = self::naFicha($p, (int) $i);
+                        }
+                    }
+                }
+            }
+            self::antes($e, $passos);
             $b = self::bonusDe($e, $c['c']);
             $mods = $e['cartas'][$c['c']]['mods'] ?? [];
             foreach ($e['fila'][0]['criadas'] ?? [] as $i) {
@@ -2170,13 +2186,48 @@ trait GladioRegras
                 unset($m);
             }
             self::cem($e, $l, $c);
-            self::log($e, "$fonte: $nome afetou as fichas.");
+            $mods = $e['cartas'][$c['c']]['mods'] ?? [];
+            $afeta = $passos || array_filter(self::bonusDe($e, $c['c'])) || !empty($mods['quente']) || !empty($mods['regen']) || !empty($mods['fl']);
+            self::log($e, "$fonte: $nome " . ($afeta ? 'afetou as fichas.' : 'não tem efeito em Lendas e foi para o cemitério.'));
         } else {
             $e['lados'][$l]['mao'][] = $c;
             self::log($e, "$fonte: " . self::quem($e, $l) . ' buscou uma carta no baralho.');
         }
 
         return $e;
+    }
+
+    /** O passo (ou algum dentro dele: "ou", "quantas vezes quiser"…) mira uma Lenda? */
+    private static function miraLenda(array $p): bool
+    {
+        if (($p['alvo'] ?? null) === 'lenda') {
+            return true;
+        }
+        foreach (array_merge([$p['passos'] ?? []], array_column($p['ops'] ?? [], 1)) as $sub) {
+            foreach ($sub as $q) {
+                if (self::miraLenda($q)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /** O mesmo passo com a Lenda alvo trocada pela ficha $i (também dentro de "ou" e dos laços). */
+    private static function naFicha(array $p, int $i): array
+    {
+        if (($p['alvo'] ?? null) === 'lenda') {
+            $p['alvo'] = 'inst:' . $i;
+        }
+        if (isset($p['passos'])) {
+            $p['passos'] = array_map(fn ($q) => self::naFicha($q, $i), $p['passos']);
+        }
+        if (isset($p['ops'])) {
+            $p['ops'] = array_map(fn ($o) => [$o[0], array_map(fn ($q) => self::naFicha($q, $i), $o[1])], $p['ops']);
+        }
+
+        return $p;
     }
 
     /** Scry (olhar N do topo e mandar as que quiser para o fundo) e ordenar (olhar N e escolher a ordem). */

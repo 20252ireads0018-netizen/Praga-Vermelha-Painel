@@ -183,6 +183,44 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([(string) $eq], array_map('strval', $e['escolha']['opcoes']), 'o encantamento protegido nem aparece');
     }
 
+    public function test_fisiomancia_animal_aplica_qualquer_propriedade_nas_fichas(): void
+    {
+        $prop = ['subtipos' => 'propriedade fisiomântica'];
+        $e = $this->mesa([
+            'animal' => $this->c('Fisiomancia animal', 'feitico', 'Invoque três fichas de animal 1/1. Busque no seu baralho por uma propriedade fisiomantica, ela afeta as três fichas.'),
+            'forte'  => $this->c('Propriedade: Forte', 'feitico', 'A lenda alvo ganha +4/+4 ou sobrepujar.', $prop),
+            'frio'   => $this->c('Propriedade: Frio', 'equipo', 'A Lenda alvo não pode mais atacar', $prop),
+            'constr' => $this->c('Propriedade: Constrição', 'encanto', 'Toda vez que o jogador alvo invocar uma ficha, ele perde 3$', $prop),
+        ]);
+        $fichas = fn ($e) => array_values(array_filter($e['lados']['a']['mesa'], fn ($m) => ($m['nome'] ?? '') === 'Animal'));
+        $com = function (string $p) use ($e) {
+            $e['lados']['a']['baralho'][] = ['i' => 9500, 'c' => $p];
+            $e = $this->joga($e, 'a', 'animal');
+            $this->assertSame('baralho', $e['escolha']['tipo']);
+
+            return Gladio::escolher($e, 'a', 9500);
+        };
+
+        // Forte (um feitiço): cada ficha escolhe +4/+4 ou Sobrepujar
+        $e2 = $com('forte');
+        foreach (['0', '1', '0'] as $op) {
+            $this->assertSame('opcao', $e2['escolha']['tipo']);
+            $e2 = Gladio::escolher($e2, 'a', $op);
+        }
+        $this->assertSame([[5, 5], [1, 1], [5, 5]], array_map(fn ($m) => [$m['atk'], $m['vida']], $fichas($e2)));
+        $this->assertContains('sobrepujar', $fichas($e2)[1]['pal']);
+        // Frio (equipamento com marca): as três não atacam
+        $e2 = $com('frio');
+        $this->assertCount(3, $fichas($e2));
+        foreach ($fichas($e2) as $m) {
+            $this->assertContains('preso_eq', $m['fl']);
+        }
+        // Constrição não mira Lendas: avisa e vai para o cemitério
+        $e2 = $com('constr');
+        $this->assertNull($e2['escolha']);
+        $this->assertStringContainsString('não tem efeito em Lendas', end($e2['log'])['t'] ?? (string) end($e2['log']));
+    }
+
     public function test_hexo_imune_so_contra_feiticos_encantamentos_e_equipamentos_inimigos(): void
     {
         $e = $this->mesa([
