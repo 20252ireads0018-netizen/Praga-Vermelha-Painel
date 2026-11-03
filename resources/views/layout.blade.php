@@ -12,6 +12,9 @@
 
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/cards.css') }}">
+    {{-- Ícones próprios (public/img/icones.svg): <x-icone n="..."/> nas páginas, icone('...') nos scripts --}}
+    <style>.ico{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;flex:none;overflow:visible}</style>
+    <script>window.icone=function(n,c){return '<svg class="ico'+(c?' '+c:'')+'" aria-hidden="true" focusable="false"><use href="{{ asset('img/icones.svg') }}?v={{ @filemtime(public_path('img/icones.svg')) }}#i-'+n+'"></use></svg>';};</script>
     {{-- ?v= com a data do arquivo: cada atualização do CSS da ficha chega sem cache antigo --}}
     <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}?v={{ @filemtime(public_path('css/Ficha.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">
@@ -149,7 +152,7 @@
                     @auth
                         <li class="pv-nav__item pv-has-dropdown pv-nav__item--conta">
                             <a href="#" class="pv-nav__link">
-                                <span class="pv-conta__icone">☗</span><span class="pv-conta__nome">{{ auth()->user()->name }}</span>
+                                <span class="pv-conta__icone"><x-icone n="conta"/></span><span class="pv-conta__nome">{{ auth()->user()->name }}</span>
                                 <span class="pv-caret">▾</span>
                             </a>
                             <div class="pv-dropdown">
@@ -183,7 +186,7 @@
                     @else
                         <li class="pv-nav__item pv-has-dropdown pv-nav__item--conta">
                             <a href="#" class="pv-nav__link">
-                                <span class="pv-conta__icone">☗</span>Conta <span class="pv-caret">▾</span>
+                                <span class="pv-conta__icone"><x-icone n="conta"/></span>Conta <span class="pv-caret">▾</span>
                             </a>
                             <div class="pv-dropdown">
                                 <a href="{{ route('login') }}" class="pv-dropdown__link">

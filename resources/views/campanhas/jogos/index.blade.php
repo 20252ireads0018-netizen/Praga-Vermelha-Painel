@@ -14,7 +14,7 @@
     </header>
 
     <nav class="jg-abas" role="tablist">
-        <button type="button" class="jg-aba" role="tab" data-aba="gladio">⚔️ Gladio</button>
+        <button type="button" class="jg-aba" role="tab" data-aba="gladio"><x-icone n="espadas"/> Gladio</button>
         <button type="button" class="jg-aba" role="tab" data-aba="pela_dama">♛ Pela Dama</button>
     </nav>
     <p class="jg-msg" id="jg-msg" hidden></p>
@@ -66,7 +66,7 @@
                 </section>
 
                 <section class="camp-card">
-                    <div class="camp-card-cab"><h2>Partidas de Gladio</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="gladio" hidden>🧹 Limpar terminadas</button></div>
+                    <div class="camp-card-cab"><h2>Partidas de Gladio</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="gladio" hidden><x-icone n="vassoura"/> Limpar terminadas</button></div>
                     <div class="jg-partidas" data-lista="gladio"></div>
                 </section>
 
@@ -257,7 +257,7 @@
                 </section>
 
                 <section class="camp-card">
-                    <div class="camp-card-cab"><h2>Partidas de Pela Dama</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="pela_dama" hidden>🧹 Limpar terminadas</button></div>
+                    <div class="camp-card-cab"><h2>Partidas de Pela Dama</h2><button type="button" class="camp-btn camp-btn-pequeno" data-limpar-partidas="pela_dama" hidden><x-icone n="vassoura"/> Limpar terminadas</button></div>
                     <div class="jg-partidas" data-lista="pela_dama"></div>
                 </section>
 

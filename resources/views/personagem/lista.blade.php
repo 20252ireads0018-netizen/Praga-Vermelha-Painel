@@ -106,7 +106,7 @@
                                 <span>Nível {{ $personagem->nivel_mundano ?? 1 }}</span>
                             </div>
                             <form action="{{ route('personagens.exportar', $personagem->id) }}" method="GET" class="form-baixar">
-                                <button type="submit" class="botao-baixar" title="Baixar esta ficha como arquivo">⬇ Baixar ficha</button>
+                                <button type="submit" class="botao-baixar" title="Baixar esta ficha como arquivo"><x-icone n="baixar"/> Baixar ficha</button>
                             </form>
                         </div>
                     </a>

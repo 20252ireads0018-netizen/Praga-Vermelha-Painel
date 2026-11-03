@@ -235,7 +235,7 @@
 
             {{-- Só o dono baixa a ficha (o mestre vê em somente leitura) --}}
             @unless($donoNome)
-                <a href="{{ route('personagens.exportar', $personagem->id) }}" class="botao-baixar-ficha" title="Baixar esta ficha como arquivo">⬇ Baixar ficha</a>
+                <a href="{{ route('personagens.exportar', $personagem->id) }}" class="botao-baixar-ficha" title="Baixar esta ficha como arquivo"><x-icone n="baixar"/> Baixar ficha</a>
             @endunless
         </div>
 

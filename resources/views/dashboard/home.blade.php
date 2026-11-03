@@ -30,13 +30,13 @@
                 </div>
                 <div class="pv-grid pv-grid--2">
                     <article class="pv-card">
-                        <div class="pv-card__icon">🎲</div>
+                        <div class="pv-card__icon"><x-icone n="dados"/></div>
                         <h3 class="pv-card__title">Quero jogar o RPG</h3>
                         <p class="pv-card__text">Crie a conta e ganhe {{ config('planos.dias_teste', 45) }} dias de acesso completo ao painel, sem anúncios.</p>
                         <a href="{{ route('register') }}" class="pv-card__link">Criar conta ▸</a>
                     </article>
                     <article class="pv-card">
-                        <div class="pv-card__icon">📖</div>
+                        <div class="pv-card__icon"><x-icone n="livro"/></div>
                         <h3 class="pv-card__title">Quero ler os livros</h3>
                         <p class="pv-card__text">Livro do sistema e livros de histórias, em PDF ou impressos. Dá para jogar e ler: as duas coisas cabem na mesma conta.</p>
                         <a href="{{ route('planos.index') }}" class="pv-card__link">Ver livros e planos ▸</a>
@@ -76,14 +76,14 @@
                 </article>
 
                 <article class="pv-card">
-                    <div class="pv-card__icon">☰</div>
+                    <div class="pv-card__icon"><x-icone n="arquivo"/></div>
                     <h3 class="pv-card__title">Minhas fichas</h3>
                     <p class="pv-card__text">Veja, abra e edite os personagens que você já criou.</p>
                     <a href="{{ route('personagens.index') }}" class="pv-card__link">Ver personagens ▸</a>
                 </article>
 
                 <article class="pv-card">
-                    <div class="pv-card__icon">📖</div>
+                    <div class="pv-card__icon"><x-icone n="livro"/></div>
                     <h3 class="pv-card__title">Livro do sistema</h3>
                     <p class="pv-card__text">Consulte as regras e o cenário durante a criação ou a mesa.</p>
                     <a href="{{ route('livro.index') }}" class="pv-card__link">Abrir livro ▸</a>
@@ -97,7 +97,7 @@
                 </article>
 
                 <article class="pv-card">
-                    <div class="pv-card__icon">🎲</div>
+                    <div class="pv-card__icon"><x-icone n="dados"/></div>
                     <h3 class="pv-card__title">Tabletop</h3>
                     <p class="pv-card__text">Mesa virtual para jogar com seu grupo. Em breve.</p>
                     <a href="#" class="pv-card__link">Abrir tabletop ▸</a>

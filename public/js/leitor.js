@@ -274,7 +274,8 @@
             info.appendChild(mk('small', '', 'Página ' + m.p + (s ? ' · ' + s.t : '')));
             go.appendChild(info);
 
-            var ed = mk('button', 'pv-reader__edit', '✎');
+            var ed = mk('button', 'pv-reader__edit', '');
+        ed.innerHTML = icone('lapis');
             ed.type = 'button';
             ed.dataset.rename = m.id;
             ed.title = 'Renomear marcador';

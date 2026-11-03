@@ -266,7 +266,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
             const t = document.createElement("span");
             t.className = "anotacao-titulo-lista";
-            t.textContent = "📄 " + (n.titulo || "Sem título");
+            t.textContent = " " + (n.titulo || "Sem título"); t.insertAdjacentHTML("afterbegin", icone("documento"));
             b.appendChild(t);
 
             if(n.atualizado){
@@ -280,7 +280,7 @@ document.addEventListener("DOMContentLoaded", function(){
             const pin = document.createElement("button");
             pin.type = "button";
             pin.className = "anotacao-pin" + (n.fixada ? " fixada" : "");
-            pin.textContent = "📌";
+            pin.innerHTML = icone("alfinete");
             pin.title = n.fixada ? "Desafixar" : "Fixar no topo";
             pin.addEventListener("click", function(){
                 n.fixada = !n.fixada;

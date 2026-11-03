@@ -31,21 +31,21 @@
 
         <div class="pv-grid pv-grid--3">
             <article class="pv-card">
-                <div class="pv-card__icon">📖</div>
+                <div class="pv-card__icon"><x-icone n="livro"/></div>
                 <h3 class="pv-card__title">Livro do sistema</h3>
                 <p class="pv-card__text">Regras, classes, bestiário e o cenário completo de Praga Vermelha.</p>
                 <a href="#" class="pv-card__link">Acessar o livro →</a>
             </article>
 
             <article class="pv-card">
-                <div class="pv-card__icon">✒️</div>
+                <div class="pv-card__icon"><x-icone n="pena"/></div>
                 <h3 class="pv-card__title">Criar ficha</h3>
                 <p class="pv-card__text">Monte seu personagem passo a passo e deixe tudo pronto para a mesa.</p>
                 <a href="/fichas" class="pv-card__link">Criar nova ficha →</a>
             </article>
 
             <article class="pv-card">
-                <div class="pv-card__icon">🗂️</div>
+                <div class="pv-card__icon"><x-icone n="arquivo"/></div>
                 <h3 class="pv-card__title">Minhas fichas</h3>
                 <p class="pv-card__text">Consulte e gerencie todos os personagens que você já criou.</p>
                 <a href="{{ route('personagens.index') }}" class="pv-card__link">Ver minhas fichas →</a>

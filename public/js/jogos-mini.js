@@ -16,9 +16,9 @@
     let iframe = null;
 
     function status(p) {
-        if (p.pausa) return '⏸ Pausada pelo mestre';
+        if (p.pausa) return icone('pausa') + ' Pausada pelo mestre';
         if (p.mulligan) return 'Mão inicial: decida o mulligan';
-        return p.minha ? '⚔ Sua vez!' : `Vez de ${esc(p.espera)}`;
+        return p.minha ? icone('espadas') + ' Sua vez!' : `Vez de ${esc(p.espera)}`;
     }
 
     function render() {
@@ -35,9 +35,9 @@
         }
         const html =
             `<button type="button" class="jg-mini-info" data-mini="alternar" title="${aberta ? 'Recolher' : 'Expandir a mesa aqui'}">` +
-                `<span class="jg-mini-titulo">⚔️ Gladio${p.campanha ? ' · ' + esc(p.campanha) : ''}</span>` +
+                `<span class="jg-mini-titulo">${icone('espadas')} Gladio${p.campanha ? ' · ' + esc(p.campanha) : ''}</span>` +
                 `<span class="jg-mini-status">${status(p)}</span>` +
-                `<span class="jg-mini-dados">Turno ${p.turno} · 💰 ${Number(p.vida).toLocaleString('pt-BR')} · 🂠 ${p.mao}</span>` +
+                `<span class="jg-mini-dados">Turno ${p.turno} · ${icone('coracao')} ${Number(p.vida).toLocaleString('pt-BR')} · ${icone('carta')} ${p.mao}</span>` +
             `</button>` +
             `<span class="jg-mini-botoes">` +
                 `<button type="button" data-mini="alternar" title="${aberta ? 'Recolher' : 'Expandir'}" aria-label="${aberta ? 'Recolher' : 'Expandir'}">${aberta ? '▾' : '▴'}</button>` +

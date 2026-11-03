@@ -235,7 +235,7 @@
                 <div class="camp-card-cab"><h2>Jogos</h2></div>
                 <a href="{{ route('campanhas.jogos.index', $campanha) }}" class="camp-clicavel">
                     <span class="camp-clicavel-info">
-                        <strong>⚔️ Gladio · ♛ Pela Dama</strong>
+                        <strong><x-icone n="espadas"/> Gladio · ♛ Pela Dama</strong>
                         <span class="camp-dica">Duelo de cartas com apostas de Dinheiro e xadrez com peças criadas por você. Jogue ao vivo contra alguém da mesa.</span>
                     </span>
                     <span class="camp-seta" aria-hidden="true">›</span>
@@ -289,15 +289,15 @@
             {{-- ===== Pote de dados (público + potes secretos) — na coluna principal para aproveitar a largura ===== --}}
             <section class="camp-card" id="camp-dados" data-mestre="{{ $souMestre ? 1 : 0 }}">
                 <div class="camp-card-cab">
-                    <h2>🎲 Pote de dados</h2>
+                    <h2><x-icone n="dados"/> Pote de dados</h2>
                     <span class="camp-dica js-pote-rotulo">rolagens públicas</span>
                 </div>
 
                 @php $temIniciativa = Route::has('campanhas.iniciativas.index'); @endphp
                 @if ($temIniciativa)
                 <div class="camp-dados-abas" role="tablist">
-                    <button type="button" class="camp-btn camp-btn-pequeno ativo" role="tab" data-aba-dados="dados">🎲 Dados</button>
-                    <button type="button" class="camp-btn camp-btn-pequeno" role="tab" data-aba-dados="iniciativa">⚔️ Iniciativa</button>
+                    <button type="button" class="camp-btn camp-btn-pequeno ativo" role="tab" data-aba-dados="dados"><x-icone n="dados"/> Dados</button>
+                    <button type="button" class="camp-btn camp-btn-pequeno" role="tab" data-aba-dados="iniciativa"><x-icone n="espadas"/> Iniciativa</button>
                 </div>
                 @endif
                 <div class="js-aba-dados-painel" data-painel="dados">
@@ -307,10 +307,10 @@
                     $poteInicial   = (int) session('pote_ativo', 0);
                 @endphp
                 <div class="camp-potes-abas js-potes-abas" data-pote-inicial="{{ $poteInicial ?: '' }}">
-                    <button type="button" class="camp-btn camp-btn-pequeno js-pote-aba ativo" data-pote="">🌐 Público</button>
+                    <button type="button" class="camp-btn camp-btn-pequeno js-pote-aba ativo" data-pote=""><x-icone n="globo"/> Público</button>
                     @foreach ($potesSecretos as $p)
                         <button type="button" class="camp-btn camp-btn-pequeno js-pote-aba" data-pote="{{ $p['id'] }}"
-                                title="Criado por {{ $p['criador'] }}{{ count($p['membros']) ? ' · com ' . collect($p['membros'])->pluck('nome')->implode(', ') : ' · só quem criou (e o mestre)' }}">🔒 {{ $p['nome'] }}</button>
+                                title="Criado por {{ $p['criador'] }}{{ count($p['membros']) ? ' · com ' . collect($p['membros'])->pluck('nome')->implode(', ') : ' · só quem criou (e o mestre)' }}"><x-icone n="cadeado"/> {{ $p['nome'] }}</button>
                     @endforeach
                     @if (Route::has('campanhas.potes.criar'))
                     <details class="camp-pote-novo">
@@ -390,7 +390,7 @@
 
                     <div class="camp-dados-rodape">
                         <span class="camp-dados-previa js-dados-previa">1d20</span>
-                        <button type="button" class="camp-btn camp-btn-pequeno js-dados-limpar" hidden title="Apaga o histórico deste pote para todos. O histórico também recomeça sozinho a cada 20 rolagens.">🗑 Limpar</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno js-dados-limpar" hidden title="Apaga o histórico deste pote para todos. O histórico também recomeça sozinho a cada 20 rolagens."><x-icone n="vassoura"/> Limpar</button>
                         <button type="submit" class="camp-btn camp-btn-primario js-dados-rolar">Rolar</button>
                     </div>
                 </form>
@@ -431,7 +431,7 @@
                      data-url-store="{{ route('campanhas.catalogos.store', $campanha) }}"
                      data-disponiveis='@json($maldicoesDisputa)'>
                 <div class="camp-card-cab">
-                    <h2>📜 Disputa de catálogo</h2>
+                    <h2><x-icone n="pergaminho"/> Disputa de catálogo</h2>
                     <span class="camp-dica">ao vivo</span>
                 </div>
 
@@ -488,7 +488,7 @@
 
                 @if ($campanha->sessao_ativa)
                     <div class="camp-som-painel">
-                        <button type="button" class="camp-btn js-ativar-som">🔊 Ativar som da sessão</button>
+                        <button type="button" class="camp-btn js-ativar-som"><x-icone n="som"/> Ativar som da sessão</button>
                         <label class="camp-vol">Volume
                             <input type="range" class="js-volume" min="0" max="1" step="0.05" value="0.8">
                         </label>
@@ -503,8 +503,8 @@
                     <form class="cena-form" id="cena-form" data-url="{{ route('campanhas.cena', $campanha) }}">
                         <h3 class="cena-form-titulo">Animação para os jogadores</h3>
                         <div class="cena-tipos" role="radiogroup" aria-label="Animação">
-                            <label><input type="radio" name="tipo" value="descobriu" checked> <span>🔍 Você descobriu…</span></label>
-                            <label><input type="radio" name="tipo" value="matar"> <span>🗡 Como você quer matar ele?</span></label>
+                            <label><input type="radio" name="tipo" value="descobriu" checked> <span><x-icone n="lupa"/> Você descobriu…</span></label>
+                            <label><input type="radio" name="tipo" value="matar"> <span><x-icone n="adaga"/> Como você quer matar ele?</span></label>
                         </div>
                         <label class="cena-campo">Texto <span class="camp-dica">(o que foi descoberto, ou quem vai morrer)</span>
                             <input type="text" name="texto" maxlength="300" placeholder="Ex.: o selo de Vassago no porão">
@@ -604,10 +604,10 @@
                 'sonsUrl'   => route('campanhas.sons.arquivo', [$campanha, '__ID__']),
                 'sons'      => $souMestre ? $sons->map(fn ($s) => ['id' => $s->id, 'nome' => $s->nome])->values() : [],
             ]) }}">
-                <div class="camp-card-cab"><h2>🎵 Trilha</h2></div>
+                <div class="camp-card-cab"><h2><x-icone n="nota"/> Trilha</h2></div>
                 <div class="trilha-status">
                     <strong id="trilha-titulo">Nada tocando agora.</strong>
-                    <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-ouvir" hidden title="O navegador só toca som depois de um clique">🔊 Ouvir a trilha</button>
+                    <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-ouvir" hidden title="O navegador só toca som depois de um clique"><x-icone n="som"/> Ouvir a trilha</button>
                     <label class="trilha-tempo">Volume <input type="range" id="trilha-volume" min="0" max="100" aria-label="Volume"></label>
                 </div>
                 <div class="trilha-video" id="trilha-video" hidden><div id="trilha-yt"></div></div>
@@ -618,12 +618,12 @@
                 @if ($souMestre)
                     <div class="trilha-linha">
                         <select id="trilha-fonte" aria-label="O que tocar"></select>
-                        <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-tocar">▶ Tocar para todos</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-tocar"><x-icone n="play"/> Tocar para todos</button>
                         <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-apagar-link" hidden>Tirar da lista</button>
                     </div>
                     <div class="trilha-linha">
-                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-pausar" disabled>⏸ Pausar</button>
-                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-parar" disabled>⏹ Parar</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-pausar" disabled><x-icone n="pausa"/> Pausar</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-parar" disabled><x-icone n="parar"/> Parar</button>
                         <label class="trilha-tempo"><input type="checkbox" id="trilha-loop"> Repetir</label>
                     </div>
                     <form class="trilha-link" id="trilha-link-form">
@@ -649,13 +649,13 @@
                     @php $creditosCoringa = collect(config('sons_coringa', []))->pluck('credito', 'arquivo'); @endphp
                     {{-- Lista compacta (grade de botões) e recolhível; o estado aberto/fechado fica lembrado no navegador --}}
                     <details class="camp-sons js-sons-detalhes" open>
-                        <summary class="camp-btn camp-btn-pequeno" title="Mostrar ou ocultar a lista de sons">🔊 {{ $sons->count() }} {{ $sons->count() === 1 ? 'som' : 'sons' }} <span class="camp-sons-seta">▾</span></summary>
+                        <summary class="camp-btn camp-btn-pequeno" title="Mostrar ou ocultar a lista de sons"><x-icone n="som"/> {{ $sons->count() }} {{ $sons->count() === 1 ? 'som' : 'sons' }} <span class="camp-sons-seta">▾</span></summary>
                         <div class="camp-sons-grade">
                             @forelse ($sons as $s)
                                 <div class="camp-som-chip" title="{{ $s->nome }} · {{ number_format($s->tamanho / 1024, 0) }} KB{{ ($creditosCoringa[$s->arquivo] ?? '') ? ' · ' . $creditosCoringa[$s->arquivo] : '' }}">
                                     <button type="button" class="camp-btn camp-btn-primario camp-btn-pequeno camp-som-tocar"
                                             data-som-tocar="{{ route('campanhas.sons.tocar', [$campanha, $s]) }}"
-                                            @disabled(!$campanha->sessao_ativa)>▶ {{ $s->nome }}</button>
+                                            @disabled(!$campanha->sessao_ativa)><x-icone n="play"/> {{ $s->nome }}</button>
                                     <form method="POST" action="{{ route('campanhas.sons.excluir', [$campanha, $s]) }}" onsubmit="return confirm('Excluir o som “{{ $s->nome }}”?')">
                                         @csrf @method('DELETE')
                                         <button class="camp-btn camp-btn-perigo camp-btn-pequeno camp-som-x" title="Excluir" aria-label="Excluir {{ $s->nome }}">✕</button>
@@ -675,7 +675,7 @@
                     @if (Route::has('campanhas.sons.padrao'))
                     <form method="POST" action="{{ route('campanhas.sons.padrao', $campanha) }}" class="camp-form">
                         @csrf
-                        <button class="camp-btn camp-lateral-botao" title="Tiro, trovão, lâmina, grito, porta rangendo, porta batendo, explosão, vidro quebrando, uivo de lobo, vento, chuva, passos e sino">🎁 Adicionar efeitos coringa</button>
+                        <button class="camp-btn camp-lateral-botao" title="Tiro, trovão, lâmina, grito, porta rangendo, porta batendo, explosão, vidro quebrando, uivo de lobo, vento, chuva, passos e sino"><x-icone n="presente"/> Adicionar efeitos coringa</button>
                     </form>
                     @endif
 
@@ -796,7 +796,7 @@
                     <form method="POST" enctype="multipart/form-data" class="js-foto-form" hidden>
                         @csrf
                         <input type="file" name="foto" class="js-foto-input" accept="image/png,image/jpeg,image/webp" hidden>
-                        <button type="button" class="camp-btn js-foto-escolher">📷 Trocar foto</button>
+                        <button type="button" class="camp-btn js-foto-escolher"><x-icone n="camera"/> Trocar foto</button>
                     </form>
                     <a href="#" class="camp-btn js-ficha-link" hidden>Abrir ficha</a>
                     <form method="dialog"><button class="camp-btn">Fechar</button></form>

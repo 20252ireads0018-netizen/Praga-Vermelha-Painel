@@ -9,12 +9,12 @@
 <div class="camp-wrap camp-wrap-larga jg jg-partida-pagina{{ request()->boolean('mini') ? ' gl-foco gl-mini-mesa' : '' }}" id="jg-partida">
     <header class="jg-topo jg-topo--partida">
         <a href="{{ route('campanhas.jogos.index', $campanha) }}" class="camp-voltar">← Jogos da campanha</a>
-        <h1>{{ $partida->jogo === 'gladio' ? '⚔️ Gladio' : '♛ Pela Dama' }}</h1>
+        <h1>@if ($partida->jogo === 'gladio')<x-icone n="espadas"/> Gladio @else ♛ Pela Dama @endif</h1>
         <p class="jg-status" id="jg-status">Carregando…</p>
         @if ($partida->jogo === 'gladio')
-            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-pausar" hidden title="Só o mestre vê: ninguém age e o relógio para enquanto estiver pausada">⏸ Pausar</button>
+            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-pausar" hidden title="Só o mestre vê: ninguém age e o relógio para enquanto estiver pausada"><x-icone n="pausa"/> Pausar</button>
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-miniatura" hidden title="Sai da mesa e continua jogando numa janelinha, em qualquer página do site">⇲ Miniatura</button>
-            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-tela-cheia" title="Só a mesa, sem a aba de acontecimentos (Esc sai)">⛶ Tela cheia</button>
+            <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-tela-cheia" title="Só a mesa, sem a aba de acontecimentos (Esc sai)"><x-icone n="tela-cheia"/> Tela cheia</button>
         @endif
     </header>
     <p class="jg-msg" id="jg-msg" hidden></p>

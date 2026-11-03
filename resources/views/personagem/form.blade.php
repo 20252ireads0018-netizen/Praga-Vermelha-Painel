@@ -1220,8 +1220,8 @@
 
                 {{-- Descanso: recupera Vida, Sanidade e Aura conforme as regras rápidas de descanso --}}
                 <div class="descanso-barra">
-                    <button type="button" class="button descanso-btn" id="descanso-curto" title="1–2 horas: Vida +1, Sanidade +1d2, Aura +1d20">🌙 Descanso curto</button>
-                    <button type="button" class="button descanso-btn" id="descanso-longo" title="6–8 horas: Vida +1d3, Sanidade +1d4, Aura +4d20">🛏️ Descanso longo</button>
+                    <button type="button" class="button descanso-btn" id="descanso-curto" title="1–2 horas: Vida +1, Sanidade +1d2, Aura +1d20"><x-icone n="lua"/> Descanso curto</button>
+                    <button type="button" class="button descanso-btn" id="descanso-longo" title="6–8 horas: Vida +1d3, Sanidade +1d4, Aura +4d20"><x-icone n="cama"/> Descanso longo</button>
                 </div>
             
                 {{-- Atributos vitais personalizados --}}
@@ -1402,10 +1402,10 @@
                     Anotações
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="dinheiro-abrir" title="Dinheiro do personagem">
-                    💰 Dinheiro
+                    <x-icone n="moeda"/> Dinheiro
                 </button>
                 <button type="button" class="button" style="margin-top:8px;" id="ama-abrir" title="Estudos na AMA: matérias, aulas, Currículo e Talentos de Grade">
-                    🎓 Estudos AMA
+                    <x-icone n="capelo"/> Estudos AMA
                 </button>
             </div>
 
@@ -1861,7 +1861,7 @@
                         + Adicionar Item
                     </button>
                     <button class="botao-rolar-preview" type="button" id="rolar-preview-item" title="Rola o dano configurado acima, sem precisar adicionar o item">
-                        🎲 Rolar Dano
+                        <x-icone n="dados"/> Rolar Dano
                     </button>
                 </div>
 
@@ -2304,7 +2304,7 @@ window.LivroTalentos = (function(){
 
     function montar(el, grupo, aoEscolher){
         el.innerHTML =
-            '<details class="livro-tal"><summary>📖 Lista do livro <span class="prop-qtd"></span></summary>' +
+            '<details class="livro-tal"><summary>' + icone('livro') + ' Lista do livro <span class="prop-qtd"></span></summary>' +
                 '<input type="search" class="livro-tal-busca" placeholder="Pesquisar nome, requisito ou efeito…" autocomplete="off">' +
                 '<div class="livro-tal-lista"><p class="vazio-lista">Carregando…</p></div>' +
             '</details>';
@@ -2415,9 +2415,9 @@ window.PastasFicha = (function(){
         }).join("");
     }
 
-    function chip(valor, rotulo, qtd, ativo){
+    function chip(valor, rotulo, qtd, ativo, ico){
         return '<button type="button" class="pasta-chip' + (ativo === valor ? " ativo" : "") +
-            '" data-pasta="' + esc(valor) + '">' + esc(rotulo) +
+            '" data-pasta="' + esc(valor) + '">' + (ico ? icone(ico) + " " : "") + esc(rotulo) +
             ' <span class="pasta-qtd">' + qtd + "</span></button>";
     }
 
@@ -2434,7 +2434,7 @@ window.PastasFicha = (function(){
         h += chip("__todas__", "Todas", us.length, ativo);
         h += chip("__sem__", "Sem pasta", us.filter(n => !n).length, ativo);
         lista.forEach(function(n){
-            h += chip(n, "📁 " + n, us.filter(x => x === n).length, ativo);
+            h += chip(n, n, us.filter(x => x === n).length, ativo, "pasta");
         });
         h += '<button type="button" class="pasta-chip pasta-nova" data-acao="nova">＋ Nova pasta</button></div>';
 
@@ -2835,7 +2835,7 @@ window.PastasFicha = (function(){
         },
         // Campo "Aprimoramentos grátis" do rodapé (ao lado da Eficiência)
         rodapeHtml: function(item){
-            return '<label class="tecnica-eficiencia aprim-gratis-label" title="Quantas aplicações de aprimoramento esta técnica tem de graça">🎁 Aprimoramentos grátis ' +
+            return '<label class="tecnica-eficiencia aprim-gratis-label" title="Quantas aplicações de aprimoramento esta técnica tem de graça">' + icone('presente') + ' Aprimoramentos grátis ' +
                 '<input type="number" min="0" max="99" class="aprim-gratis-disp" value="' + item.gratis_disponiveis + '"> ' +
                 '<span class="aprim-usados">' + this.textoUsados(item) + "</span></label>";
         },
@@ -4962,7 +4962,7 @@ window.PastasFicha = (function(){
                     <button type="button" class="botao-fechar talento-remover" title="Remover ${nomeItem}" aria-label="Remover ${nomeItem}">✕</button>
                 </div>
                 <div class="item-pasta">
-                    <label>📁 Pasta</label>
+                    <label><x-icone n="pasta"/> Pasta</label>
                     <select class="pasta-select"></select>
                 </div>
                 <textarea class="talento-descricao" placeholder="Descrição ${ehArte ? 'da técnica' : 'do talento'}"></textarea>
@@ -4979,7 +4979,7 @@ window.PastasFicha = (function(){
                 </div>
                 <div class="aprim-bloco talento-aprim-view"></div>
                 <div class="tecnica-rodape talento-rodape-arte" style="display:none;">
-                    <label class="tecnica-eficiencia talento-eficiencia-view" title="Aura abatida do custo base (não afeta aprimoramentos)">⚡ Eficiência <input type="number" min="0" class="talento-eficiencia-card" value="0"></label>
+                    <label class="tecnica-eficiencia talento-eficiencia-view" title="Aura abatida do custo base (não afeta aprimoramentos)"><x-icone n="raio"/> Eficiência <input type="number" min="0" class="talento-eficiencia-card" value="0"></label>
                     ${Aprimoramentos.rodapeHtml(Aprimoramentos.normalizarItem({}))}
                 </div>` : ''}
                 <span class="talento-custo-tag" style="display:none;"></span>
@@ -5287,7 +5287,7 @@ window.PastasFicha = (function(){
         return '<details class="maldicao-tecnica" data-nivel-req="' + (isNaN(req) ? "" : req) + '">' +
             "<summary>" +
                 '<span class="maldicao-tecnica-nome">' + esc(t.nome) + "</span>" +
-                '<span class="maldicao-trava" title="Nível de Hexomante insuficiente">🔒</span>' +
+                '<span class="maldicao-trava" title="Nível de Hexomante insuficiente">' + icone('cadeado') + '</span>' +
                 '<span class="maldicao-tecnica-meta">' + esc(t.custo || "") + "</span>" +
             "</summary>" +
             '<div class="maldicao-tecnica-corpo">' +
@@ -5324,7 +5324,7 @@ window.PastasFicha = (function(){
             return '<div class="maldicao-ameaca">' +
                 '<div class="maldicao-ameaca-topo">' +
                     '<span class="personagem-card-tag">Ameaça ' + esc(a.nivel) + "</span>" +
-                    (a.dado ? '<span class="maldicao-dado">🎲 ' + esc(a.dado) + "</span>" : "") +
+                    (a.dado ? '<span class="maldicao-dado">' + icone('dados') + ' ' + esc(a.dado) + "</span>" : "") +
                 "</div>" +
                 (a.regra ? '<p class="maldicao-regra">' + a.regra + "</p>" : "") + // HTML confiável vindo do config
                 efeitos +
@@ -5333,7 +5333,7 @@ window.PastasFicha = (function(){
         }).join("");
 
         if(bloqueadas > 0){
-            h += '<p class="maldicao-bloqueada-aviso">🔒 ' + bloqueadas + " ameaça(s) ainda não liberada(s) neste nível.</p>";
+            h += '<p class="maldicao-bloqueada-aviso">' + icone('cadeado') + ' ' + bloqueadas + " ameaça(s) ainda não liberada(s) neste nível.</p>";
         }
         return h;
     }
@@ -6090,7 +6090,7 @@ function renderizarTecnicas(){
     listaTecnicas.innerHTML = visiveis.map(function(t){
         return '<div class="tecnica-card" data-id="' + t.id + '">' +
             "<h4>" + esc(t.nome) + "</h4>" +
-            '<div class="item-pasta"><label>📁 Pasta</label><select class="pasta-select">' +
+            '<div class="item-pasta"><label>' + icone('pasta') + ' Pasta</label><select class="pasta-select">' +
                 PastasFicha.opcoes("tecnicas", t.pasta || "") + "</select></div>" +
             "<dl>" +
                 dadoTecnica("Descrição", t.descricao) +
@@ -6102,7 +6102,7 @@ function renderizarTecnicas(){
             '<div class="aprim-bloco">' + Aprimoramentos.html(t) + "</div>" +
             '<div class="tecnica-rodape">' +
                 '<span class="tecnica-total tec-total-texto">' + esc(Aprimoramentos.textoCusto(t)) + "</span>" +
-                '<label class="tecnica-eficiencia" title="Aura abatida do custo base (não afeta aprimoramentos)">⚡ Eficiência ' +
+                '<label class="tecnica-eficiencia" title="Aura abatida do custo base (não afeta aprimoramentos)">' + icone('raio') + ' Eficiência ' +
                     '<input type="number" min="0" class="tec-eficiencia-card" value="' + (Number(t.eficiencia) || 0) + '"></label>' +
                 Aprimoramentos.rodapeHtml(t) +
                 '<button type="button" class="button botao-conjurar-tecnica">Conjurar</button>' +

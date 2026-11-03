@@ -82,7 +82,7 @@
                 if (p.status === 'andamento' || p.status === 'fim')
                     botoes += `<a class="camp-btn camp-btn-pequeno${p.meu && p.status === 'andamento' ? ' camp-btn-primario' : ''}" href="${esc(p.url)}">${p.meu && p.status === 'andamento' ? 'Jogar' : (p.status === 'fim' ? 'Ver' : 'Assistir')}</a>`;
                 if (p.cancelar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno" data-cancelar="${p.id}" data-andamento="${p.status === 'andamento' ? 1 : 0}">Cancelar</button>`;
-                if (p.apagar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno jg-apagar" data-apagar="${p.id}" title="${D.souMestre ? 'Apagar do histórico de todos' : 'Tirar do seu histórico'}" aria-label="Apagar partida do histórico">🗑</button>`;
+                if (p.apagar) botoes += `<button type="button" class="camp-btn camp-btn-pequeno jg-apagar" data-apagar="${p.id}" title="${D.souMestre ? 'Apagar do histórico de todos' : 'Tirar do seu histórico'}" aria-label="Apagar partida do histórico">${icone('vassoura')}</button>`;
                 return `<div class="jg-partida jg-st-${p.status}"><div class="jg-partida-info"><strong>${nomes}</strong>` +
                     `<span class="camp-dica">${rotulo(p)}${aposta}</span></div><div class="jg-partida-botoes">${botoes}</div></div>`;
             }).join('') : '<p class="camp-vazio">Nenhuma partida por enquanto.</p>';
@@ -206,8 +206,8 @@
         if (!s) return;
         const atual = s.value;
         const fmt = n => Number(n || 0).toLocaleString('pt-BR');
-        const html = `<option value="">Carteira da campanha (💰 ${fmt(lobby.carteiras && lobby.carteiras[D.eu])})</option>` +
-            (lobby.fichas || []).map(f => `<option value="${f.id}">${esc(f.nome)} (💰 ${fmt(f.dinheiro)})</option>`).join('');
+        const html = `<option value="">Carteira da campanha (R$ ${fmt(lobby.carteiras && lobby.carteiras[D.eu])})</option>` +
+            (lobby.fichas || []).map(f => `<option value="${f.id}">${esc(f.nome)} (R$ ${fmt(f.dinheiro)})</option>`).join('');
         // o lobby atualiza a cada 3 s: refazer a lista sem mudança fecharia o seletor aberto e perderia a escolha
         if (s.dataset.html === html) return;
         s.dataset.html = html;
@@ -232,7 +232,7 @@
             }).filter(Boolean).join(', ');
             const cmd = d.comandante_id && cartas.find(x => x.id === d.comandante_id);
             return `<div class="jg-deck-item"><div class="jg-partida-info"><strong>${esc(d.nome)}</strong>` +
-                `<span class="camp-dica">👑 ${cmd ? esc(cmd.nome) : 'comandante sorteado entre as Lendas'} · ${n} cartas · ${nomes || 'cartas apagadas pelo mestre'}</span></div>` +
+                `<span class="camp-dica">${icone('coroa')} ${cmd ? esc(cmd.nome) : 'comandante sorteado entre as Lendas'} · ${n} cartas · ${nomes || 'cartas apagadas pelo mestre'}</span></div>` +
                 `<div class="jg-partida-botoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-deck="${d.id}">Editar</button>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-deck="${d.id}">Excluir</button></div></div>`;
         }).join('') : '<p class="camp-vazio">Nenhum deck ainda.</p>';
@@ -251,8 +251,8 @@
         let rotCmd = $('#jg-deck-comandante');
         if (!rotCmd) { rotCmd = document.createElement('p'); rotCmd.id = 'jg-deck-comandante'; rotCmd.className = 'jg-deck-comandante'; $('#jg-deck-total').after(rotCmd); }
         const cmd = comandante && cartas.find(c => String(c.id) === comandante);
-        rotCmd.innerHTML = cmd ? `👑 Comandante: <strong>${esc(cmd.nome)}</strong>`
-            : '👑 Comandante: <em>sorteado entre as Lendas do deck</em> · clique na coroa de uma Lenda do deck para escolher';
+        rotCmd.innerHTML = cmd ? `${icone('coroa')} Comandante: <strong>${esc(cmd.nome)}</strong>`
+            : icone('coroa') + ' Comandante: <em>sorteado entre as Lendas do deck</em> · clique na coroa de uma Lenda do deck para escolher';
         // pesquisa (nome ou texto, sem acento) e filtros da montagem: tipo, custo, palavra-chave e "só as do deck"
         const fd = campo => $(`[data-deck-filtro="${campo}"]`);
         const opcoes = (campo, primeira, valores, rotulo) => {
@@ -277,7 +277,7 @@
             return `<div class="jg-deck-linha${q ? ' jg-deck-linha--tem' : ''}${ehCmd ? ' jg-deck-linha--cmd' : ''}" data-previa="${c.id}">` +
                 `<span class="jg-deck-custo" title="Custo">${esc(c.custo)}</span>` +
                 `<span class="jg-deck-nome">${esc(c.nome)}${selo(c)} <small>${c.tipo === 'lenda' ? `Lenda ${esc(c.ataque)}/${esc(c.vida)}` : esc(window.JG.TIPOS[c.tipo] || 'Feitiço')}</small></span>` +
-                (podeComandar(c) ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>👑</button>` : '<span class="jg-coroa-vazia"></span>') +
+                (podeComandar(c) ? `<button type="button" class="jg-coroa${ehCmd ? ' ativo' : ''}" data-comandante="${c.id}" title="${ehCmd ? 'É o comandante (clique para tirar)' : (q ? 'Escolher como comandante' : 'Ponha no deck para escolher como comandante')}" aria-label="Comandante: ${esc(c.nome)}"${q ? '' : ' disabled'}>${icone('coroa')}</button>` : '<span class="jg-coroa-vazia"></span>') +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="-1" aria-label="Tirar uma ${esc(c.nome)}"${q ? '' : ' disabled'}>−</button>` +
                 `<b class="jg-deck-qtd">${q}</b>` +
                 `<button type="button" class="camp-btn camp-btn-pequeno" data-qtd="${c.id}" data-d="1" aria-label="Pôr mais uma ${esc(c.nome)}"${q >= maxDe(c) ? ' disabled' : ''}>+</button>` +

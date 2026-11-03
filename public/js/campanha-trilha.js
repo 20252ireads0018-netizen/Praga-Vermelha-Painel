@@ -91,9 +91,9 @@
 
     function desenharStatus() {
         const t = estado;
-        $('#trilha-titulo').textContent = t && t.tipo ? (t.tocando ? '▶ ' : '⏸ ') + t.titulo : 'Nada tocando agora.';
+        $('#trilha-titulo').innerHTML = t && t.tipo ? icone(t.tocando ? 'play' : 'pausa') + ' ' + esc(t.titulo) : 'Nada tocando agora.';
         if (mestre) {
-            $('#trilha-pausar').textContent = t && t.tocando ? '⏸ Pausar' : '▶ Continuar';
+            $('#trilha-pausar').innerHTML = t && t.tocando ? icone('pausa') + ' Pausar' : icone('play') + ' Continuar';
             $('#trilha-pausar').disabled = !(t && t.tipo);
             $('#trilha-parar').disabled = !(t && t.tipo);
             $('#trilha-loop').checked = !!(t && t.loop);

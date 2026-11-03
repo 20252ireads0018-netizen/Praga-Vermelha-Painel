@@ -56,7 +56,7 @@
                 <div class="pv-reader__panel" data-panel="marcadores" hidden>
                     <ul class="pv-reader__list" id="leitor-marcadores"></ul>
                     <p class="pv-reader__empty" id="leitor-vazio">
-                        Nenhum marcador ainda. Selecione um trecho de texto e clique em "Marcar trecho", ou use a estrela (★) / tecla <kbd>B</kbd> para destacar a página atual.
+                        Nenhum marcador ainda. Selecione um trecho de texto e clique em "Marcar trecho", ou use a estrela (<x-icone n="estrela"/>) / tecla <kbd>B</kbd> para destacar a página atual.
                     </p>
                 </div>
 
@@ -71,7 +71,7 @@
             {{-- Área principal --}}
             <div class="pv-reader__main">
                 <div class="pv-reader__toolbar">
-                    <button type="button" class="pv-tool" data-act="side" title="Mostrar/ocultar painel">☰</button>
+                    <button type="button" class="pv-tool" data-act="side" title="Mostrar/ocultar painel"><x-icone n="menu"/></button>
 
                     <div class="pv-tool-group">
                         <button type="button" class="pv-tool" data-act="prev" title="Página anterior (←)">‹</button>
@@ -88,8 +88,8 @@
                     </div>
 
                     <div class="pv-tool-group pv-tool-group--end">
-                        <button type="button" class="pv-tool pv-tool--mark" data-act="mark" aria-pressed="false" title="Destacar esta página (B)">★</button>
-                        <button type="button" class="pv-tool" data-act="full" title="Tela cheia">⛶</button>
+                        <button type="button" class="pv-tool pv-tool--mark" data-act="mark" aria-pressed="false" title="Destacar esta página (B)"><x-icone n="estrela"/></button>
+                        <button type="button" class="pv-tool" data-act="full" title="Tela cheia"><x-icone n="tela-cheia"/></button>
                     </div>
                 </div>
 
@@ -98,7 +98,7 @@
                 </div>
 
                 {{-- Botão flutuante ao selecionar texto --}}
-                <button type="button" class="pv-reader__pop" id="leitor-pop" hidden>★ Marcar trecho</button>
+                <button type="button" class="pv-reader__pop" id="leitor-pop" hidden><x-icone n="estrela"/> Marcar trecho</button>
 
                 <div class="pv-reader__status" id="leitor-status">Carregando livro…</div>
             </div>

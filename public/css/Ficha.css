@@ -848,8 +848,16 @@
     user-select: none;
 }
 
-.botao-rolar-habilidade::before {
-    content: "⚄";
+.botao-rolar-habilidade::before { /* ícone próprio (o mesmo de icones.svg#i-dados) */
+    content: "";
+    display: inline-block;
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -.2em;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.5 20.5 7.5v9L12 21.5 3.5 16.5v-9Z'/%3E%3Cpath d='M12 2.5 7.5 10h9ZM3.5 7.5 7.5 10 12 17l4.5-7 4-2.5M7.5 10l-4 6.5M16.5 10l4 6.5M12 17v4.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2.5 20.5 7.5v9L12 21.5 3.5 16.5v-9Z'/%3E%3Cpath d='M12 2.5 7.5 10h9ZM3.5 7.5 7.5 10 12 17l4.5-7 4-2.5M7.5 10l-4 6.5M16.5 10l4 6.5M12 17v4.5'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .botao-rolar-habilidade:hover {
@@ -1619,8 +1627,16 @@
     flex-shrink: 0;
 }
 
-.botao-remover-item::before{
-    content: "🗑";
+.botao-remover-item::before{ /* lixeira, no traço dos ícones do site */
+    content: "";
+    display: inline-block;
+    width: 1.15em;
+    height: 1.15em;
+    vertical-align: -.2em;
+    flex: none;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
     font-size: .8rem;
 }
 

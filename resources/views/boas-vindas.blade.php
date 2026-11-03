@@ -13,12 +13,12 @@
         <form method="POST" action="{{ route('boas-vindas.salvar') }}" class="bv-escolhas">
             @csrf
             <button type="submit" name="objetivo" value="jogar" class="bv-escolha">
-                <span class="bv-escolha__icone">🎲</span>
+                <span class="bv-escolha__icone"><x-icone n="dados"/></span>
                 <strong>Quero jogar o RPG</strong>
                 <span>Criar fichas, montar campanhas e jogar com o grupo no painel.</span>
             </button>
             <button type="submit" name="objetivo" value="livros" class="bv-escolha">
-                <span class="bv-escolha__icone">📖</span>
+                <span class="bv-escolha__icone"><x-icone n="livro"/></span>
                 <strong>Quero ler os livros</strong>
                 <span>O livro do sistema e os livros de histórias, em PDF ou impressos.</span>
             </button>

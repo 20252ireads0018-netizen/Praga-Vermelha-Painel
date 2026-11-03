@@ -1356,7 +1356,7 @@ class Gladio
             throw new \InvalidArgumentException('Ainda há tempo nesta vez.');
         }
         $quem = self::esperando($e);
-        self::log($e, '⏰ Acabou o tempo de ' . self::quem($e, $quem) . '.');
+        self::log($e, 'Acabou o tempo de ' . self::quem($e, $quem) . '.');
         if ($e['fase'] === 'mulligan') {
             $e = self::tempoMulligan($e);
         } elseif ($e['escolha']) {
@@ -1388,7 +1388,7 @@ class Gladio
         if ($pausar) {
             if (empty($e['pausa'])) {
                 $e['pausa'] = ['desde' => $agora];
-                self::log($e, '⏸ O mestre pausou a partida.');
+                self::log($e, 'O mestre pausou a partida.');
             }
 
             return $e;
@@ -1402,7 +1402,7 @@ class Gladio
                 $e['escolha']['desde'] = (int) $e['escolha']['desde'] + $parado;
             }
             unset($e['pausa']);
-            self::log($e, '▶ O mestre retomou a partida.');
+            self::log($e, 'O mestre retomou a partida.');
         }
 
         return $e;

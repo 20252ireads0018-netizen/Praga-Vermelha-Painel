@@ -80,7 +80,7 @@
 
                             @if(!empty($ameaca['penalidade']))
                                 <div class="ameaca-penalidade">
-                                    <span class="ameaca-penalidade-icone">⚠</span>
+                                    <span class="ameaca-penalidade-icone"><x-icone n="alerta"/></span>
                                     <div>
                                         <p class="ameaca-penalidade-titulo">Descumprimento</p>
                                         <p>{{ $ameaca['penalidade'] }}</p>

@@ -41,7 +41,7 @@
             audio.src = SILENCIO;
             audio.play().then(() => {
                 liberado = true;
-                btnAtivar.textContent = '🔊 Som ativado';
+                btnAtivar.innerHTML = icone('som') + ' Som ativado';
                 btnAtivar.disabled = true;
                 msg('Você ouvirá os efeitos do mestre.');
             }).catch(() => msg('Não foi possível ativar o som neste navegador.'));

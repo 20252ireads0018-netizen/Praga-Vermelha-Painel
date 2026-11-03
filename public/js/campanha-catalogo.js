@@ -134,11 +134,13 @@
         if (!it.meu || (!it.dica && !it.pode_dica)) return null;
         const w = el('div', 'cat-dica');
         if (it.dica) {
-            w.appendChild(el('strong', 'cat-dica-titulo', '💡 Dica'));
+            const tit = w.appendChild(el('strong', 'cat-dica-titulo', ' Dica'));
+        tit.insertAdjacentHTML('afterbegin', icone('lampada'));
             w.appendChild(el('p', 'cat-dica-texto', it.dica));
             return w;
         }
-        const b = el('button', 'camp-btn camp-btn-pequeno cat-dica-botao', '💡 Ver dica para melhorar');
+        const b = el('button', 'camp-btn camp-btn-pequeno cat-dica-botao', '');
+        b.innerHTML = icone('lampada') + ' Ver dica para melhorar';
         b.type = 'button';
         b.title = 'Mostra o que mais tira pontos deste catálogo. Só uma dica por catálogo.';
         b.addEventListener('click', function (ev) {
@@ -165,12 +167,12 @@
                         return;
                     }
                     b.disabled = false;
-                    b.textContent = '💡 Ver dica para melhorar';
+                    b.innerHTML = icone('lampada') + ' Ver dica para melhorar';
                     mostrarErro(x.d.erro || x.d.message || 'Não foi possível buscar a dica.');
                 })
                 .catch(function () {
                     b.disabled = false;
-                    b.textContent = '💡 Ver dica para melhorar';
+                    b.innerHTML = icone('lampada') + ' Ver dica para melhorar';
                     mostrarErro('Falha de conexão ao buscar a dica.');
                 });
         });
@@ -225,7 +227,8 @@
 
             const t1 = el('span', 'cat-item-linha1');
             if (coroa) {
-                const c = el('span', 'cat-coroa', '👑');
+                const c = el('span', 'cat-coroa', '');
+            c.innerHTML = icone('coroa');
                 c.title = 'Melhor resultado desta maldição';
                 t1.appendChild(c);
             }

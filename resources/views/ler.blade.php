@@ -44,7 +44,7 @@
             <div class="pv-reader__main">
                 <div class="pv-reader__toolbar">
                     <div class="pv-tool-group">
-                        <button type="button" class="pv-tool" data-act="side" title="Mostrar/ocultar painel">☰</button>
+                        <button type="button" class="pv-tool" data-act="side" title="Mostrar/ocultar painel"><x-icone n="menu"/></button>
                     </div>
                     <div class="pv-tool-group">
                         <button type="button" class="pv-tool" data-act="prev" title="Página anterior">‹</button>
@@ -59,8 +59,8 @@
                         <button type="button" class="pv-tool" data-act="fit" title="Ajustar à largura">⤢</button>
                     </div>
                     <div class="pv-tool-group pv-tool-group--end">
-                        <button type="button" class="pv-tool pv-tool--mark" data-act="mark" title="Marcar página (B)">★</button>
-                        <button type="button" class="pv-tool" data-act="full" title="Tela cheia">⛶</button>
+                        <button type="button" class="pv-tool pv-tool--mark" data-act="mark" title="Marcar página (B)"><x-icone n="estrela"/></button>
+                        <button type="button" class="pv-tool" data-act="full" title="Tela cheia"><x-icone n="tela-cheia"/></button>
                     </div>
                 </div>
 
@@ -80,5 +80,5 @@
 
 @section('script')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="{{ asset('js/leitor.js') }}"></script>
+<script src="{{ asset('js/leitor.js') }}?v={{ @filemtime(public_path('js/leitor.js')) }}"></script>
 @endsection

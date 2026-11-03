@@ -19,7 +19,7 @@
     if (pagina && botaoFoco) {
         const foco = ligado => {
             pagina.classList.toggle('gl-foco', ligado);
-            botaoFoco.textContent = ligado ? '✕ Sair da tela cheia' : '⛶ Tela cheia';
+            botaoFoco.innerHTML = ligado ? icone('fechar') + ' Sair da tela cheia' : icone('tela-cheia') + ' Tela cheia';
         };
         botaoFoco.addEventListener('click', () => {
             if (!pagina.classList.contains('gl-foco')) {
@@ -224,16 +224,16 @@
         const vida = lado => {
             const l = L[lado];
             const pct = Math.max(0, Math.min(100, (l.vida / (l.max || 1)) * 100));
-            return `<div class="gl-vida" title="Pontos de vida"><span style="width:${pct}%"></span><b>❤ ${Math.max(0, l.vida)} / ${l.max}</b></div>`;
+            return `<div class="gl-vida" title="Pontos de vida"><span style="width:${pct}%"></span><b>${icone('coracao')} ${Math.max(0, l.vida)} / ${l.max}</b></div>`;
         };
         const comandoBotao = lado => {
             const x = (L[lado].comando || [])[0];
             if (!x) return '';
             const meu = lado === D.lado;
             return `<button type="button" class="gl-zona gl-zona-cmd" data-gl="comando" data-lado="${lado}"${meu ? ` data-comando="${x.i}"` : ''} title="Comandante na zona de comando: ${esc(cartaDef(x.c).nome)} (custo ${custoCmd(L[lado])})${meu ? ' · arraste para o campo para invocar' : ''}">` +
-                `👑 <span class="gl-cmd-nome">${esc(cartaDef(x.c).nome)}</span> <b>⚡${custoCmd(L[lado])}</b></button>`;
+                `${icone('coroa')} <span class="gl-cmd-nome">${esc(cartaDef(x.c).nome)}</span> <b>${icone('raio')}${custoCmd(L[lado])}</b></button>`;
         };
-        const cemiterioBotao = lado => `<button type="button" class="gl-zona" data-gl="cemiterio" data-lado="${lado}" title="Cemitério">✝ ${L[lado].cemiterio.length}</button>`;
+        const cemiterioBotao = lado => `<button type="button" class="gl-zona" data-gl="cemiterio" data-lado="${lado}" title="Cemitério">${icone('cruz')} ${L[lado].cemiterio.length}</button>`;
 
         // uma carta na mesa (Lenda ou feitiço no campo), com contador, anotação e o botão de ações
         const naMesa = (x, lado, feitico) => {
@@ -266,13 +266,13 @@
             // equipamentos vinculados a esta Lenda: ficam presos a ela (e caem junto)
             const equip = feitico ? [] : (L[lado].feiticos || []).filter(f => f.em === x.i);
             return `<div class="gl-slot${feitico ? ' gl-slot--feitico' : ''}${equip.length ? ' gl-slot--equipada' : ''}" data-slot="${x.i}">` +
-                (equip.length ? `<div class="gl-equipos">${equip.map(f => `<button type="button" class="gl-equipo" data-mais-feitico="${f.i}" data-dono="${lado}" title="Equipado: ${esc(cartaDef(f.c).nome)}${f.bonus && (f.bonus.atk || f.bonus.vida) ? ` (${f.bonus.atk >= 0 ? '+' : ''}${f.bonus.atk}/${f.bonus.vida >= 0 ? '+' : ''}${f.bonus.vida})` : ''}">🗡 ${esc(cartaDef(f.c).nome)}</button>`).join('')}</div>` : '') + carta +
-                (!feitico && x.i === L[lado].cmd ? '<span class="gl-cmd-selo" title="Comandante">👑</span>' : '') +
+                (equip.length ? `<div class="gl-equipos">${equip.map(f => `<button type="button" class="gl-equipo" data-mais-feitico="${f.i}" data-dono="${lado}" title="Equipado: ${esc(cartaDef(f.c).nome)}${f.bonus && (f.bonus.atk || f.bonus.vida) ? ` (${f.bonus.atk >= 0 ? '+' : ''}${f.bonus.atk}/${f.bonus.vida >= 0 ? '+' : ''}${f.bonus.vida})` : ''}">${icone('adaga')} ${esc(cartaDef(f.c).nome)}</button>`).join('')}</div>` : '') + carta +
+                (!feitico && x.i === L[lado].cmd ? '<span class="gl-cmd-selo" title="Comandante">' + icone('coroa') + '</span>' : '') +
                 (x.nota ? `<span class="gl-nota" title="${esc(x.nota)}">${esc(x.nota)}</span>` : '') +
                 etiqueta +
-                (!feitico ? (x.regen > 0 ? `<span class="gl-selo gl-selo-regen" title="Regenerar: volta de pé ao morrer (${x.regen}x)">♻${x.regen}</span>` : '') +
-                    (x.st && x.st.silhueta ? '<span class="gl-selo gl-selo-silhueta" title="De cabeça para baixo: hexo-imune, indestrutível e não ataca">🙃</span>' : '') +
-                    ((x.fl || []).includes('semdano') ? '<span class="gl-selo" title="Não sofre dano neste turno">🛡</span>' : '') : '') +
+                (!feitico ? (x.regen > 0 ? `<span class="gl-selo gl-selo-regen" title="Regenerar: volta de pé ao morrer (${x.regen}x)">${icone('regenerar')}${x.regen}</span>` : '') +
+                    (x.st && x.st.silhueta ? '<span class="gl-selo gl-selo-silhueta" title="De cabeça para baixo: hexo-imune, indestrutível e não ataca">' + icone('invertido') + '</span>' : '') +
+                    ((x.fl || []).includes('semdano') ? '<span class="gl-selo" title="Não sofre dano neste turno">' + icone('escudo') + '</span>' : '') : '') +
                 (M.jogo ? `<button type="button" class="gl-mais" data-mais-${feitico ? 'feitico' : 'mesa'}="${x.i}" data-dono="${lado}" title="Ações desta carta" aria-label="Ações de ${esc(feitico ? cartaDef(x.c).nome : nomeLenda(x))}">⋯</button>` : '') +
                 `</div>`;
         };
@@ -296,8 +296,8 @@
                 `<div class="gl-assento-cab${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
                     `<span class="gl-avatar">${inicialDe(lado)}</span>` +
                     `<div class="gl-assento-info"><strong>${nomeDe(lado)}${selo(lado)}</strong>${vida(lado)}</div>` +
-                    `<div class="gl-assento-numeros"><span class="gl-energia" title="Energia">⚡ ${l.energia}/${l.energiaMax}</span>` +
-                        `<span title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>${cemiterioBotao(lado)}${comandoBotao(lado)}</div>` +
+                    `<div class="gl-assento-numeros"><span class="gl-energia" title="Energia">${icone('raio')} ${l.energia}/${l.energiaMax}</span>` +
+                        `<span title="Cartas no baralho">${icone('baralho')} ${qtd(l.baralho)}</span>${cemiterioBotao(lado)}${comandoBotao(lado)}</div>` +
                     `<div class="gl-assento-shots">${shots(lado, false)}</div>` +
                     (l.fora ? '<span class="gl-selo-fora">Fora</span>' : '') +
                 `</div>` +
@@ -337,7 +337,7 @@
             acoes = `<span class="gl-dica">Aguardando a defesa de ${nomeDe(M.ataque.defensor)}…</span>`;
         } else if (minhaVez) {
             acoes = (atacantes.length
-                    ? M.inimigos.map(l => `<button type="button" class="camp-btn camp-btn-primario" data-gl="atacar" data-alvo="${l}">⚔ Atacar ${nomeDe(l)} com ${atacantes.length}</button>`).join('') +
+                    ? M.inimigos.map(l => `<button type="button" class="camp-btn camp-btn-primario" data-gl="atacar" data-alvo="${l}">${icone('espadas')} Atacar ${nomeDe(l)} com ${atacantes.length}</button>`).join('') +
                       `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="limpar-ataque">Limpar</button>`
                     : `<span class="gl-dica gl-dica--suave">${e.atacou ? 'Você já atacou neste turno (uma onda de ataque por turno) · ainda dá para jogar cartas' : 'Arraste cartas para o campo · escolha as Lendas da sua onda de ataque'}</span>`) +
                 `<button type="button" class="camp-btn camp-btn-primario" data-gl="passar" title="Vai para a fase final: efeitos de fim de turno, descarte até ${MAO_FIM} cartas e a vez passa">Fim do turno ▸</button>`;
@@ -348,7 +348,7 @@
         const centro = `<div class="gl-centro">` +
             `<div class="gl-pote" title="${D.aposta ? 'Aposta de todos: o vencedor leva o pote inteiro. As moedas mostram a vida já perdida na mesa' : 'Pontos de vida perdidos até agora (amistoso)'}">` +
                 `<span class="gl-moedas" aria-hidden="true">${'<i></i>'.repeat(Math.min(6, 1 + Math.floor(pote / Math.max(1, (e.total || 30) / 6))))}</span>` +
-                `<span><small>Pote</small><b>${D.aposta ? '💰 ' + (D.aposta * ordem.length).toLocaleString('pt-BR') : '❤ ' + pote.toLocaleString('pt-BR')}</b></span></div>` +
+                `<span><small>Pote</small><b>${D.aposta ? icone('moeda') + ' ' + (D.aposta * ordem.length).toLocaleString('pt-BR') : icone('coracao') + ' ' + pote.toLocaleString('pt-BR')}</b></span></div>` +
             `<div class="gl-centro-acoes"><span class="gl-turno">Turno ${e.turno}</span>${fases(e, ativo)}${relogio(M)}${acoes}</div>` +
             `</div>`;
 
@@ -363,7 +363,7 @@
                     window.JG.carta(c, { classe: (podeJogar(c, x) ? 'gl-jogavel' : 'gl-cara') + (alvo && alvo.inst === x.i ? ' gl-mirando' : '') +
                         (M.escolho && M.esc.tipo === 'mao' && M.esc.opcoes.includes(x.i) ? ' gl-alvo' : '') +
                         (paraFundo.includes(x.i) ? ' gl-mirando' : ''), attrs: `data-mao="${x.i}"${ver(x.c)}` }) +
-                    (x.rev ? '<span class="gl-olho" title="Revelada para os outros jogadores">👁</span>' : '') +
+                    (x.rev ? '<span class="gl-olho" title="Revelada para os outros jogadores">' + icone('olho') + '</span>' : '') +
                     (M.jogo ? `<button type="button" class="gl-mais" data-mais-mao="${x.i}" title="Ações desta carta" aria-label="Ações de ${esc(c.nome)}">⋯</button>` : '') +
                     `</div>`;
             }).join('')}</div>`
@@ -371,10 +371,10 @@
         const minhaBarra = `<div class="gl-eu-barra${e.vez === eu && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === eu ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}${alvoOk(eu, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${eu}">` +
             `<span class="gl-avatar">${inicialDe(eu)}</span>` +
             `<div class="gl-assento-info"><strong>${nomeDe(eu)}${selo(eu)}${D.lado ? ' <small>(você)</small>' : ''}</strong>${vida(eu)}</div>` +
-            `<span class="gl-energia gl-energia--grande" title="Energia: sobe 1 a cada turno seu">⚡ ${l.energia}/${l.energiaMax}</span>` +
+            `<span class="gl-energia gl-energia--grande" title="Energia: sobe 1 a cada turno seu">${icone('raio')} ${l.energia}/${l.energiaMax}</span>` +
             `<div class="gl-assento-shots">${shots(eu, eu === D.lado)}</div>` +
-            `<span class="gl-zona" title="Cartas no baralho">📚 ${qtd(l.baralho)}</span>` +
-            (l.extras && l.extras.topo ? `<button type="button" class="gl-zona"${ver(l.extras.topo)} title="Carta do topo do seu baralho (uma carta em jogo deixa você ver)">👁 ${esc(cartaDef(l.extras.topo).nome)}</button>` : '') +
+            `<span class="gl-zona" title="Cartas no baralho">${icone('baralho')} ${qtd(l.baralho)}</span>` +
+            (l.extras && l.extras.topo ? `<button type="button" class="gl-zona"${ver(l.extras.topo)} title="Carta do topo do seu baralho (uma carta em jogo deixa você ver)">${icone('olho')} ${esc(cartaDef(l.extras.topo).nome)}</button>` : '') +
             cemiterioBotao(eu) +
             comandoBotao(eu) +
             (l.fora ? '<span class="gl-selo-fora">Fora</span>' : '') +
@@ -388,7 +388,7 @@
                 centro +
                 `<div class="gl-meu-lado${playmat(eu).cls}"${playmat(eu).st}>${campo(eu)}${minhaBarra}${maoHtml}</div>` +
             `</div>` +
-            (e.pausa && D.status === 'andamento' ? `<div class="gl-pausa" role="status"><b>⏸ Partida pausada</b><span>O mestre pausou o jogo. O relógio parou e ninguém pode agir até ele retomar.</span></div>` : '') +
+            (e.pausa && D.status === 'andamento' ? `<div class="gl-pausa" role="status"><b>${icone('pausa')} Partida pausada</b><span>O mestre pausou o jogo. O relógio parou e ninguém pode agir até ele retomar.</span></div>` : '') +
             `<aside class="gl-log"><h3>Acontecimentos</h3><ol>${e.log.slice().reverse().map(t => `<li>${esc(t)}</li>`).join('')}</ol></aside>` +
             renderModal(M);
 
@@ -399,15 +399,15 @@
         const bp = document.getElementById('jg-pausar');
         if (bp) {
             bp.hidden = !(D.mestre && D.status === 'andamento' && !e.fim);
-            bp.textContent = e.pausa ? '▶ Retomar' : '⏸ Pausar';
+            bp.innerHTML = e.pausa ? icone('play') + ' Retomar' : icone('pausa') + ' Pausar';
             bp.dataset.acao = e.pausa ? 'retomar' : 'pausar';
         }
         if (D.status === 'cancelada') status('Partida cancelada pelo mestre. As apostas voltaram.');
-        else if (e.pausa && !e.fim) status('⏸ <strong>Partida pausada pelo mestre.</strong> O relógio parou e ninguém age até ele retomar.');
+        else if (e.pausa && !e.fim) status(icone('pausa') + ' <strong>Partida pausada pelo mestre.</strong> O relógio parou e ninguém age até ele retomar.');
         else if (e.fim) {
             const time = e.fim.equipe || null;
             const ganhei = D.lado && (time ? equipeDe(D.lado) === time : e.fim.vencedor === D.lado);
-            status(`${ganhei ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} ${time ? `Venceu a <strong>equipe ${time}</strong> (${ordem.filter(l => equipeDe(l) === time).map(nomeDe).join(', ')})` : `Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>`}` +
+            status(`${ganhei ? icone('trofeu') + ' Você venceu!' : (D.lado ? 'Você perdeu.' : '')} ${time ? `Venceu a <strong>equipe ${time}</strong> (${ordem.filter(l => equipeDe(l) === time).map(nomeDe).join(', ')})` : `Vencedor: <strong>${nomeDe(e.fim.vencedor)}</strong>`}` +
                 (e.fim.motivo === 'overdeck' ? ' (o adversário ficou sem cartas para comprar)' : '') +
                 (D.aposta ? (time ? ` · a equipe divide o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro` : ` · leva o pote de ${(D.aposta * ordem.length).toLocaleString('pt-BR')} de Dinheiro`) : ''));
         } else if (D.lado && L[D.lado].fora) status('Você está fora desta partida. Pode continuar assistindo.');
@@ -426,7 +426,7 @@
         if (!modal) return '';
         const { L, eu, minhaVez } = M;
         const fechar = `<button type="button" class="camp-btn camp-btn-pequeno" data-gl="fechar-modal">${modal.volta ? 'Voltar' : 'Fechar'}</button>`;
-        const botaoVer = (c, inst, dono) => `<button type="button" class="camp-btn"${ver(c, inst, dono)}>🔍 Ver detalhes</button>`;
+        const botaoVer = (c, inst, dono) => `<button type="button" class="camp-btn"${ver(c, inst, dono)}>${icone('lupa')} Ver detalhes</button>`;
         const janela = (titulo, corpo, rodape) => `<div class="gl-modal" data-gl="fundo-modal"><div class="gl-modal-caixa" role="dialog" aria-label="${esc(titulo)}">` +
             `<div class="gl-modal-cab"><h3>${esc(titulo)}</h3>${fechar}</div><div class="gl-modal-corpo">${corpo}</div>` +
             (rodape ? `<div class="gl-modal-rodape">${rodape}</div>` : '') + `</div></div>`;
@@ -517,9 +517,9 @@
             if (!x) { modal = null; return ''; }
             const custo = custoCmd(l);
             const corpo = `<div class="gl-modal-carta">${window.JG.carta(cartaDef(x.c), { attrs: ver(x.c) })}<div class="gl-modal-acoes">` +
-                `<p class="gl-conjurar-texto">👑 Comandante ${lado === D.lado ? 'seu' : 'de ' + nomeDe(lado)}. Custo agora: <b>${custo}</b> ` +
+                `<p class="gl-conjurar-texto">${icone('coroa')} Comandante ${lado === D.lado ? 'seu' : 'de ' + nomeDe(lado)}. Custo agora: <b>${custo}</b> ` +
                 `(${esc(cartaDef(x.c).custo)} da carta + 2 × ${l.taxa || 0} ${l.taxa === 1 ? 'vez' : 'vezes'} que já saiu da zona de comando).</p>` +
-                (meu ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="comandar"${M.minhaVez && custo <= l.energia ? '' : ' disabled'}>Invocar pagando ⚡${custo}</button>` +
+                (meu ? `<button type="button" class="camp-btn camp-btn-primario" data-gl="comandar"${M.minhaVez && custo <= l.energia ? '' : ' disabled'}>Invocar pagando ${icone('raio')}${custo}</button>` +
                        `<p class="camp-dica">${M.minhaVez ? (custo <= l.energia ? 'Ou arraste o comandante para o campo.' : 'Energia insuficiente para pagar agora.') : 'Pagando, só no seu turno.'} Quando ele cair ou for sacrificado, volta para cá.</p>` : '') +
                 `</div></div>`;
             return janela('Zona de comando', corpo, '');
@@ -548,7 +548,7 @@
                 `<p class="gl-detalhe-tipo">${lenda ? 'Lenda' : 'Feitiço'} · custo ${esc(c.custo)}` +
                 (lenda ? ` · ataque ${esc(naMesa ? x.atk : c.ataque)} · vida ${esc(naMesa ? x.vida : c.vida)}${naMesa ? ` / ${esc(x.max)}` : ''}` : '') + '</p>' +
                 (naMesa && (x.atk !== +c.ataque || x.max !== +c.vida) && x.c != null ? `<p class="camp-dica">Na carta: ${esc(c.ataque)}/${esc(c.vida)}.</p>` : '') +
-                (cmd ? `<p class="gl-detalhe-cmd">👑 Comandante de ${nomeDe(dono)}</p>` : '') +
+                (cmd ? `<p class="gl-detalhe-cmd">${icone('coroa')} Comandante de ${nomeDe(dono)}</p>` : '') +
                 (dono && x ? `<p class="camp-dica">Em jogo · ${dono === D.lado ? 'sua' : 'de ' + nomeDe(dono)}${naMesa && x.virada ? ' · virada' : ''}</p>` : '') +
                 `<div class="gl-detalhe-texto">${c.descricao ? esc(c.descricao) : '<em>Sem texto.</em>'}</div>` +
                 (auto ? `<p class="gl-detalhe-auto"><b>Efeito automático:</b> ${esc(auto)}</p>` : '') +
@@ -567,7 +567,7 @@
             const corpo = `<div class="gl-modal-carta">${window.JG.carta(cartaDef(x.c))}<div class="gl-modal-acoes">` +
                 marcacao(x, 'no feitiço') +
                 botaoVer(x.c, x.i, dono) +
-                (x.em && L[dono].mesa.some(m => m.i === x.em) ? `<p class="camp-dica">🗡 Equipado em <strong>${esc(nomeLenda(L[dono].mesa.find(m => m.i === x.em)))}</strong>: vai para o cemitério quando ela sair da mesa.</p>` : '') +
+                (x.em && L[dono].mesa.some(m => m.i === x.em) ? `<p class="camp-dica">${icone('adaga')} Equipado em <strong>${esc(nomeLenda(L[dono].mesa.find(m => m.i === x.em)))}</strong>: vai para o cemitério quando ela sair da mesa.</p>` : '') +
                 `<p class="camp-dica">Fica em jogo até um efeito tirá-lo.</p></div></div>`;
             return janela(cartaDef(x.c).nome, corpo, '');
         }
@@ -896,7 +896,7 @@
         if (D.status === 'cancelada') status('Partida cancelada pelo mestre.');
         else if (e.fim) {
             if (!e.fim.vencedor) status('Empate por afogamento: quem tinha a vez não tinha lance e não estava em xeque.');
-            else status(`${D.lado === e.fim.vencedor ? '🏆 Você venceu!' : (D.lado ? 'Você perdeu.' : '')} ${corNome(e.fim.vencedor)} (<strong>${nomeCor(e.fim.vencedor)}</strong>) venceram` +
+            else status(`${D.lado === e.fim.vencedor ? icone('trofeu') + ' Você venceu!' : (D.lado ? 'Você perdeu.' : '')} ${corNome(e.fim.vencedor)} (<strong>${nomeCor(e.fim.vencedor)}</strong>) venceram` +
                 (e.fim.motivo === 'xeque-mate' ? ' por xeque-mate.' : ' por desistência.'));
         } else {
             const xq = e.xeque ? ' <strong class="pd-aviso-xeque">Xeque!</strong>' : '';
@@ -939,7 +939,7 @@
 
     function relogio(M) {
         if (!M.ativo || !M.e.desde) return '';
-        return `<span class="gl-relogio" data-relogio title="Tempo que resta nesta vez (${TEMPO_VEZ} s). Acabou, o turno passa sozinho (ou a defesa/escolha segue como está)">⏱ <b>1:30</b></span>`;
+        return `<span class="gl-relogio" data-relogio title="Tempo que resta nesta vez (${TEMPO_VEZ} s). Acabou, o turno passa sozinho (ou a defesa/escolha segue como está)">${icone('relogio')} <b>1:30</b></span>`;
     }
     function tique() {
         if (D.jogo !== 'gladio' || !D.estado) return;
