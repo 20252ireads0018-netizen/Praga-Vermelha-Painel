@@ -101,6 +101,46 @@
     })();
 
     function status(t) { $('#jg-status').innerHTML = t; }
+
+    /* ---------- Como jogar: regras rápidas e palavras-chave (Gladio) ---------- */
+    const guia = document.getElementById('jg-como-jogar');
+    if (guia) guia.addEventListener('click', () => {
+        const P = window.JG.PALAVRA;
+        const caixa = document.createElement('div');
+        caixa.className = 'gl-guia';
+        caixa.innerHTML = `<div class="gl-guia-caixa" role="dialog" aria-modal="true" aria-label="Como jogar Gladio">
+            <div class="gl-guia-cab"><h2>${icone('livro')} Como jogar Gladio</h2><button type="button" class="camp-btn camp-btn-pequeno" data-guia="fechar">${icone('fechar')} Fechar</button></div>
+            <ol class="gl-guia-passos">
+                <li><b>Objetivo.</b> Zerar a vida dos adversários (cada um começa com 40). Quem precisa comprar com o baralho vazio também perde.</li>
+                <li><b>Começo.</b> Cada um recebe 5 cartas e decide se fica com elas ou troca (mulligan).</li>
+                <li><b>Seu turno.</b> A energia máxima sobe 1 (até 10) e enche. As cartas da mão que cabem na energia <span class="gl-guia-brilha">brilham</span>: arraste para o campo ou clique nelas.</li>
+                <li><b>Atacar.</b> Lendas prontas brilham no seu campo. Clique nelas (ou arraste um laço) e escolha o jogador. É uma onda de ataque por turno. Lenda que entrou agora fica cansada, a não ser que tenha Pressa.</li>
+                <li><b>Defender.</b> Quando atacarem você, escolha Lendas suas de pé para bloquear. O que ninguém bloquear acerta a sua vida.</li>
+                <li><b>Alvos e respostas.</b> Quando uma carta mira outra, aparece ${icone('alvo')} "mirada por" no alvo, e quem tiver uma resposta (negar, Imbuir…) pode reagir antes.</li>
+                <li><b>Comandante.</b> A Lenda escolhida como comandante (${icone('coroa')}) fica no comando e pode ser invocada de lá; cada nova invocação custa mais.</li>
+                <li><b>Fim do turno.</b> Você descarta até ficar com 7 cartas e a vez passa. Cada vez tem 90 segundos.</li>
+            </ol>
+            <h3>Palavras-chave</h3>
+            <dl class="gl-guia-palavras">${Object.values(P).map(p => `<dt>${esc(p.nome)}</dt><dd>${esc(p.desc)}</dd>`).join('')}</dl>
+        </div>`;
+        const fechar = () => { caixa.remove(); document.removeEventListener('keydown', tecla); };
+        const tecla = ev => { if (ev.key === 'Escape') fechar(); };
+        caixa.addEventListener('click', ev => { if (ev.target === caixa || ev.target.closest('[data-guia="fechar"]')) fechar(); });
+        document.addEventListener('keydown', tecla);
+        document.body.appendChild(caixa);
+    });
+
+    /** Na sua vez, diz o próximo passo: quantas cartas cabem na energia, quantas Lendas podem atacar, ou que é hora de passar. */
+    function dicaDoTurno() {
+        const e = D.estado;
+        if (!e || e.fim || !D.lado || e.vez !== D.lado || e.fase !== 'principal' || e.escolha || e.pilha || (e.ataque && (e.ataque.atacantes || []).length)) return;
+        const jogaveis = box.querySelectorAll('.gl-mao .gl-jogavel').length;
+        const prontas = box.querySelectorAll('.gl-campo .gl-pode').length;
+        const partes = [];
+        if (jogaveis) partes.push(`${jogaveis} carta${jogaveis > 1 ? 's' : ''} da mão cabe${jogaveis > 1 ? 'm' : ''} na sua energia (as que brilham)`);
+        if (prontas) partes.push(`${prontas} Lenda${prontas > 1 ? 's' : ''} pronta${prontas > 1 ? 's' : ''} para atacar`);
+        $('#jg-status').insertAdjacentHTML('beforeend', ` <span class="gl-dica-passo">${partes.length ? 'Próximo passo: ' + partes.join(' · ') + '.' : 'Nada mais para fazer agora: clique em <b>Fim do turno</b>.'}</span>`);
+    }
     const nomeJ = j => esc(D.nomes[j] || '—');
 
     /* ================================================================== */
@@ -236,6 +276,18 @@
         const cemiterioBotao = lado => `<button type="button" class="gl-zona" data-gl="cemiterio" data-lado="${lado}" title="Cemitério">${icone('cruz')} ${L[lado].cemiterio.length}</button>`;
 
         // uma carta na mesa (Lenda ou feitiço no campo), com contador, anotação e o botão de ações
+        // quem mirou esta carta ou este jogador: efeitos (inclusive instantâneos que já resolveram) deste turno e do anterior,
+        // e o alvo que está esperando resposta agora (pulsando)
+        const miradaPor = (lista, chave) => {
+            const regs = (lista || []).filter(r => r.t >= (e.turno || 0) - 1 && e.cartas[r.c]);
+            const pend = e.pilha && e.pilha.campo === 'alvo:' + chave && e.pilha.fonte_c != null ? e.pilha.fonte_c : null;
+            if (!regs.length && pend == null) return '';
+            const nomes = regs.filter(r => r.c !== pend).map(r => cartaDef(r.c).nome);
+            const titulo = (pend != null ? 'Sendo mirada agora por ' + cartaDef(pend).nome + '. ' : '') + (nomes.length ? 'Já foi alvo de: ' + nomes.join(', ') : '');
+            return `<span class="gl-mirada${pend != null ? ' gl-mirada--agora' : ''}" title="${esc(titulo)}">${icone('alvo')}` +
+                (pend != null ? `<b>${esc(cartaDef(pend).nome)}</b>` : '') +
+                nomes.slice(-2).map(n => `<i>${esc(n)}</i>`).join('') + (nomes.length > 2 ? `<i>+${nomes.length - 2}</i>` : '') + '</span>';
+        };
         const naMesa = (x, lado, feitico) => {
             const meu = lado === D.lado;
             const cls = [];
@@ -269,7 +321,7 @@
                 (equip.length ? `<div class="gl-equipos">${equip.map(f => `<button type="button" class="gl-equipo" data-mais-feitico="${f.i}" data-dono="${lado}" title="Equipado: ${esc(cartaDef(f.c).nome)}${f.bonus && (f.bonus.atk || f.bonus.vida) ? ` (${f.bonus.atk >= 0 ? '+' : ''}${f.bonus.atk}/${f.bonus.vida >= 0 ? '+' : ''}${f.bonus.vida})` : ''}">${icone('adaga')} ${esc(cartaDef(f.c).nome)}</button>`).join('')}</div>` : '') + carta +
                 (!feitico && x.i === L[lado].cmd ? '<span class="gl-cmd-selo" title="Comandante">' + icone('coroa') + '</span>' : '') +
                 (x.nota ? `<span class="gl-nota" title="${esc(x.nota)}">${esc(x.nota)}</span>` : '') +
-                etiqueta +
+                etiqueta + miradaPor(x.alvo_de, 'inst:' + x.i) +
                 (!feitico ? (x.regen > 0 ? `<span class="gl-selo gl-selo-regen" title="Regenerar: volta de pé ao morrer (${x.regen}x)">${icone('regenerar')}${x.regen}</span>` : '') +
                     (x.st && x.st.silhueta ? '<span class="gl-selo gl-selo-silhueta" title="De cabeça para baixo: hexo-imune, indestrutível e não ataca">' + icone('invertido') + '</span>' : '') +
                     ((x.fl || []).includes('semdano') ? '<span class="gl-selo" title="Não sofre dano neste turno">' + icone('escudo') + '</span>' : '') : '') +
@@ -295,7 +347,7 @@
             return `<section class="gl-assento${playmat(lado).cls}${e.vez === lado && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === lado ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}"${playmat(lado).st}>` +
                 `<div class="gl-assento-cab${alvoOk(lado, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${lado}">` +
                     `<span class="gl-avatar">${inicialDe(lado)}</span>` +
-                    `<div class="gl-assento-info"><strong>${nomeDe(lado)}${selo(lado)}</strong>${vida(lado)}</div>` +
+                    `<div class="gl-assento-info"><strong>${nomeDe(lado)}${selo(lado)}</strong>${vida(lado)}${miradaPor(L[lado].alvo_de, 'lado:' + lado)}</div>` +
                     `<div class="gl-assento-numeros"><span class="gl-energia" title="Energia">${icone('raio')} ${l.energia}/${l.energiaMax}</span>` +
                         `<span title="Cartas no baralho">${icone('baralho')} ${qtd(l.baralho)}</span>${cemiterioBotao(lado)}${comandoBotao(lado)}</div>` +
                     `<div class="gl-assento-shots">${shots(lado, false)}</div>` +
@@ -370,7 +422,7 @@
             : `<div class="gl-mao-op">${'<span class="gl-verso"></span>'.repeat(qtd(l.mao))}</div>`;
         const minhaBarra = `<div class="gl-eu-barra${e.vez === eu && ativo ? ' gl-vez' : ''}${e.fase === 'defesa' && M.ataque.defensor === eu ? ' gl-atacado' : ''}${l.fora ? ' gl-fora' : ''}${alvoOk(eu, 'heroi') ? ' gl-alvo' : ''}" data-heroi="${eu}">` +
             `<span class="gl-avatar">${inicialDe(eu)}</span>` +
-            `<div class="gl-assento-info"><strong>${nomeDe(eu)}${selo(eu)}${D.lado ? ' <small>(você)</small>' : ''}</strong>${vida(eu)}</div>` +
+            `<div class="gl-assento-info"><strong>${nomeDe(eu)}${selo(eu)}${D.lado ? ' <small>(você)</small>' : ''}</strong>${vida(eu)}${miradaPor(l.alvo_de, 'lado:' + eu)}</div>` +
             `<span class="gl-energia gl-energia--grande" title="Energia: sobe 1 a cada turno seu">${icone('raio')} ${l.energia}/${l.energiaMax}</span>` +
             `<div class="gl-assento-shots">${shots(eu, eu === D.lado)}</div>` +
             `<span class="gl-zona" title="Cartas no baralho">${icone('baralho')} ${qtd(l.baralho)}</span>` +
@@ -974,10 +1026,12 @@
     // posição e aparência das cartas antes de redesenhar (as que sumirem viram "fantasmas" animados)
     function fotografar() {
         const f = { slot: {}, mao: {}, cem: {} };
-        box.querySelectorAll('.gl-campo [data-slot]').forEach(s => { f.slot[s.dataset.slot] = { r: s.getBoundingClientRect(), html: s.outerHTML }; });
+        // cw: largura da carta (a cópia que anima fora da mesa precisa dela, senão sai no tamanho padrão)
+        const cw = s => { const c = s.querySelector('.jg-carta'); return c ? c.getBoundingClientRect().width : 0; };
+        box.querySelectorAll('.gl-campo [data-slot]').forEach(s => { f.slot[s.dataset.slot] = { r: s.getBoundingClientRect(), html: s.outerHTML, cw: cw(s) }; });
         box.querySelectorAll('.gl-mao .gl-slot--mao').forEach(s => {
             const c = s.querySelector('[data-mao]');
-            if (c) f.mao[c.dataset.mao] = { r: s.getBoundingClientRect(), html: s.outerHTML };
+            if (c) f.mao[c.dataset.mao] = { r: s.getBoundingClientRect(), html: s.outerHTML, cw: cw(s) };
         });
         return f;
     }
@@ -985,6 +1039,7 @@
         const g = document.createElement('div');
         g.className = 'gl-fantasma-anim ' + classe;
         g.innerHTML = foto.html;
+        if (foto.cw) g.style.setProperty('--cw-fantasma', foto.cw + 'px');
         Object.assign(g.style, { left: foto.r.left + 'px', top: foto.r.top + 'px', width: foto.r.width + 'px', height: foto.r.height + 'px' });
         if (alvoEl) {
             const a = alvoEl.getBoundingClientRect();
@@ -993,6 +1048,38 @@
         }
         camada().appendChild(g);
         setTimeout(() => g.remove(), 1100);
+    }
+    /** A carta sai do lugar, voa até o alvo, dá a pancada (o alvo treme e pisca) e volta. */
+    function investida(f, alvoEl, original) {
+        if (!f || !alvoEl) return;
+        const a = alvoEl.getBoundingClientRect ? alvoEl.getBoundingClientRect() : alvoEl;
+        const g = document.createElement('div');
+        g.className = 'gl-fantasma-anim gl-investida';
+        g.innerHTML = f.html;
+        if (f.cw) g.style.setProperty('--cw-fantasma', f.cw + 'px');
+        Object.assign(g.style, { left: f.r.left + 'px', top: f.r.top + 'px', width: f.r.width + 'px', height: f.r.height + 'px' });
+        const dx = a.left + a.width / 2 - (f.r.left + f.r.width / 2), dy = a.top + a.height / 2 - (f.r.top + f.r.height / 2);
+        const d = Math.hypot(dx, dy) || 1, para = Math.max(0, d - Math.min(a.height, f.r.height) * .45); // para encostado no alvo
+        const px = dx / d * para, py = dy / d * para;
+        if (original) original.style.visibility = 'hidden';
+        camada().appendChild(g);
+        const an = g.animate([
+            { transform: 'translate(0,0) scale(1) rotate(0deg)' },
+            { transform: `translate(${-dx / d * 18}px,${-dy / d * 18}px) scale(1.08) rotate(${dx > 0 ? -6 : 6}deg)`, offset: .2 }, // toma impulso
+            { transform: `translate(${px}px,${py}px) scale(1.15) rotate(${dx > 0 ? 8 : -8}deg)`, offset: .5, easing: 'cubic-bezier(.5,0,1,.5)' },
+            { transform: `translate(${px * .9}px,${py * .9}px) scale(1.05) rotate(0deg)`, offset: .62 },
+            { transform: 'translate(0,0) scale(1) rotate(0deg)' },
+        ], { duration: 900, easing: 'ease-in-out' });
+        setTimeout(() => { // a pancada
+            const alvoDom = alvoEl.getBoundingClientRect ? alvoEl : null;
+            if (alvoDom) marcar(alvoDom, 'gl-anim-golpe');
+            const boom = document.createElement('span');
+            boom.className = 'gl-impacto';
+            Object.assign(boom.style, { left: (f.r.left + f.r.width / 2 + px) + 'px', top: (f.r.top + f.r.height / 2 + py) + 'px' });
+            camada().appendChild(boom);
+            setTimeout(() => boom.remove(), 600);
+        }, 450);
+        an.onfinish = () => { g.remove(); if (original) original.style.visibility = ''; };
     }
     function marcar(el, classe) {
         if (!el) return;
@@ -1059,8 +1146,16 @@
         atB.forEach(i => { if (!atA.includes(i)) marcar(slot(i), b.vez === D.lado ? 'gl-anim-ataca' : 'gl-anim-ataca-baixo'); });
         const blA = (a.ataque && a.ataque.bloqueios) || {}, blB = (b.ataque && b.ataque.bloqueios) || {};
         Object.keys(blB).forEach(i => { if (blA[i] == null) marcar(slot(i), 'gl-anim-bloqueia'); });
-        // combate resolvido: os atacantes avançam de novo, como o golpe
-        if (atA.length && !atB.length && a.vez === b.vez) atA.forEach(i => marcar(slot(i), a.vez === D.lado ? 'gl-anim-ataca' : 'gl-anim-ataca-baixo'));
+        // combate resolvido: cada atacante voa até o alvo (o jogador, ou a Lenda que bloqueou), dá a pancada e volta
+        if (atA.length && !atB.length && a.vez === b.vez && a.ataque) {
+            const quemBloqueou = {};
+            Object.entries(a.ataque.bloqueios || {}).forEach(([bl, at]) => { quemBloqueou[+at] = +bl; });
+            atA.forEach((i, k) => {
+                const alvoEl = quemBloqueou[i] != null ? (slot(quemBloqueou[i]) || (foto.slot[quemBloqueou[i]] && foto.slot[quemBloqueou[i]].r))
+                    : box.querySelector(`[data-heroi="${a.ataque.defensor}"]`);
+                setTimeout(() => investida(foto.slot[i], alvoEl, slot(i)), k * 160);
+            });
+        }
         // cartas conjuradas e efeitos que começaram: a carta brilha (ou aparece no meio da mesa, se já saiu do campo)
         const visto = Math.max(0, ...(a.brilho || []).map(x => x.n));
         const novos = (b.brilho || []).filter(x => x.n > visto);
@@ -1196,22 +1291,19 @@
     }
     function brilhar(x, el) {
         const def = x.c != null ? cartaDef(x.c) : null;
-        if (x.t === 'efeito' && el) { // a carta em jogo brilha e mostra que o efeito dela ativou
-            marcar(el, 'gl-anim-efeito');
-            rotulo(el, '✦ efeito', '');
-            return;
-        }
+        if (x.t === 'efeito' && el) marcar(el, 'gl-anim-efeito'); // a carta em jogo brilha no lugar dela também
         if (!def) return;
-        // feitiço conjurado (ou efeito de quem já saiu do campo): a carta aparece um instante no meio da mesa
-        const mesa = box.querySelector('.gl-mesa');
-        if (!mesa) return;
-        const r = mesa.getBoundingClientRect();
+        // feitiço conjurado ou efeito ativado: a carta salta rápido para o centro da tela e vai sumindo
         const g = document.createElement('div');
         g.className = 'gl-conjura-anim' + (x.t === 'efeito' ? ' gl-conjura-anim--efeito' : '');
-        g.innerHTML = window.JG.carta(def) + `<span>${x.t === 'efeito' ? '✦ efeito de' : '✦ conjurou'} · ${nomeDe(x.lado)}</span>`;
-        Object.assign(g.style, { left: (r.left + r.width / 2) + 'px', top: (r.top + r.height / 2) + 'px' });
+        g.innerHTML = window.JG.carta(def) + `<span>${x.t === 'efeito' ? 'Efeito ativado' : 'Conjurou'} · ${nomeDe(x.lado)}</span>`;
+        if (el) { // nasce de onde a carta está e voa para o centro
+            const r = el.getBoundingClientRect();
+            g.style.setProperty('--de-x', (r.left + r.width / 2 - innerWidth / 2) + 'px');
+            g.style.setProperty('--de-y', (r.top + r.height / 2 - innerHeight / 2) + 'px');
+        }
         camada().appendChild(g);
-        setTimeout(() => g.remove(), 1600);
+        setTimeout(() => g.remove(), 1500);
     }
 
     /* ================================================================== */
@@ -1225,6 +1317,7 @@
         if (D.estado.agora) difRelogio = D.estado.agora - Date.now() / 1000;
         const foto = estadoAnterior && estadoAnterior !== D.estado ? fotografar() : null;
         renderGladio();
+        dicaDoTurno();
         if (foto) animar(estadoAnterior, D.estado, foto);
         estadoAnterior = D.estado;
         desenharCombate();

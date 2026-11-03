@@ -66,7 +66,7 @@ class KurosTest extends TestCase
         // a ficha é limpa no servidor: só chaves conhecidas, números dentro dos limites
         $r = $this->postJson($this->url(), ['nome' => 'Bicho do Teste', 'dados' => [
             'tipo' => 1, 'aprim' => ['dano' => 1, 'inventado' => 5], 'habilidades' => ['carniceiro' => 1, 'nao_existe' => 2],
-            'resistencias' => ['tóxico', 'fogo'], 'daemon' => 'Belial',
+            'resistencias' => ['tóxico', 'fogo'], 'daemon' => 'Belial', 'notas_mestre' => 'Segredo do mestre',
         ]])->assertOk();
         $id = $r->json('kuro.id');
         $this->assertSame(['dano' => 1], $r->json('kuro.dados.aprim'));
@@ -79,7 +79,7 @@ class KurosTest extends TestCase
 
         // o mestre entrega à Ana: ela vê e controla vida e anotações, mas não edita a ficha
         $this->actingAs($this->mestre)->postJson($this->url("/$id/dar"), ['user_id' => $this->ana->id])->assertOk();
-        $this->actingAs($this->ana)->get($this->url())->assertOk()->assertSee('Bicho do Teste');
+        $this->actingAs($this->ana)->get($this->url())->assertOk()->assertSee('Bicho do Teste')->assertDontSee('Segredo do mestre'); // as notas do mestre não vão para o jogador
         $this->postJson($this->url("/$id/estado"), ['pv_atual' => 4, 'notas' => 'ferido'])->assertOk();
         $this->assertSame([4, 'ferido'], [Kuro::find($id)->pv_atual, Kuro::find($id)->notas]);
         $this->postJson($this->url(), ['id' => $id, 'nome' => 'Hack', 'dados' => ['tipo' => 9]])->assertStatus(403);

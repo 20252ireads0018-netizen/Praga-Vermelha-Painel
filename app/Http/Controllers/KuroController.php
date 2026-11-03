@@ -63,7 +63,7 @@ class KuroController extends Controller
         }
         $kuro->save();
 
-        return response()->json(['ok' => true, 'kuro' => $kuro->paraTela()]);
+        return response()->json(['ok' => true, 'kuro' => $kuro->paraTela($campanha->ehMestre($uid))]);
     }
 
     /** O mestre entrega o Kuro a um jogador da campanha (ou tira, com user_id vazio). */
@@ -140,7 +140,7 @@ class KuroController extends Controller
             $q->where('user_id', $uid); // o jogador só vê os Kuros que recebeu
         }
 
-        return $q->get()->map(fn (Kuro $k) => $k->paraTela())->all();
+        return $q->get()->map(fn (Kuro $k) => $k->paraTela($mestre))->all();
     }
 
     /** Jogadores ativos da campanha (para entregar Kuros). */

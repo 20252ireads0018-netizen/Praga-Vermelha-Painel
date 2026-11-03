@@ -921,3 +921,46 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 #jg-peca-foto-previa .pd-foto { font-size: 1.6rem; }
 .pd-legenda .pd-foto, .jg-peca-simb .pd-foto, .jg-ex-simb .pd-foto, #jg-peca-foto-previa .pd-foto { width: 1.8em; height: 1.8em; flex: none; }
 .pd-legenda .pd-foto { font-size: 1.2rem; }
+
+/* Gladio: "mirada por" — quem mirou esta carta ou este jogador (efeitos já resolvidos e o alvo esperando resposta) */
+.gl-mirada { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-top: 3px; max-width: 100%; font-size: .66rem; line-height: 1.2; color: #fecaca; pointer-events: auto; }
+.gl-mirada .ico { color: #f87171; width: 1.2em; height: 1.2em; }
+.gl-mirada i, .gl-mirada b { font-style: normal; padding: 1px 6px; border-radius: 999px; background: rgba(127, 29, 29, .72); border: 1px solid rgba(248, 113, 113, .45);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+.gl-mirada b { background: #b91c1c; color: #fff; border-color: #fecaca; }
+.gl-mirada--agora .ico { animation: gl-mira-pulso 1s ease-in-out infinite; }
+.gl-slot .gl-mirada { justify-content: center; }
+@keyframes gl-mira-pulso { 50% { transform: scale(1.35); color: #fff; } }
+
+/* ataque: a carta voa até o alvo e dá a pancada */
+.gl-investida { z-index: 1960; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .6)) drop-shadow(0 0 10px rgba(248, 113, 113, .6)); }
+.gl-impacto { position: fixed; z-index: 1970; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle, #fff 0 20%, #fde68a 35%, rgba(239, 68, 68, .85) 55%, transparent 70%); animation: gl-impacto .55s ease-out forwards; }
+@keyframes gl-impacto { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(7); opacity: 0; } }
+
+/* efeito ativado / conjurou: a carta salta para o centro da tela, um instante, e some */
+.gl-conjura-anim { left: 50% !important; top: 50% !important; --cw: clamp(120px, 22vh, 200px); animation: gl-salta-centro 1.45s cubic-bezier(.2, 1, .3, 1) forwards; }
+@keyframes gl-salta-centro {
+    0% { opacity: .2; transform: translate(calc(-50% + var(--de-x, 0px)), calc(-50% + var(--de-y, 0px))) scale(.45); }
+    22% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    40% { transform: translate(-50%, -50%) scale(1); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); filter: blur(4px); } }
+@media (prefers-reduced-motion: reduce) { .gl-conjura-anim, .gl-impacto { animation-duration: .01ms !important; } }
+
+/* Gladio: próximo passo na barra de status e o guia "Como jogar" */
+.gl-dica-passo { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: rgba(201, 164, 92, .16); border: 1px solid rgba(201, 164, 92, .4); color: #f2d7a0; font-size: .85em; }
+.gl-guia { position: fixed; inset: 0; z-index: 2100; background: rgba(0, 0, 0, .7); display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 24px 12px; }
+.gl-guia-caixa { width: min(720px, 100%); background: #160f17; border: 1px solid rgba(201, 164, 92, .35); border-radius: 14px; padding: 16px 18px; box-sizing: border-box; }
+.gl-guia-cab { display: flex; align-items: center; gap: 10px; }
+.gl-guia-cab h2 { flex: 1; margin: 0; font-size: 1.2rem; }
+.gl-guia-passos { padding-left: 20px; line-height: 1.5; }
+.gl-guia-passos li { margin: 6px 0; }
+.gl-guia-brilha { color: #fde68a; text-shadow: 0 0 8px rgba(250, 204, 21, .8); }
+.gl-guia-palavras { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; font-size: .9rem; }
+.gl-guia-palavras dt { font-weight: 700; color: #f2d7a0; }
+.gl-guia-palavras dd { margin: 0; opacity: .9; }
+@media (max-width: 520px) { .gl-guia-palavras { grid-template-columns: minmax(0, 1fr); } .gl-guia-palavras dd { margin-bottom: 6px; } }
+
+/* cópias que animam fora da mesa (investida, carta morrendo, descarte) mantêm o tamanho que a carta tinha */
+.gl-fantasma-anim .jg-carta { --cw: var(--cw-fantasma, 110px); }

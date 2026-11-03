@@ -2977,6 +2977,7 @@ class Gladio
             && !in_array($p['a'], ['sacrificar', 'absorver1', 'serrar', 'organizar', 'fixar', 'desafiar'], true)
             && ($podem = self::respondentes($e, $lado, ['imbuir', 'protecao'], 'alvo:' . $p['alvo']))) {
             $e['pilha'] = ['tipo' => 'alvo', 'resp' => ['imbuir', 'protecao'], 'campo' => 'alvo:' . $p['alvo'], 'quem' => $podem, 'passo' => $p, 'original' => $es['passo'],
+                           'fonte' => $es['fonte'] ?? null, 'fonte_c' => $e['fila'][0]['c'] ?? null, // a tela mostra no alvo quem está mirando
                            'opcoes' => $es['opcoes'], 'esc_tipo' => $es['tipo'], 'lado' => $lado,
                            'texto' => self::quem($e, $lado) . " escolheu o alvo de {$es['fonte']}: você pode responder"];
 

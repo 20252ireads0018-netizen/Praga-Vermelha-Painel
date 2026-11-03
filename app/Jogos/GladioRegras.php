@@ -179,11 +179,49 @@ trait GladioRegras
         foreach ($lendas as $i) {
             if ((int) $i !== $de) { // a própria carta não mira a si mesma
                 self::brilho($e, 'mira', $ef['lado'], $ef['c'] ?? null, $de, ['para' => (int) $i]);
+                self::marcarAlvo($e, $ef, (int) $i, null);
             }
         }
         foreach ($jogadores as $l) {
             if ($l !== $ef['lado']) {
                 self::brilho($e, 'mira', $ef['lado'], $ef['c'] ?? null, $de, ['para_lado' => $l]);
+                self::marcarAlvo($e, $ef, null, $l);
+            }
+        }
+    }
+
+    /**
+     * Guarda na Lenda (ou no jogador) qual carta a mirou e em que turno: a tela mostra "mirada por …" em cada alvo,
+     * inclusive de feitiços instantâneos que já resolveram. Fica só o último registro de cada carta, até 4.
+     */
+    private static function marcarAlvo(array &$e, array $ef, ?int $inst, ?string $jogador): void
+    {
+        if (($ef['c'] ?? null) === null) {
+            return;
+        }
+        $reg = ['c' => $ef['c'], 'lado' => $ef['lado'], 't' => (int) ($e['turno'] ?? 0)];
+        $guardar = function (array $lista) use ($reg) {
+            $lista = array_values(array_filter($lista, fn ($r) => ($r['c'] ?? null) !== $reg['c']));
+            $lista[] = $reg;
+
+            return array_slice($lista, -4);
+        };
+        if ($jogador !== null) {
+            if (isset($e['lados'][$jogador])) {
+                $e['lados'][$jogador]['alvo_de'] = $guardar($e['lados'][$jogador]['alvo_de'] ?? []);
+            }
+
+            return;
+        }
+        foreach (array_keys($e['lados']) as $l) {
+            foreach (['mesa', 'feiticos'] as $zona) {
+                foreach ($e['lados'][$l][$zona] ?? [] as $k => $x) {
+                    if ((int) ($x['i'] ?? -1) === $inst) {
+                        $e['lados'][$l][$zona][$k]['alvo_de'] = $guardar($x['alvo_de'] ?? []);
+
+                        return;
+                    }
+                }
             }
         }
     }

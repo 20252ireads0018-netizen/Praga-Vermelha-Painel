@@ -24,13 +24,18 @@ class Kuro extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /** O que a página recebe. */
-    public function paraTela(): array
+    /** O que a página recebe. As notas do mestre não vão para o jogador (nem escondidas no HTML). */
+    public function paraTela(bool $mestre = true): array
     {
+        $dados = (array) ($this->dados ?: []);
+        if (!$mestre) {
+            unset($dados['notas_mestre']);
+        }
+
         return [
             'id'       => (int) $this->id,
             'nome'     => (string) $this->nome,
-            'dados'    => $this->dados ?: (object) [],
+            'dados'    => $dados ?: (object) [],
             'pv_atual' => $this->pv_atual,
             'notas'    => (string) ($this->notas ?? ''),
             'dono'     => $this->user_id ? (int) $this->user_id : null,

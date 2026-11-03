@@ -284,8 +284,14 @@ class MinijogoController extends Controller
     private function mover(Campanha $campanha, int $uid, ?int $ficha, int $quanto): void
     {
         DB::transaction(function () use ($campanha, $uid, $ficha, $quanto) {
-            if ($ficha !== null) {
-                $f = Personagem::withoutGlobalScopes()->lockForUpdate()->findOrFail($ficha);
+            $f = $ficha !== null ? Personagem::withoutGlobalScopes()->lockForUpdate()->find($ficha) : null;
+            if ($f && (int) $f->usuario_id !== $uid) {
+                if ($quanto < 0) {
+                    throw new \InvalidArgumentException('Esse personagem não é mais seu.');
+                }
+                $f = null; // o prêmio vai para a carteira da campanha
+            }
+            if ($f) {
                 if ((int) $f->dinheiro + $quanto < 0) {
                     throw new \InvalidArgumentException("{$f->nome} não tem Dinheiro suficiente para essa aposta.");
                 }

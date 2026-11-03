@@ -39,6 +39,7 @@ class CampanhaJogoController extends Controller
     private ?array $oficiais = null;
 
     public const JOGOS = ['gladio', 'pela_dama'];
+    public const MAX_PECAS = 60; // peças de Pela Dama por pessoa em cada campanha (cada uma pode ter foto)
 
     /* ================================================================== */
     /*  Páginas                                                            */
@@ -214,9 +215,9 @@ class CampanhaJogoController extends Controller
             'nome'    => ['required', 'string', 'max:40'],
             'simbolo' => ['required', 'string', 'max:24'],
             'regras'  => ['required', 'string', 'max:20000'],
-            'foto'    => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:3072'], // KB
+            'foto'    => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:600'], // KB (a tela já manda 256 px)
             'sem_foto'=> ['nullable', 'boolean'],
-        ], ['foto.mimes' => 'A foto precisa ser uma imagem (JPG, PNG ou WebP).', 'foto.max' => 'A foto pode ter no máximo 3 MB.']);
+        ], ['foto.mimes' => 'A foto precisa ser uma imagem (JPG, PNG ou WebP).', 'foto.max' => 'A foto pode ter no máximo 600 KB.']);
         $regras = PelaDama::limparRegras(json_decode($d['regras'], true));
         if (!$regras) {
             return response()->json(['ok' => false, 'erro' => 'Marque pelo menos um movimento para a peça.'], 422);
@@ -230,6 +231,9 @@ class CampanhaJogoController extends Controller
             return response()->json(['ok' => false, 'erro' => 'Escolha um símbolo para a peça.'], 422);
         }
 
+        if (empty($d['id']) && PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->count() >= self::MAX_PECAS) {
+            return response()->json(['ok' => false, 'erro' => 'Você já tem ' . self::MAX_PECAS . ' peças nesta campanha: exclua uma para criar outra.'], 422);
+        }
         $peca = !empty($d['id'])
             ? PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->findOrFail((int) $d['id'])
             : new PelaDamaPeca(['campanha_id' => $campanha->id, 'user_id' => $uid]);
@@ -658,7 +662,13 @@ class CampanhaJogoController extends Controller
                 $c->dinheiro -= (int) $d['valor'];
                 $c->save();
                 $cfg = (array) ($p->config ?? []);
-                $cfg['bolao'][] = ['u' => $uid, 'alvo' => $d['alvo'], 'v' => (int) $d['valor']];
+                $cfg['bolao'] = (array) ($cfg['bolao'] ?? []);
+                $k = collect($cfg['bolao'])->search(fn ($a) => (int) $a['u'] === $uid && $a['alvo'] === $d['alvo']);
+                if ($k !== false) {
+                    $cfg['bolao'][$k]['v'] = (int) $cfg['bolao'][$k]['v'] + (int) $d['valor'];
+                } else {
+                    $cfg['bolao'][] = ['u' => $uid, 'alvo' => $d['alvo'], 'v' => (int) $d['valor']];
+                }
                 $p->config = $cfg;
                 $p->versao = (int) $p->versao + 1;
                 $p->save();

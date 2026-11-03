@@ -14,6 +14,9 @@
         @if ($partida->jogo === 'gladio')
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-pausar" hidden title="Só o mestre vê: ninguém age e o relógio para enquanto estiver pausada"><x-icone n="pausa"/> Pausar</button>
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-miniatura" hidden title="Sai da mesa e continua jogando numa janelinha, em qualquer página do site">⇲ Miniatura</button>
+            @if ($partida->jogo === 'gladio')
+                <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-como-jogar" title="Regras rápidas e todas as palavras-chave"><x-icone n="livro"/> Como jogar</button>
+            @endif
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-tela-cheia" title="Só a mesa, sem a aba de acontecimentos (Esc sai)"><x-icone n="tela-cheia"/> Tela cheia</button>
         @endif
     </header>
