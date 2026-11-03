@@ -187,6 +187,16 @@
         } catch (err) { falhou(err); }
     }));
 
+    // Gladio contra o bot: a partida começa na hora e a tela vai direto para ela
+    const botaoBot = $('#jg-contra-bot');
+    if (botaoBot) botaoBot.addEventListener('click', async () => {
+        botaoBot.disabled = true;
+        try {
+            const r = await post(D.url.bot, { deck_id: deckEscolhido() }, D.csrf);
+            location.href = r.url;
+        } catch (err) { botaoBot.disabled = false; falhou(err); }
+    });
+
     /* ---------- decks (Gladio): cada membro monta os seus ---------- */
     let decks = D.decks || [];
     const R = D.deckRegra;

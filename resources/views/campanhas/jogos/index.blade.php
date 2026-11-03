@@ -62,6 +62,10 @@
                         </label>
                         <button class="camp-btn camp-btn-primario">Lançar desafio</button>
                     </form>
+                    <div class="jg-bot">
+                        <button type="button" class="camp-btn" id="jg-contra-bot"><x-icone n="espadas"/> Jogar contra o bot</button>
+                        <span class="camp-dica">Começa na hora, sem aposta, com o seu deck. O bot joga com um deck sorteado entre os de todos os jogadores.</span>
+                    </div>
                     <p class="camp-dica">Seu Dinheiro: <strong id="jg-meu-dinheiro">0</strong></p>
                 </section>
 
@@ -356,6 +360,7 @@
         'playmat'  => route('campanhas.jogos.playmat.salvar', $campanha),
         'decks'    => route('campanhas.jogos.decks.salvar', $campanha),
         'partidas' => route('campanhas.jogos.partidas.criar', $campanha),
+        'bot'      => route('campanhas.jogos.bot', $campanha),
         'base'     => url('/campanhas/' . $campanha->id . '/jogos'),
     ],
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>

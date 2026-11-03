@@ -182,6 +182,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{campanha}/jogos/pecas/{peca}/foto', [CampanhaJogoController::class, 'verFotoPeca'])->name('jogos.pecas.foto');
         Route::post('/{campanha}/jogos/partidas', [CampanhaJogoController::class, 'criarPartida'])
             ->middleware('throttle:30,1')->name('jogos.partidas.criar');
+        Route::post('/{campanha}/jogos/bot', [CampanhaJogoController::class, 'contraBot'])
+            ->middleware('throttle:20,1')->name('jogos.bot'); // Gladio contra o bot (deck sorteado entre os de todos)
         Route::get('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'partida'])->name('jogos.partida');
         Route::delete('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'excluirPartida'])->name('jogos.partidas.excluir'); // tirar do histórico
         Route::post('/{campanha}/jogos/limpar-partidas', [CampanhaJogoController::class, 'limparPartidas'])->name('jogos.partidas.limpar'); // todas as terminadas

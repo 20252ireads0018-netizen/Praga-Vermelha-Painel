@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jogos\Gladio;
+use App\Jogos\GladioBot;
 use App\Jogos\PelaDama;
 use App\Models\Campanha;
 use App\Models\CampanhaFicha;
@@ -696,7 +697,7 @@ class CampanhaJogoController extends Controller
         }
         $r = [];
         foreach ($p->jogadores() as $k => $id) {
-            $r[Gladio::LADOS[$k]] = (string) (User::whereKey($id)->value('name') ?? 'Jogador');
+            $r[Gladio::LADOS[$k]] = $this->nomeJogador($p, (int) $id);
         }
 
         return $r;
@@ -806,6 +807,86 @@ class CampanhaJogoController extends Controller
         return response()->json(['ok' => true, 'url' => route('campanhas.jogos.partida', [$campanha, $partida])]);
     }
 
+    /**
+     * Gladio contra o bot: a partida começa na hora, sem aposta, com o seu deck (ou 20 sorteadas) contra um deck
+     * sorteado entre todos os decks já montados por qualquer jogador (só os que ainda têm cartas suficientes no
+     * catálogo; sem nenhum, o bot joga com 20 sorteadas). Quem começa é sorteado.
+     */
+    public function contraBot(Request $request, Campanha $campanha): JsonResponse
+    {
+        $this->exigirMembro($campanha);
+        $uid = (int) auth()->id();
+        $request->validate(['deck_id' => ['nullable', 'integer']]);
+        if (!GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->exists()) {
+            return $this->erro('O mestre ainda não criou nenhuma carta de Gladio.');
+        }
+        $catalogo = $this->catalogo($campanha);
+        try {
+            $meu = $this->deckDe($campanha, $uid, $request->input('deck_id'), $catalogo);
+        } catch (\InvalidArgumentException $e) {
+            return $this->erro($e->getMessage());
+        }
+        [$deckBot, $nomeDeck, $cmdBot] = $this->deckDoBot($catalogo);
+        $jogadores = random_int(0, 1) ? [$uid, GladioBot::ID] : [GladioBot::ID, $uid];
+        $cfg = ['vagas' => 2, 'jogadores' => $jogadores,
+                'decks' => [(string) $uid => $meu, (string) GladioBot::ID => $deckBot],
+                'comandantes' => [(string) $uid => $this->comandanteDe($campanha, $uid, $request->input('deck_id')), (string) GladioBot::ID => $cmdBot],
+                'fichas' => [], 'bot' => ['nome' => 'Bot' . ($nomeDeck ? " ($nomeDeck)" : ''), 'deck' => $nomeDeck]];
+
+        $p = DB::transaction(function () use ($campanha, $uid, $cfg) {
+            $p = JogoPartida::create(['campanha_id' => $campanha->id, 'jogo' => 'gladio', 'jogador1_id' => $uid,
+                                      'convidado_id' => null, 'aposta' => 0, 'status' => 'aberta', 'config' => $cfg]);
+            $this->comecarMesa($campanha, $p);
+            $p->estado = GladioBot::agir($p->estado, $this->ladoDoBot($p)); // o bot já mantém a mão
+            $p->save();
+
+            return $p;
+        });
+
+        return response()->json(['ok' => true, 'url' => route('campanhas.jogos.partida', [$campanha, $p])]);
+    }
+
+    /** Deck sorteado para o bot entre os decks de todos os jogadores: [lista de ids | null, nome, comandante]. */
+    private function deckDoBot(array $catalogo): array
+    {
+        if (!Schema::hasTable('gladio_decks')) {
+            return [null, null, null];
+        }
+        $ids = GladioDeck::query()->pluck('id')->shuffle();
+        foreach ($ids->take(40) as $id) { // os que o mestre esvaziou (cartas apagadas/banidas) ficam de fora
+            $deck = GladioDeck::find($id);
+            $lista = $deck ? $deck->lista($catalogo) : [];
+            if (count($lista) >= GladioDeck::MIN) {
+                $cmd = GladioDeck::temComandante() && $deck->comandante_id ? (string) $deck->comandante_id : null;
+
+                return [$lista, (string) $deck->nome, $cmd];
+            }
+        }
+
+        return [null, null, null];
+    }
+
+    /** Lado do bot na partida (null: partida só de pessoas). */
+    private function ladoDoBot(JogoPartida $p): ?string
+    {
+        if (empty(($p->config ?? [])['bot'])) {
+            return null;
+        }
+        $k = array_search(GladioBot::ID, $p->jogadores(), true);
+
+        return $k === false ? null : Gladio::LADOS[$k];
+    }
+
+    /** Nome de quem joga na mesa: o da conta ou, para o bot, o nome dele com o deck sorteado. */
+    private function nomeJogador(JogoPartida $p, int $id): string
+    {
+        if ($id === GladioBot::ID && !empty(($p->config ?? [])['bot'])) {
+            return (string) $p->config['bot']['nome'];
+        }
+
+        return (string) (User::whereKey($id)->value('name') ?? 'Jogador');
+    }
+
     /** Config da mesa de Gladio, completando desafios criados antes das vagas (2 jogadores, deck em config.deck). */
     private function configMesa(JogoPartida $p): array
     {
@@ -869,13 +950,13 @@ class CampanhaJogoController extends Controller
             }));
             $decks[$lado] = $deck ?: null;
             $comandantes[$lado] = $cfg['comandantes'][(string) $quem] ?? null;
-            $nomes[$lado] = (string) (User::whereKey($quem)->value('name') ?? 'Jogador');
+            $nomes[$lado] = $this->nomeJogador($p, (int) $quem);
             if ($f = ($cfg['fichas'][(string) $quem] ?? null)) { // partida vinculada a um personagem: aparece o nome dele
                 $nomes[$lado] = (string) (Personagem::withoutGlobalScopes()->whereKey($f)->value('nome') ?? '') . ' (' . $nomes[$lado] . ')';
             }
         }
         $p->config = $cfg;
-        $p->jogador2_id = $cfg['jogadores'][1] ?? null;
+        $p->jogador2_id = ($cfg['jogadores'][1] ?? null) ?: null; // o bot (id 0) não é uma conta
         // antes do primeiro turno, cada um decide se mantém a mão inicial ou faz mulligan
         $equipesLado = [];
         foreach ($cfg['equipes'] ? $cfg['jogadores'] : [] as $k => $quem) {
@@ -1005,7 +1086,7 @@ class CampanhaJogoController extends Controller
             $e = Gladio::completar($e);
             $nomes = [];
             foreach ($p->jogadores() as $k => $id) {
-                $nomes[Gladio::LADOS[$k]] = (string) (User::whereKey($id)->value('name') ?? 'Jogador');
+                $nomes[Gladio::LADOS[$k]] = $this->nomeJogador($p, (int) $id);
             }
             $espera = Gladio::esperando($e);
             $campanha = Campanha::find($p->campanha_id);
@@ -1129,6 +1210,9 @@ class CampanhaJogoController extends Controller
                         default      => throw new \InvalidArgumentException('Ação desconhecida.'),
                     };
                     $e = Gladio::conferirVitorias($e); // Vassago e afins valem assim que a condição se cumpre, em qualquer ação
+                    if ($bot = $this->ladoDoBot($p)) { // contra o bot: ele joga a vez dele logo em seguida
+                        $e = GladioBot::agir($e, $bot);
+                    }
                     $venceu = $e['fim'] ? $e['fim']['vencedor'] : null;
                 } else {
                     if ($acao === 'desistir') {
@@ -1168,7 +1252,7 @@ class CampanhaJogoController extends Controller
                         // Pela Dama: brancas ('b') é quem criou o desafio; empate não tem vencedor
                         $vencedorId = $venceu === null ? null : ($venceu === 'b' ? $p->jogador1_id : $p->jogador2_id);
                     }
-                    $p->vencedor_id = $vencedorId;
+                    $p->vencedor_id = $vencedorId ?: null; // vitória do bot: sem conta vencedora
                 }
                 $p->save();
 
@@ -1439,7 +1523,7 @@ class CampanhaJogoController extends Controller
                     'aposta'    => (int) $p->aposta,
                     'j1'        => $nome($p->jogador1_id),
                     'j2'        => $nome($p->jogador2_id),
-                    'jogadores' => array_values(array_map(fn ($id) => $nome($id), $jogadores)),
+                    'jogadores' => array_values(array_map(fn ($id) => (int) $id === GladioBot::ID && !empty($p->config['bot']) ? (string) $p->config['bot']['nome'] : $nome($id), $jogadores)),
                     'vagas'     => $vagas,
                     'equipes'   => $gladio && $cfg['equipes'] ? array_map(fn ($k) => [
                         'letra' => self::LETRAS[$k],
@@ -1497,7 +1581,7 @@ class CampanhaJogoController extends Controller
         $p->loadMissing(['jogador1', 'jogador2']);
         // Gladio: os jogadores em roda ({ lado, nome }), na mesma ordem dos lados do motor
         $roda = $p->jogo === 'gladio'
-            ? array_map(fn ($id, $k) => ['lado' => Gladio::LADOS[$k], 'nome' => (string) (User::whereKey($id)->value('name') ?? 'Jogador')],
+            ? array_map(fn ($id, $k) => ['lado' => Gladio::LADOS[$k], 'nome' => $this->nomeJogador($p, (int) $id)],
                 $p->jogadores(), array_keys($p->jogadores()))
             : [];
 

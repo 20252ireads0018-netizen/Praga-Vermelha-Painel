@@ -964,3 +964,7 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 
 /* cópias que animam fora da mesa (investida, carta morrendo, descarte) mantêm o tamanho que a carta tinha */
 .gl-fantasma-anim .jg-carta { --cw: var(--cw-fantasma, 110px); }
+
+/* Gladio contra o bot */
+.jg .jg-bot { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; margin-top: .8rem; padding-top: .8rem; border-top: 1px dashed var(--linha, rgba(255,255,255,.12)); }
+.jg .jg-bot .camp-dica { flex: 1 1 220px; margin: 0; }
