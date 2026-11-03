@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\LivroMestre;
 use App\Support\Plano;
 use App\Models\Campanha;
 use App\Models\CampanhaFicha;
@@ -44,7 +45,10 @@ class CampanhaController extends Controller
             ->whereHas('participantes', fn ($q) => $q->where('user_id', $user->id)->where('status', 'convidado'))
             ->latest()->get();
 
-        return view('campanhas.index', compact('minhas', 'participo', 'convites', 'user'));
+        // jogadores pedindo para abrir o livro do mestre ("Sou mestre")
+        $pedidosLivro = LivroMestre::pendentesPara($user);
+
+        return view('campanhas.index', compact('minhas', 'participo', 'convites', 'user', 'pedidosLivro'));
     }
 
     public function store(Request $request)

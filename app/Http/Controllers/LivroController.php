@@ -2,15 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\LivroMestre;
 use App\Support\Plano;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LivroController extends Controller
 {
-    // Livro completo: chave aplicada nesta sessão, ou conta que comprou o livro (plano vitalício)
+    // Livro do mestre (completo): chave antiga nesta sessão, conta que comprou o livro, ou quem clicou em "Sou mestre"
+    // (ou já pediu) e não joga em campanha nenhuma ou tem a permissão de todos os mestres delas
     private function liberado(): bool
     {
-        return session('livro_completo') === true || Plano::comprouLivro(auth()->user());
+        $user = auth()->user();
+        if (session('livro_completo') === true || Plano::comprouLivro($user)) {
+            return true;
+        }
+        if (!$user || !(session('sou_mestre') === true || LivroMestre::pedidos($user))) {
+            return false;
+        }
+
+        return LivroMestre::estado($user) === LivroMestre::LIVRE;
     }
 
     // /livro: com chave abre o livro completo; sem chave vai para a tela de acesso
@@ -35,7 +46,42 @@ class LivroController extends Controller
             return redirect()->route('livro.index');
         }
 
-        return view('livro-acesso');
+        $user = auth()->user();
+        $mestres = $user ? LivroMestre::mestres($user) : collect();
+        $pedidos = $user ? LivroMestre::pedidos($user) : [];
+
+        return view('livro-acesso', [
+            'mestres' => $mestres->map(fn ($m) => ['nome' => $m->name, 'status' => $pedidos[$m->id] ?? null]),
+            'pediu'   => (bool) $pedidos,
+        ]);
+    }
+
+    /** "Sou mestre": sem campanhas como jogador, abre na hora; senão, pede permissão a cada mestre. */
+    public function souMestre(Request $request)
+    {
+        $user = $request->user();
+        session(['sou_mestre' => true]);
+        if (LivroMestre::estado($user) === LivroMestre::LIVRE) {
+            return redirect()->route('livro.index');
+        }
+        if (!LivroMestre::temTabela()) {
+            return redirect()->route('livro.acesso')->with('aviso', 'Os pedidos aos mestres ainda não estão disponíveis. Tente novamente mais tarde.');
+        }
+        LivroMestre::pedir($user);
+
+        return redirect()->route('livro.acesso')->with('aviso', 'Você joga em campanhas de outros mestres: enviamos um pedido de permissão a eles. O livro do mestre abre assim que todos aprovarem.');
+    }
+
+    /** O mestre aprova ou recusa o pedido de um jogador (na tela de campanhas). */
+    public function decidirPedido(Request $request, int $id)
+    {
+        $acao = $request->validate(['acao' => 'required|in:aprovar,recusar'])['acao'];
+        abort_unless(LivroMestre::temTabela(), 404);
+        $pedido = DB::table('livro_mestre_pedidos')->where('id', $id)->where('mestre_id', $request->user()->id)->first();
+        abort_unless($pedido, 404);
+        DB::table('livro_mestre_pedidos')->where('id', $id)->update(['status' => $acao === 'aprovar' ? 'aprovado' : 'recusado', 'updated_at' => now()]);
+
+        return back()->with('ok', $acao === 'aprovar' ? 'Pedido aprovado: o jogador pode abrir o livro do mestre.' : 'Pedido recusado.');
     }
 
     public function verificar(Request $request)
@@ -104,36 +150,44 @@ class LivroController extends Controller
 
     public function sair(Request $request)
     {
-        $request->session()->forget('livro_completo');
+        $request->session()->forget(['livro_completo', 'sou_mestre']);
         return redirect()->route('livro.acesso');
     }
 
-    // Sumário da versão de jogadores (baseado no índice do próprio PDF).
-    // ATENÇÃO: confira os números com as páginas físicas do players.pdf.
+    // Sumário da versão de jogadores: páginas físicas do players.pdf (176 páginas), conferidas no próprio PDF.
     private function sumarioPlayers(): array
     {
         return [
-            ['g' => 'Criação de personagem'],
-            ['t' => 'Como criar personagem e atributos', 'a' => 1,   'b' => 8],
-            ['t' => 'PV, Sanidade e Aura',               'a' => 5,   'b' => 8],
-            ['t' => 'Habilidades',                       'a' => 9,   'b' => 18],
-            ['t' => 'Profissões',                        'a' => 18,  'b' => 50],
-            ['t' => 'Talentos',                          'a' => 53,  'b' => 69],
-
-            ['g' => 'Regras'],
-            ['t' => 'Regras de combate',                 'a' => 70,  'b' => 101],
-            ['t' => 'Ficha',                             'a' => 101, 'b' => 104],
-            ['t' => 'Ascensão',                          'a' => 105, 'b' => 107],
+            ['g' => 'Regras do sistema'],
+            ['t' => 'Introdução ao sistema, testes e acertos',              'a' => 1,   'b' => 2],
+            ['t' => 'Atributos básicos, experiência e progressão mundana',  'a' => 2,   'b' => 5],
+            ['t' => 'Pontos de vida, sanidade, fobias e aura',              'a' => 5,   'b' => 9],
+            ['t' => 'Habilidades: distribuição, limites e usos',            'a' => 9,   'b' => 19],
+            ['t' => 'Profissões, ramos e talentos de profissão',            'a' => 19,  'b' => 52],
+            ['t' => 'Dados de Praga, níveis mundanos e talentos gerais',    'a' => 52,  'b' => 69],
+            ['t' => 'Experiência, treinamento, negócios e regras complementares', 'a' => 70, 'b' => 87],
+            ['t' => 'Condições especiais',                                  'a' => 87,  'b' => 96],
+            ['t' => 'Regras rápidas de combate e portes físicos',           'a' => 96,  'b' => 101],
+            ['t' => 'Criação de personagem e ficha',                        'a' => 102, 'b' => 106],
 
             ['g' => 'Sobrenatural'],
-            ['t' => 'Maldições e Hexomancia',            'a' => 108, 'b' => 118],
-            ['t' => 'Fisiomancia',                       'a' => 369, 'b' => 415],
+            ['t' => 'Manifestações sobrenaturais e maldições',              'a' => 107, 'b' => 111],
+            ['t' => 'Hexomancia e talentos de Hexomancia',                  'a' => 112, 'b' => 121],
+            ['t' => 'Fisiomancia e propriedades naturais',                  'a' => 121, 'b' => 131],
 
-            ['g' => 'Equipamento e cenário'],
-            ['t' => 'Armas',                             'a' => 418, 'b' => 430],
-            ['t' => 'Equipamentos',                      'a' => 430, 'b' => 436],
-            ['t' => 'Modificações',                      'a' => 437, 'b' => 452],
-            ['t' => 'AMA',                               'a' => 482, 'b' => 500],
+            ['g' => 'Itens e equipamentos'],
+            ['t' => 'Sistema de armazenamento e tamanhos de item',          'a' => 132, 'b' => 133],
+            ['t' => 'Armas de longo alcance e de arremesso',                'a' => 134, 'b' => 139],
+            ['t' => 'Armas corpo a corpo',                                  'a' => 139, 'b' => 146],
+            ['t' => 'Proteções e compartimentos',                           'a' => 146, 'b' => 150],
+            ['t' => 'Outros itens',                                         'a' => 150, 'b' => 152],
+            ['t' => 'Modificações de equipamentos',                         'a' => 153, 'b' => 158],
+            ['t' => 'Pontos de vida de estruturas e objetos',               'a' => 159, 'b' => 161],
+
+            ['g' => 'Cenário e AMA'],
+            ['t' => 'AMA e legislação sobrenatural',                        'a' => 162, 'b' => 164],
+            ['t' => 'Lojas, compras e preços',                              'a' => 164, 'b' => 170],
+            ['t' => 'Patentes e crescimento na AMA',                        'a' => 170, 'b' => 176],
         ];
     }
 }

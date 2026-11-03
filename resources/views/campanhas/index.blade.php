@@ -36,6 +36,31 @@
         </section>
     @endif
 
+    @if ($pedidosLivro->isNotEmpty())
+        <section class="camp-card">
+            <h2>Pedidos para ler o livro do mestre</h2>
+            <p class="camp-dica">Estes jogadores das suas campanhas clicaram em "Sou mestre". Aprovar libera para eles o livro completo, com os segredos do mestre.</p>
+            @foreach ($pedidosLivro as $p)
+                <div class="camp-linha">
+                    <div>
+                        <strong>{{ $p->name }}</strong>
+                        <span class="camp-dica">pediu em {{ \Illuminate\Support\Carbon::parse($p->created_at)->format('d/m/Y') }}</span>
+                    </div>
+                    <div class="camp-acoes">
+                        <form method="POST" action="{{ route('livro.mestre.decidir', $p->id) }}">@csrf
+                            <input type="hidden" name="acao" value="aprovar">
+                            <button class="camp-btn camp-btn-primario">Aprovar</button>
+                        </form>
+                        <form method="POST" action="{{ route('livro.mestre.decidir', $p->id) }}">@csrf
+                            <input type="hidden" name="acao" value="recusar">
+                            <button class="camp-btn">Recusar</button>
+                        </form>
+                    </div>
+                </div>
+            @endforeach
+        </section>
+    @endif
+
     <section class="camp-card">
         <h2>Campanhas que eu mestro</h2>
         @forelse ($minhas as $c)
