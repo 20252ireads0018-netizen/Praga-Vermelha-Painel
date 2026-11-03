@@ -137,7 +137,7 @@ class PersonagemController extends Controller
 
         // Campos que só são gravados se vieram no formulário (o merge abaixo cria a chave, então a presença é lida antes)
         $veio = [];
-        foreach (['armaduras', 'artes_marciais', 'niveis_profissao'] as $campo) {
+        foreach (['armaduras', 'artes_marciais', 'niveis_profissao', 'estudos_ama'] as $campo) {
             $veio[$campo] = $request->has($campo);
         }
 
@@ -145,6 +145,8 @@ class PersonagemController extends Controller
         // para não apagar o que está salvo quando outra tela grava a ficha sem esse campo.
         $request->merge([
             'armaduras' => $request->has('armaduras') ? (json_decode($request->input('armaduras') ?: 'null', true) ?: null) : null,
+            // Estudos na AMA (períodos, matérias e provas): o mesmo cuidado, só decodifica se veio
+            'estudos_ama' => $request->has('estudos_ama') ? (json_decode($request->input('estudos_ama') ?: 'null', true) ?: null) : null,
         ]);
 
         // Artes marciais (nível, experiência e talentos de cada arte). Mesmo cuidado das armaduras: só decodifica se veio no formulário.
@@ -287,12 +289,26 @@ class PersonagemController extends Controller
 
             // Propriedades fisiomantes salvas na ficha (do catálogo ou personalizadas)
             'propriedades_fisiomantes' => 'nullable|array|max:300',
+            'estudos_ama' => 'nullable|array',
+            'estudos_ama.periodos' => 'nullable|array|max:20',
+            'estudos_ama.periodos.*.aprovado' => 'nullable|boolean',
+            'estudos_ama.periodos.*.talento' => 'nullable|string|max:80',
+            'estudos_ama.periodos.*.materias' => 'nullable|array|max:5',
+            'estudos_ama.periodos.*.materias.*.id' => 'required|integer|min:1|max:99',
+            'estudos_ama.periodos.*.materias.*.aulas' => 'nullable|integer|min:0|max:99',
+            'estudos_ama.periodos.*.materias.*.esc' => 'nullable|array|max:5',
+            'estudos_ama.periodos.*.materias.*.esc.*' => 'nullable|string|max:30',
             'armaduras' => 'nullable|array',
             'armaduras.armadura_natural' => 'nullable|integer|min:-999|max:9999',
             'armaduras.resistencias' => 'nullable|array|max:20',
             'armaduras.resistencias.*' => 'string|max:30',
             'armaduras.imunidades' => 'nullable|array|max:20',
             'armaduras.imunidades.*' => 'string|max:30',
+            'armaduras.fraquezas' => 'nullable|array|max:20',
+            'armaduras.fraquezas.*' => 'string|max:30',
+            'armaduras.condicoes' => 'nullable|array|max:30',
+            'armaduras.condicoes.*' => 'string|max:30',
+            'armaduras.condicoes_especiais' => 'nullable|string|max:1000',
             'armaduras.pecas' => 'nullable|array|max:30',
             'armaduras.pecas.*.nome' => 'required|string|max:100',
             'armaduras.pecas.*.descricao' => 'nullable|string|max:1000',
@@ -358,6 +374,11 @@ class PersonagemController extends Controller
             unset($dados['niveis_profissao']);
         } elseif (isset($dados['niveis_profissao'])) {
             $dados['niveis_profissao'] = array_values($dados['niveis_profissao']);
+        }
+
+        // Estudos na AMA: só grava se a coluna existir (rode o SQL da migração 2026_11_02_000020) e se veio no formulário
+        if (!Schema::hasColumn('fichas', 'estudos_ama') || !$veio['estudos_ama']) {
+            unset($dados['estudos_ama']);
         }
 
         // Armaduras: só grava se a coluna existir e se o formulário enviou o campo

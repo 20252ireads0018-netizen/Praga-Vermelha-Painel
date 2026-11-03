@@ -149,4 +149,11 @@ t("texto do log por linha (exemplo do usuário)", () => {
     assert.strictEqual(r.total, 136);
 });
 
+t("fraqueza dobra o dano depois da armadura; sem usar resistências, não dobra", () => {
+    const r = Dano.calcularAtaque(Object.assign({}, base, { natural: 5, fraquezas: ["impacto"], linhas: [{ tipo: "impacto", valor: 20 }, { tipo: "tóxico", valor: 7 }] }));
+    assert.deepStrictEqual(r.linhas.map(l => [l.final, l.efeito]), [[30, "fraqueza"], [7, ""]]);
+    const s = Dano.calcularAtaque(Object.assign({}, base, { natural: 5, usarRes: false, fraquezas: ["impacto"], linhas: [{ tipo: "impacto", valor: 20 }] }));
+    assert.strictEqual(s.total, 15);
+});
+
 console.log(ok + " testes passaram");

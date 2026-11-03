@@ -381,6 +381,21 @@
 .arm-peca-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 .arm-peca-acoes label, .arm-check { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; }
 .arm-peca-acoes .arm-mini { margin-left: auto; }
+.historico-rolagens { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, .22); border: 1px solid rgba(255, 255, 255, .1); }
+.historico-rolagens-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.historico-rolagens-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.historico-rolagens-lista li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 4px 10px; padding: 5px 8px; border-radius: 6px; background: rgba(255, 255, 255, .04); font-size: .88rem; }
+.historico-rolagens-lista .hr-hora { opacity: .55; font-size: .78rem; }
+.historico-rolagens-lista .hr-rotulo { overflow-wrap: anywhere; }
+.historico-rolagens-lista .hr-total { font-size: 1.05rem; }
+.historico-rolagens-lista .hr-detalhe { grid-column: 2 / 4; opacity: .65; font-size: .78rem; overflow-wrap: anywhere; }
+.historico-rolagens-lista .hr-excluir { grid-row: 1; grid-column: 4; width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .15); background: none; color: inherit; cursor: pointer; }
+.historico-rolagens-vazio { opacity: .6; font-size: .85rem; margin: 4px 0; }
+#historico-rolagens-mais { margin-top: 6px; }
+.ficha-condicoes-topo { margin: 8px 0 12px; padding: 8px 12px; border-radius: 10px; background: rgba(127, 29, 29, .35); border: 1px solid rgba(248, 113, 113, .45); font-size: .9rem; }
+.arm-chip--cond.ativo { background: rgba(185, 28, 28, .55); border-color: rgba(248, 113, 113, .8); }
+.arm-cond-especiais { width: 100%; box-sizing: border-box; min-height: 64px; padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(255, 255, 255, .14); font: inherit; resize: vertical; }
+.arm-dica { opacity: .7; font-size: .82rem; margin: 2px 0 6px; }
 .arm-mini { min-height: 32px; padding: 0 10px; background: rgba(0, 0, 0, .25); color: inherit; border: 1px solid rgba(255, 255, 255, .14); border-radius: 8px; cursor: pointer; font: inherit; font-size: .8rem; }
 .arm-mini:hover { border-color: rgba(220, 70, 70, .7); }
 .arm-mini + .arm-mini { margin-left: 0 !important; }
@@ -533,6 +548,7 @@
 #form-ficha #tecnicas-card > .botao-fechar,
 #form-ficha #anotacoes-card > .botao-fechar,
 #form-ficha #dinheiro-card > .botao-fechar,
+#form-ficha #ama-card > .botao-fechar,
 #form-ficha #maldicao-card > .botao-fechar {
     position: sticky; top: 0; align-self: flex-end;
     margin: 0 0 -36px auto; z-index: 10;
@@ -586,6 +602,7 @@
 .acessos-grade #artes-marciais-abrir,
 .acessos-grade #anotacoes-abrir,
 .acessos-grade #dinheiro-abrir { grid-column: span 3; }
+.acessos-grade #ama-abrir { grid-column: 1 / -1; }
 .acessos-grade #rolarD100 { grid-column: 1 / -1; }
 @media (max-width: 560px) {
     .acessos-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -593,7 +610,8 @@
     .acessos-grade #talentos-arte-abrir,
     .acessos-grade #artes-marciais-abrir,
     .acessos-grade #anotacoes-abrir,
-    .acessos-grade #dinheiro-abrir { grid-column: span 1; }
+    .acessos-grade #dinheiro-abrir,
+    .acessos-grade #ama-abrir { grid-column: span 1; }
     /* 7 botões em 2 colunas: Maldição e Rolagem ocupam a linha inteira, sem buraco. */
     .acessos-grade #maldicao-adicao,
     .acessos-grade #rolarD100 { grid-column: 1 / -1; }
@@ -1056,6 +1074,7 @@
         @if($editando)
             @method('PUT')
         @endif
+        <div class="ficha-condicoes-topo" id="ficha-condicoes-topo" role="status" hidden></div>
 
         {{-- Modo "ficha já existente": permite digitar tudo sem o controle de pontos. Não é salvo no banco (fica lembrado no navegador). --}}
         <label class="modo-livre" title="Desliga a verificação de pontos de atributos, habilidades e nível. Útil para registrar uma ficha que já existe no papel.">
@@ -1066,6 +1085,7 @@
 
         @include('partials.anotacoes')
         @include('partials.dinheiro')
+        @include('partials.ama')
         
             <div class="ficha-header colapsavel">
                 <h1 id="titulo-info-pessoais">Informações Pessoais</h1>
@@ -1262,6 +1282,13 @@
                 <div class="arm-chips" id="armadura-chips-res"></div>
                 <h4 class="arm-grupo-titulo">Imunidades (dano zero)</h4>
                 <div class="arm-chips" id="armadura-chips-imu"></div>
+                <h4 class="arm-grupo-titulo">Fraquezas (dano dobrado)</h4>
+                <div class="arm-chips" id="armadura-chips-fra"></div>
+                <h4 class="arm-grupo-titulo">Condições</h4>
+                <p class="arm-dica">Marque as condições em que o personagem está agora (aparecem também no topo da ficha).</p>
+                <div class="arm-chips" id="armadura-chips-cond"></div>
+                <label class="arm-grupo-titulo" for="armadura-cond-especiais">Condições especiais</label>
+                <textarea id="armadura-cond-especiais" class="arm-cond-especiais" maxlength="1000" rows="3" placeholder="Ex.: maldito pelo Nomeador até o fim da cena; -10 em testes de força"></textarea>
               </div>
               <input type="hidden" id="armaduras" name="armaduras" value="">
               </div>
@@ -1333,7 +1360,7 @@
                         <input type="text" id="sorte" name="sorte" class="atributo-valor" placeholder="0" value="{{ old('sorte', $personagem->sorte ?? '') }}" title="Role ou digite a Sorte">
                     </div>
                     
-                    <button class="button" style="width: 30%" id="espalhar-pontos">
+                    <button class="button" style="width: 30%" id="espalhar-pontos" hidden>
                         Espalhar Pontos
                     </button>
 
@@ -1377,6 +1404,9 @@
                 <button type="button" class="button" style="margin-top:8px;" id="dinheiro-abrir" title="Dinheiro do personagem">
                     💰 Dinheiro
                 </button>
+                <button type="button" class="button" style="margin-top:8px;" id="ama-abrir" title="Estudos na AMA: matérias, aulas, Currículo e Talentos de Grade">
+                    🎓 Estudos AMA
+                </button>
             </div>
 
             <div class="ficha-header" id="rolagem-setor-conteudo">
@@ -1412,6 +1442,16 @@
                     <span class="rotulo">Resultado</span>
                     <span class="numero" id="resultado-dado-diverso">—</span>
                     <span class="detalhe" id="resultado-dado-diverso-detalhe"></span>
+                </div>
+
+                <div class="historico-rolagens" id="historico-rolagens">
+                    <div class="historico-rolagens-cab">
+                        <strong>Histórico de rolagens</strong>
+                        <button type="button" class="arm-mini" id="historico-rolagens-limpar" title="Apaga todo o histórico desta ficha neste aparelho">Limpar</button>
+                    </div>
+                    <ol class="historico-rolagens-lista" id="historico-rolagens-lista"></ol>
+                    <p class="historico-rolagens-vazio" id="historico-rolagens-vazio">Nenhuma rolagem ainda. Dados, dano de itens, testes de habilidade e dano recebido aparecem aqui.</p>
+                    <button type="button" class="arm-mini" id="historico-rolagens-mais" hidden>Ver mais</button>
                 </div>
             </div>
 
@@ -2567,7 +2607,7 @@ window.PastasFicha = (function(){
 
 // Painéis flutuantes redimensionáveis: arraste o canto inferior direito; o tamanho fica lembrado no navegador
 (function(){
-    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card", "artes-marciais-card", "dinheiro-card"].forEach(function(id){
+    ["talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "anotacoes-card", "maldicao-card", "artes-marciais-card", "dinheiro-card", "ama-card"].forEach(function(id){
         const card = document.getElementById(id);
         if(!card) return;
         card.classList.add("redimensionavel");
@@ -2591,7 +2631,7 @@ window.PastasFicha = (function(){
 (function(){
     const form = document.getElementById("form-ficha");
     if(!form) return;
-    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card", "artes-marciais-card", "dinheiro-card"];
+    const ids = ["anotacoes-card", "talentos-mundanos-card", "talentos-arte-card", "tecnicas-card", "maldicao-card", "artes-marciais-card", "dinheiro-card", "ama-card"];
     const cards = ids.map(id => document.getElementById(id)).filter(Boolean);
     if(!cards.length) return;
 
@@ -2945,6 +2985,53 @@ window.PastasFicha = (function(){
     // ---- Modo "ficha já existente": desliga a verificação de pontos (atributos, habilidades, nível) ----
     const modoLivreCheck = document.getElementById("modo-livre");
     const MODO_LIVRE_CHAVE = "ficha-modo-livre:" + @json($editando ? (int) $personagem->id : 'nova');
+
+    // ==================== Histórico de rolagens (por ficha, neste aparelho) ====================
+    (function(){
+        const CHAVE = "ficha-rolagens:" + @json($editando ? (int) $personagem->id : 'nova');
+        const MAX = 100, VISIVEIS = 5;
+        const lista = document.getElementById("historico-rolagens-lista");
+        const vazio = document.getElementById("historico-rolagens-vazio");
+        const mais = document.getElementById("historico-rolagens-mais");
+        let tudo = false;
+        const ler = () => { try { return JSON.parse(localStorage.getItem(CHAVE)) || []; } catch(e) { return []; } };
+        const gravar = l => { try { localStorage.setItem(CHAVE, JSON.stringify(l.slice(0, MAX))); } catch(e) {} };
+        const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+        function desenhar(){
+            if(!lista) return;
+            const l = ler();
+            const ver = tudo ? l : l.slice(0, VISIVEIS);
+            lista.innerHTML = ver.map((x, k) => '<li><span class="hr-hora">' + esc(x.h) + '</span>' +
+                '<span class="hr-rotulo">' + esc(x.r) + '</span><strong class="hr-total">' + esc(x.v) + '</strong>' +
+                (x.d ? '<span class="hr-detalhe">' + esc(x.d) + '</span>' : '') +
+                '<button type="button" class="hr-excluir" data-k="' + k + '" title="Excluir esta rolagem" aria-label="Excluir esta rolagem">×</button></li>').join("");
+            vazio.hidden = l.length > 0;
+            mais.hidden = l.length <= VISIVEIS;
+            mais.textContent = tudo ? "Ver menos" : "Ver mais (" + (l.length - VISIVEIS) + ")";
+        }
+        window.registrarRolagem = function(rotulo, total, detalhe){
+            const agora = new Date();
+            const l = ler();
+            l.unshift({ h: String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0"), r: rotulo, v: total, d: detalhe || "" });
+            gravar(l);
+            desenhar();
+        };
+        if(lista){
+            lista.addEventListener("click", e => {
+                const b = e.target.closest(".hr-excluir");
+                if(!b) return;
+                const l = ler();
+                l.splice(Number(b.dataset.k), 1);
+                gravar(l);
+                desenhar();
+            });
+            mais.addEventListener("click", () => { tudo = !tudo; desenhar(); });
+            document.getElementById("historico-rolagens-limpar").addEventListener("click", () => {
+                if(confirm("Apagar todo o histórico de rolagens desta ficha?")){ gravar([]); desenhar(); }
+            });
+            desenhar();
+        }
+    })();
     function modoLivre(){ return !!(modoLivreCheck && modoLivreCheck.checked); }
     if(modoLivreCheck){
         try { modoLivreCheck.checked = localStorage.getItem(MODO_LIVRE_CHAVE) === "1"; } catch(e) {}
@@ -3395,7 +3482,8 @@ window.PastasFicha = (function(){
     const numRolagem = v => Number(v) || 0;
     function reducaoRolagem(){
         if(!habilidadeRolagem) return 0;
-        return numRolagem(habilidadeRolagem.input.value) + numRolagem(habilidadeRolagem.mod()) + numRolagem(vantagensExtras.value);
+        return numRolagem(habilidadeRolagem.input.value) + numRolagem(habilidadeRolagem.mod()) + numRolagem(vantagensExtras.value)
+            + Math.floor(((window.amaBonus || {})[habilidadeRolagem.chave]) || 0); // estudos na AMA
     }
     function atualizarReducaoRolagem(){
         aplicacaoFinal.textContent = reducaoRolagem();
@@ -3406,7 +3494,7 @@ window.PastasFicha = (function(){
             const inputHabilidade = document.getElementById(chave);
             // habilidades sem atributo vinculado (ex.: Maldição, Explosivos) rolam com mod 0 em vez de quebrar
             const modHabilidade = () => (vinculoHabilidadeAtributo[chave] ? vinculoHabilidadeAtributo[chave]() : 0) * multiplicadorNivel();
-            habilidadeRolagem = { input: inputHabilidade, mod: modHabilidade };
+            habilidadeRolagem = { input: inputHabilidade, mod: modHabilidade, chave: chave };
             const m = numRolagem(modHabilidade());
             valorHabilidadePopup.textContent = inputHabilidade.value || "0";
             tituloRolagemHabilidade.textContent = "Rolar: " + (nomesHabilidades[chave] || chave);
@@ -3423,6 +3511,7 @@ window.PastasFicha = (function(){
         const dadoNatural = rolarDado(100);
         resultadoNatural.textContent = dadoNatural;
         resultadoFinal.textContent = dadoNatural - reducaoRolagem();
+        registrarRolagem(tituloRolagemHabilidade.textContent.replace(/^Rolar:\s*/, ""), dadoNatural - reducaoRolagem(), "d100 " + dadoNatural + " − " + reducaoRolagem());
     });
 
     fecharHabilidade.addEventListener("click", function(){
@@ -3456,6 +3545,7 @@ window.PastasFicha = (function(){
         resultado += 6;
         resultado += Math.floor(Number((constituicao.value/10)/3));
         resultadoDado.textContent = "Pontos de Vida: " + resultado;
+        registrarRolagem("Pontos de Vida", resultado, "");
         vida.textContent = resultado + "/" + resultado;
         rolagemVida.classList.add("usado");
     });
@@ -3468,6 +3558,7 @@ window.PastasFicha = (function(){
         }
         aura.textContent = resultado + "/" + resultado;
         resultadoDado.textContent = "Aura: " + resultado;
+        registrarRolagem("Aura", resultado, "");
         rolagemAura.classList.add("usado");
     });
 
@@ -3479,6 +3570,7 @@ window.PastasFicha = (function(){
             resultado = rolarDado(lados);
         }
         resultadoDado.textContent = "Sanidade: " + resultado;
+        registrarRolagem("Sanidade", resultado, "");
         sanidade.textContent = resultado + "/" + resultado;
         rolagemSanidade.classList.add("usado");
     });
@@ -3490,6 +3582,7 @@ window.PastasFicha = (function(){
             resultado = rolarDado(lados);
         }
         resultadoDado.textContent = "Sorte: " + resultado;
+        registrarRolagem("Sorte", resultado, "");
         sorte.value = resultado;
         nomeSorte.style="color: var(--tinta-fraca);";
         rolagemSorte.classList.add("usado");
@@ -4602,15 +4695,7 @@ window.PastasFicha = (function(){
             }else {
                 novoValor = Number(this.value);
             }
-            if(!modoLivre() && novoValor > pontosHabilidadeRestantes){
-                mostrarPopup("Pontos insuficientes!");
-                this.value = this.dataset.anterior === "0" ? "" : this.dataset.anterior;
-                pontosHabilidadeRestantes -= anterior;
-                pontosHabilidadeGastos += anterior;
-                pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
-                return;
-            }
-
+            // pontos de habilidade livres: o jogador ajusta como quiser; o contador só mostra o saldo (pode ficar negativo)
             pontosHabilidadeRestantes -= novoValor;
             pontosHabilidadeGastos += novoValor;
             this.dataset.anterior = this.value;
@@ -5069,6 +5154,7 @@ window.PastasFicha = (function(){
     });
     Object.values(gruposTalentos).forEach(g => g.atualizar());
 
+    window.fichaAdicionarTalentoMundano = function(t){ gruposTalentos.mundano.adicionarDoLivro(t); };
     const livroMundanos = document.getElementById("livro-talentos-mundano");
     if(livroMundanos){
         LivroTalentos.montar(livroMundanos, "mundano", function(t){
@@ -5585,6 +5671,7 @@ const listaItens = document.getElementById("lista-itens");
                 ? detalhes.join(" + ") + (valorFixo !== 0 ? " " + (valorFixo > 0 ? "+ " : "- ") + Math.abs(valorFixo) : "")
                 : "";
 
+            registrarRolagem("Dano: " + (card.dataset.nome || "item"), total, detalheTexto);
             resultadoSpan.innerHTML =
                 '<span class="item-resultado-rotulo">Resultado</span>' +
                 '<strong class="item-resultado-total">' + total + '</strong>' +
@@ -5621,6 +5708,7 @@ rolarDadoDiverso.addEventListener("click", function(){
 
     resultadoDadoDiverso.textContent = total;
     resultadoDadoDiversoDetalhe.textContent = qtd + "d" + lados + " (" + resultados.join(" + ") + ")";
+    registrarRolagem("Dados " + qtd + "d" + lados, total, resultados.join(" + "));
 
     roladorResultadoCard.classList.remove("piscar");
     void roladorResultadoCard.offsetWidth;
@@ -5655,6 +5743,7 @@ rolarPreviewItem.addEventListener("click", function(){
         : String(valorFixo);
 
     rolarPreviewResultado.textContent = "Resultado: " + total + " — " + textoDetalhe;
+    registrarRolagem("Dano (prévia do item)", total, textoDetalhe);
 });
 
 document.querySelectorAll("form button:not([type])").forEach(function(botao){
@@ -6441,6 +6530,7 @@ const Dano = {
             if(e.usarRes){
                 if((e.imunidades || []).indexOf(tipo) >= 0){ final = 0; efeito = "imunidade"; }
                 else if((e.resistencias || []).indexOf(tipo) >= 0){ final = Math.floor(reduzido / 2); efeito = "resistência"; }
+                else if((e.fraquezas || []).indexOf(tipo) >= 0){ final = reduzido * 2; efeito = "fraqueza"; }
             }
             total += final;
             return { tipo: tipo, valor: valor, defesa: defesa, contra: contra, natural: natural, reduzido: reduzido, final: final, efeito: efeito, ignora: ignora };
@@ -6479,6 +6569,12 @@ const Dano = {
     let pecas = (Array.isArray(dados.pecas) ? dados.pecas : []).map(normalizar);
     let resistencias = (Array.isArray(dados.resistencias) ? dados.resistencias : []).filter(t => tipos.indexOf(t) >= 0);
     let imunidades = (Array.isArray(dados.imunidades) ? dados.imunidades : []).filter(t => tipos.indexOf(t) >= 0 && resistencias.indexOf(t) < 0);
+    let fraquezas = (Array.isArray(dados.fraquezas) ? dados.fraquezas : []).filter(t => tipos.indexOf(t) >= 0 && resistencias.indexOf(t) < 0 && imunidades.indexOf(t) < 0);
+    // condições do livro (regras de combate e de Kuros); as que não estão na lista vão em "condições especiais"
+    const CONDICOES = ["amedrontado", "cego", "surdo", "ofuscado", "desprevenido", "caído", "indefeso", "imobilizado", "sangrando",
+        "vulnerável", "ferida grave", "ferida duradoura", "morrendo", "hexo-limitado"];
+    let condicoes = (Array.isArray(dados.condicoes) ? dados.condicoes : []).filter(t => CONDICOES.indexOf(t) >= 0);
+    let condicoesEspeciais = typeof dados.condicoes_especiais === "string" ? dados.condicoes_especiais : "";
     let natural = Math.max(0, num(dados.armadura_natural));
     const editando = new Set();
     const logs = [];
@@ -6501,8 +6597,10 @@ const Dano = {
     function sincronizar(silencioso){
         hidden.value = JSON.stringify({
             pecas: pecas.map(p => { const c = Object.assign({}, p); delete c._id; return c; }),
-            armadura_natural: natural, resistencias: resistencias, imunidades: imunidades
+            armadura_natural: natural, resistencias: resistencias, imunidades: imunidades,
+            fraquezas: fraquezas, condicoes: condicoes, condicoes_especiais: condicoesEspeciais
         });
+        mostrarCondicoesNoTopo();
         if(!silencioso) hidden.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
@@ -6574,6 +6672,19 @@ const Dano = {
         }
         montar("armadura-chips-res", resistencias);
         montar("armadura-chips-imu", imunidades);
+        montar("armadura-chips-fra", fraquezas);
+        const cond = document.getElementById("armadura-chips-cond");
+        cond.innerHTML = CONDICOES.map(t => '<button type="button" class="arm-chip arm-chip--cond' + (condicoes.indexOf(t) >= 0 ? " ativo" : "") + '" data-tipo="' + t + '">' + cap(t) + '</button>').join("");
+        if(somenteLeitura) cond.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    }
+    // as condições marcadas e as especiais aparecem num aviso no topo da ficha
+    function mostrarCondicoesNoTopo(){
+        const el = document.getElementById("ficha-condicoes-topo");
+        if(!el) return;
+        const partes = condicoes.map(cap).concat(condicoesEspeciais.trim() ? [condicoesEspeciais.trim()] : []);
+        el.hidden = !partes.length && !fraquezas.length;
+        el.innerHTML = (partes.length ? "<strong>Condições:</strong> " + esc(partes.join(" · ")) : "") +
+            (fraquezas.length ? (partes.length ? "<br>" : "") + "<strong>Fraquezas:</strong> " + esc(fraquezas.map(cap).join(", ")) : "");
     }
 
     function achar(el){ const c = el.closest(".arm-peca"); return c ? pecas.find(p => p._id === c.dataset.id) : null; }
@@ -6626,20 +6737,29 @@ const Dano = {
     campoNatural.value = natural;
     campoNatural.addEventListener("input", function(){ natural = Math.max(0, num(campoNatural.value)); sincronizar(); });
 
-    function aoClicarChip(id, alvo, outro){
+    function aoClicarChip(id, alvo, outras){
         document.getElementById(id).addEventListener("click", function(e){
             const b = e.target.closest(".arm-chip");
             if(!b || somenteLeitura) return;
             const t = b.dataset.tipo;
-            const lst = alvo(), oposta = outro();
+            const lst = alvo();
             const i = lst.indexOf(t);
             if(i >= 0) lst.splice(i, 1);
-            else { lst.push(t); const j = oposta.indexOf(t); if(j >= 0) oposta.splice(j, 1); }
+            else {
+                lst.push(t);
+                outras().forEach(o => { const j = o.indexOf(t); if(j >= 0) o.splice(j, 1); });
+            }
             renderizarChips(); sincronizar();
         });
     }
-    aoClicarChip("armadura-chips-res", () => resistencias, () => imunidades);
-    aoClicarChip("armadura-chips-imu", () => imunidades, () => resistencias);
+    aoClicarChip("armadura-chips-res", () => resistencias, () => [imunidades, fraquezas]);
+    aoClicarChip("armadura-chips-imu", () => imunidades, () => [resistencias, fraquezas]);
+    aoClicarChip("armadura-chips-fra", () => fraquezas, () => [resistencias, imunidades]);
+    aoClicarChip("armadura-chips-cond", () => condicoes, () => []);
+    const campoCondEsp = document.getElementById("armadura-cond-especiais");
+    campoCondEsp.value = condicoesEspeciais;
+    if(somenteLeitura) campoCondEsp.disabled = true;
+    campoCondEsp.addEventListener("input", function(){ condicoesEspeciais = campoCondEsp.value.slice(0, 1000); sincronizar(); });
 
     function rolarD100(){ return Math.floor(Math.random() * 100) + 1; }
 
@@ -6744,7 +6864,7 @@ const Dano = {
         marcarAtingida(peca);
         document.getElementById("armadura-rolar-res").textContent = "Local " + d + " → " + (peca ? (peca.nome || "peça sem nome") : "sem armadura");
         const usarRes = document.getElementById("armadura-dano-usar").checked;
-        const res = Dano.calcularAtaque({ linhas: entradas, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades });
+        const res = Dano.calcularAtaque({ linhas: entradas, peca: peca, natural: natural, usarRes: usarRes, resistencias: resistencias, imunidades: imunidades, fraquezas: fraquezas });
 
         // 3) desconta dos PVs (pode ficar negativo)
         const novo = v.atual - res.total;
@@ -6755,6 +6875,7 @@ const Dano = {
         txt += " · total " + res.total + " · PV " + v.atual + " → " + novo;
         logs.unshift(txt);
         logs.length = Math.min(logs.length, 5);
+        registrarRolagem("Dano recebido", res.total, txt);
         document.getElementById("armadura-log").innerHTML = logs.map(l => "<div>" + esc(l) + "</div>").join("");
     });
 
