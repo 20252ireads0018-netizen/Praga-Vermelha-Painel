@@ -558,7 +558,7 @@
                             <span class="camp-badge {{ $p->status === 'ativo' ? 'camp-badge-on' : '' }}">
                                 {{ $p->status === 'ativo' ? 'jogador' : 'convite pendente' }}
                             </span>
-                            @if ($souMestre && $p->status === 'ativo' && AppModelsCampanha::temControleCassino())
+                            @if ($souMestre && $p->status === 'ativo' && \App\Models\Campanha::temControleCassino())
                                 @php $cassinoAberto = (bool) ($p->cassino ?? true); @endphp
                                 <form method="POST" action="{{ route('campanhas.jogadores.cassino', [$campanha, $p->user_id]) }}"
                                       title="{{ $cassinoAberto ? 'Fechar o cassino (minijogos) para esta pessoa' : 'Liberar o cassino (minijogos) para esta pessoa' }}">
