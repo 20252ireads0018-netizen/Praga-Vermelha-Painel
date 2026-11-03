@@ -91,6 +91,7 @@
 
     function desenharStatus() {
         const t = estado;
+        caixa.dataset.tocando = t && t.tipo && t.tocando ? '1' : ''; // o disco gira enquanto toca
         $('#trilha-titulo').innerHTML = t && t.tipo ? icone(t.tocando ? 'play' : 'pausa') + ' ' + esc(t.titulo) : 'Nada tocando agora.';
         if (mestre) {
             $('#trilha-pausar').innerHTML = t && t.tocando ? icone('pausa') + ' Pausar' : icone('play') + ' Continuar';

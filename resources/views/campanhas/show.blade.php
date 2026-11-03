@@ -583,12 +583,25 @@
             @if (Route::has('campanhas.trilha'))
             {{-- ===== Trilha: música ou vídeo que o mestre toca para todos (public/js/campanha-trilha.js) ===== --}}
             <style>
-                .trilha-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-                .trilha-status strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+                .trilha-status { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 8px; border-radius: 10px;
+                    background: linear-gradient(135deg, rgba(122, 21, 21, .28), rgba(0, 0, 0, .35)); border: 1px solid var(--camp-borda); }
+                .trilha-disco { flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #f2d7a0;
+                    background: radial-gradient(circle, #2b1717 0 22%, #0d0a0a 23% 60%, #241515 61%); border: 1px solid #472020; }
+                .trilha-disco .ico { width: 18px; height: 18px; }
+                #camp-trilha[data-tocando="1"] .trilha-disco { animation: trilha-gira 3.5s linear infinite; box-shadow: 0 0 12px rgba(182, 37, 37, .45); }
+                @keyframes trilha-gira { to { transform: rotate(360deg); } }
+                .trilha-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+                .trilha-info strong { overflow-wrap: anywhere; font-size: .98rem; }
+                .trilha-progresso { display: flex; align-items: center; gap: 8px; }
+                .trilha-volume { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--camp-texto-suave); }
+                .trilha-volume input { width: 90px; }
+                .trilha-acoes { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 0 0 6px; }
                 .trilha-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
                 .trilha-linha select { flex: 1 1 200px; min-width: 0; }
-                .trilha-barra { flex: 1; min-width: 120px; }
-                .trilha-tempo { font-size: .8rem; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+                .trilha-barra { flex: 1; min-width: 100px; }
+                .trilha-tempo { font-size: .8rem; color: var(--camp-texto-suave); font-variant-numeric: tabular-nums; white-space: nowrap; }
+                .trilha-repetir { display: inline-flex; align-items: center; font-size: .85rem; cursor: pointer; }
+                @media (prefers-reduced-motion: reduce) { #camp-trilha[data-tocando="1"] .trilha-disco { animation: none; } }
                 .trilha-video { aspect-ratio: 16 / 9; width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin: 6px 0; }
                 .trilha-video[hidden] { display: none; }
                 .trilha-link { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
@@ -606,15 +619,20 @@
             ]) }}">
                 <div class="camp-card-cab"><h2><x-icone n="nota"/> Trilha</h2></div>
                 <div class="trilha-status">
-                    <strong id="trilha-titulo">Nada tocando agora.</strong>
+                    <span class="trilha-disco" aria-hidden="true"><x-icone n="nota"/></span>
+                    <div class="trilha-info">
+                        <strong id="trilha-titulo">Nada tocando agora.</strong>
+                        <div class="trilha-progresso">
+                            <input type="range" class="trilha-barra" id="trilha-barra" min="0" max="1" value="0" aria-label="Posição" @unless ($souMestre) disabled @endunless>
+                            <span class="trilha-tempo" id="trilha-tempo"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="trilha-acoes">
                     <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-ouvir" hidden title="O navegador só toca som depois de um clique"><x-icone n="som"/> Ouvir a trilha</button>
-                    <label class="trilha-tempo">Volume <input type="range" id="trilha-volume" min="0" max="100" aria-label="Volume"></label>
+                    <label class="trilha-volume" title="Volume (só para você)"><x-icone n="som"/><input type="range" id="trilha-volume" min="0" max="100" aria-label="Volume"></label>
                 </div>
                 <div class="trilha-video" id="trilha-video" hidden><div id="trilha-yt"></div></div>
-                <div class="trilha-linha">
-                    <input type="range" class="trilha-barra" id="trilha-barra" min="0" max="1" value="0" aria-label="Posição" @unless ($souMestre) disabled @endunless>
-                    <span class="trilha-tempo" id="trilha-tempo"></span>
-                </div>
                 @if ($souMestre)
                     <div class="trilha-linha">
                         <select id="trilha-fonte" aria-label="O que tocar"></select>
@@ -624,7 +642,7 @@
                     <div class="trilha-linha">
                         <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-pausar" disabled><x-icone n="pausa"/> Pausar</button>
                         <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-parar" disabled><x-icone n="parar"/> Parar</button>
-                        <label class="trilha-tempo"><input type="checkbox" id="trilha-loop"> Repetir</label>
+                        <label class="trilha-repetir"><input type="checkbox" id="trilha-loop"> Repetir</label>
                     </div>
                     <form class="trilha-link" id="trilha-link-form">
                         <input type="text" name="url" maxlength="300" placeholder="Link do YouTube" aria-label="Link do YouTube">

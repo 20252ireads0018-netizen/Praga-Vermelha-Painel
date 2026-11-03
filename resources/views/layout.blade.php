@@ -10,11 +10,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/cards.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ @filemtime(public_path('css/style.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/cards.css') }}?v={{ @filemtime(public_path('css/cards.css')) }}">
     {{-- Ícones próprios (public/img/icones.svg): <x-icone n="..."/> nas páginas, icone('...') nos scripts --}}
     <style>.ico{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;flex:none;overflow:visible}</style>
-    <script>window.icone=function(n,c){return '<svg class="ico'+(c?' '+c:'')+'" aria-hidden="true" focusable="false"><use href="{{ asset('img/icones.svg') }}?v={{ @filemtime(public_path('img/icones.svg')) }}#i-'+n+'"></use></svg>';};</script>
+    <script>/* deslizantes: a parte cheia do trilho segue o valor (--p), inclusive quando um script muda o valor */
+    (function(){var p=function(i){var mn=+i.min||0,mx=i.max===''?100:+i.max,v=+i.value;i.style.setProperty('--p',Math.max(0,Math.min(100,(v-mn)/((mx-mn)||1)*100))+'%');};
+    var tudo=function(){document.querySelectorAll('input[type=range]').forEach(p);};
+    document.addEventListener('input',function(e){if(e.target.type==='range')p(e.target);});
+    document.addEventListener('DOMContentLoaded',tudo);setInterval(tudo,700);})();
+    window.icone=function(n,c){return '<svg class="ico'+(c?' '+c:'')+'" aria-hidden="true" focusable="false"><use href="{{ asset('img/icones.svg') }}?v={{ @filemtime(public_path('img/icones.svg')) }}#i-'+n+'"></use></svg>';};</script>
     {{-- ?v= com a data do arquivo: cada atualização do CSS da ficha chega sem cache antigo --}}
     <link rel="stylesheet" href="{{ asset('css/Ficha.css') }}?v={{ @filemtime(public_path('css/Ficha.css')) ?: 1 }}">
     <link rel="stylesheet" href="{{ asset('css/Maldicao.css') }}">

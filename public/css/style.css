@@ -936,3 +936,67 @@ input[type="number"]{
     -moz-appearance: textfield;
     appearance: textfield;
 }
+
+/* ============================================
+   DESLIZANTES, CAIXAS DE MARCAR E OPÇÕES
+   O estilo de "input" acima é das caixas de texto; aqui os controles nativos ganham o tema
+   (trilho escuro com a parte cheia em vermelho, botão dourado). Classes das páginas continuam valendo.
+   ============================================ */
+input:where([type="range"]){
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    height: 22px;
+    min-width: 70px;
+    cursor: pointer;
+    vertical-align: middle;
+    --p: 50%;
+}
+input:where([type="range"]):focus{ outline: none; }
+input:where([type="range"])::-webkit-slider-runnable-track{
+    height: 6px;
+    border-radius: 999px;
+    border: 1px solid var(--linha);
+    background: linear-gradient(90deg, var(--sangue-3) 0 var(--p), #2b1717 var(--p) 100%);
+}
+input:where([type="range"])::-moz-range-track{ height: 6px; border-radius: 999px; border: 1px solid var(--linha); background: #2b1717; }
+input:where([type="range"])::-moz-range-progress{ height: 6px; border-radius: 999px; background: var(--sangue-3); }
+input:where([type="range"])::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f6dfae, #c9a45c 70%);
+    border: 2px solid var(--sangue-1);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+    transition: transform .12s;
+}
+input:where([type="range"])::-moz-range-thumb{
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f6dfae, #c9a45c 70%);
+    border: 2px solid var(--sangue-1);
+}
+input:where([type="range"]):hover::-webkit-slider-thumb,
+input:where([type="range"]):focus-visible::-webkit-slider-thumb{ transform: scale(1.18); box-shadow: 0 0 0 4px rgba(182, 37, 37, .35); }
+input:where([type="range"]):disabled{ cursor: default; opacity: .55; }
+input:where([type="range"]):disabled::-webkit-slider-thumb{ display: none; }
+
+input:where([type="checkbox"], [type="radio"]){
+    padding: 0;
+    border: 0;
+    width: 1.05em;
+    height: 1.05em;
+    margin: 0 .35em 0 0;
+    vertical-align: -.15em;
+    accent-color: var(--sangue-3);
+    color-scheme: dark;
+    cursor: pointer;
+}
+input:where([type="color"]){ padding: 2px; width: 2.6rem; height: 2rem; cursor: pointer; }

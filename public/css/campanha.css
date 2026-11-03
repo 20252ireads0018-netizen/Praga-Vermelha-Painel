@@ -1016,3 +1016,19 @@
 
 .camp-card-recolhido > :not(.camp-card-cab) { display: none !important; }
 .camp-card-recolhido > .camp-card-cab { padding-bottom: 0; border-bottom: 0; }
+
+
+/* busca, número, link, e-mail e senha com o mesmo visual das caixas de texto das campanhas */
+.camp-wrap input:where([type="search"], [type="number"], [type="url"], [type="email"], [type="password"], [type="date"], [type="time"]) {
+    box-sizing: border-box;
+    min-height: 2.25rem;
+    padding: .45rem .7rem;
+    font: inherit;
+    font-size: .92rem;
+    color: inherit;
+    background-color: var(--camp-fundo-campo);
+    border: 1px solid var(--camp-borda-forte);
+    border-radius: 6px;
+}
+.camp-wrap input:where([type="search"], [type="number"], [type="url"], [type="email"], [type="password"]):focus,
+.camp-wrap input[type="text"]:focus, .camp-wrap textarea:focus, .camp-wrap select:focus { outline: none; border-color: var(--camp-acento-hover); }
