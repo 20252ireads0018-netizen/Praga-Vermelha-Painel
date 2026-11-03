@@ -243,6 +243,20 @@
             </section>
             @endif
 
+            @if (Route::has('campanhas.kuros.index'))
+            {{-- ===== Kuros: o mestre cria e entrega; o jogador vê os que recebeu ===== --}}
+            <section class="camp-card">
+                <div class="camp-card-cab"><h2>Kuros</h2></div>
+                <a href="{{ route('campanhas.kuros.index', $campanha) }}" class="camp-clicavel">
+                    <span class="camp-clicavel-info">
+                        <strong>Kuros e criaturas do profano</strong>
+                        <span class="camp-dica">{{ $souMestre ? 'Crie Kuros pelas regras do livro (ficha calculada sozinha), use os prontos e entregue aos jogadores.' : 'Veja e controle os Kuros que o mestre entregou a você.' }}</span>
+                    </span>
+                    <span class="camp-seta" aria-hidden="true">›</span>
+                </a>
+            </section>
+            @endif
+
             @if (Route::has('campanhas.rolagens.index'))
             {{-- ===== Pote de dados (público + potes secretos) — na coluna principal para aproveitar a largura ===== --}}
             <section class="camp-card" id="camp-dados" data-mestre="{{ $souMestre ? 1 : 0 }}">

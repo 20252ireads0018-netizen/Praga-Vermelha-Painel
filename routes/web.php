@@ -13,6 +13,7 @@ use App\Http\Controllers\CampanhaCatalogoController;
 use App\Http\Controllers\CampanhaRolagemController;
 use App\Http\Controllers\CampanhaIniciativaController;
 use App\Http\Controllers\CampanhaJogoController;
+use App\Http\Controllers\KuroController;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\CompraLivroController;
 
@@ -133,6 +134,12 @@ Route::middleware('auth')->group(function () {
             ->middleware('throttle:60,1')->name('mesas.sala'); // painel rápido: sala ao vivo da mesa (o mestre abre na hora)
 
         // Jogos da campanha: Gladio (cartas e apostas) e Pela Dama (xadrez com peças customizadas)
+        // Kuros da campanha: o mestre cria e entrega; o jogador vê e controla os que recebeu
+        Route::get('/{campanha}/kuros', [KuroController::class, 'index'])->name('kuros.index');
+        Route::post('/{campanha}/kuros', [KuroController::class, 'salvar'])->middleware('throttle:60,1')->name('kuros.salvar');
+        Route::post('/{campanha}/kuros/{kuro}/estado', [KuroController::class, 'estado'])->middleware('throttle:120,1')->name('kuros.estado');
+        Route::post('/{campanha}/kuros/{kuro}/dar', [KuroController::class, 'dar'])->name('kuros.dar');
+        Route::delete('/{campanha}/kuros/{kuro}', [KuroController::class, 'excluir'])->name('kuros.excluir');
         Route::get('/{campanha}/jogos', [CampanhaJogoController::class, 'index'])->name('jogos.index');
         Route::get('/{campanha}/jogos/lobby', [CampanhaJogoController::class, 'lobby'])->name('jogos.lobby'); // polling do lobby
         Route::get('/jogos/ativas', [CampanhaJogoController::class, 'ativas'])->name('jogos.ativas'); // miniatura do Gladio em todo o site
