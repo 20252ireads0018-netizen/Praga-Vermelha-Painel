@@ -59,8 +59,7 @@ document.addEventListener("DOMContentLoaded", function(){
     document.getElementById("fechar-ama").addEventListener("click", function(){ card.classList.remove("ativo"); });
     document.addEventListener("keydown", function(e){ if(e.key === "Escape") card.classList.remove("ativo"); });
 
-    const CFG = @json(['materias' => config('ama.materias'), 'talentos' => config('ama.talentos'), 'extras' => config('ama.extras'),
-        'maxMaterias' => config('ama.max_materias_periodo'), 'maxHab' => config('ama.max_por_habilidade')]);
+    const CFG = {!! json_encode(['materias' => config('ama.materias'), 'talentos' => config('ama.talentos'), 'extras' => config('ama.extras'), 'maxMaterias' => config('ama.max_materias_periodo'), 'maxHab' => config('ama.max_por_habilidade')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) !!};
     const somenteLeitura = !!document.querySelector("#form-ficha.somente-leitura");
     const hidden = document.getElementById("estudos-ama");
     const caixa = document.getElementById("ama-periodos");
