@@ -183,6 +183,114 @@ class GladioCartasNovasTest extends TestCase
         $this->assertSame([(string) $eq], array_map('strval', $e['escolha']['opcoes']), 'o encantamento protegido nem aparece');
     }
 
+    public function test_barill_sacrifica_obrigatoriamente_e_compra_duas(): void
+    {
+        $cartas = ['barill' => $this->c('Barill', 'lenda', 'Quando invocado, sacrifique uma lenda, compre duas cartas', ['ataque' => 1, 'vida' => 4])];
+        // com outra Lenda: tem de escolher uma delas (não dá para pular nem escolher o próprio Barill)
+        $e = $this->mesa($cartas);
+        [$e, $soldado] = $this->poe($e, 'a', 'x');
+        $mao = count($e['lados']['a']['mao']);
+        $e = $this->joga($e, 'a', 'barill');
+        $this->assertTrue($e['escolha']['obrig']);
+        $this->assertSame([$soldado], $e['escolha']['opcoes']);
+        try {
+            Gladio::escolher($e, 'a', null);
+            $this->fail('o sacrifício não pode ser pulado');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertStringContainsString('não dá para pular', $x->getMessage());
+        }
+        $e = Gladio::escolher($e, 'a', $soldado);
+        $this->assertSame(['Barill'], array_map(fn ($m) => $e['cartas'][$m['c']]['nome'], $e['lados']['a']['mesa']));
+        $this->assertCount($mao + 2, $e['lados']['a']['mao']);
+        // sozinho na mesa: ele mesmo é sacrificado e as duas são compradas
+        $e = $this->mesa($cartas);
+        $e = $this->joga($e, 'a', 'barill');
+        $this->assertSame([$this->seq], $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'a', $this->seq);
+        $this->assertSame([], $e['lados']['a']['mesa']);
+        $this->assertCount(2, $e['lados']['a']['mao']);
+    }
+
+    public function test_custos_de_descarte_sao_obrigatorios_e_condicionam_o_efeito(): void
+    {
+        $cartas = [
+            'isaque' => $this->c('Isaque Solomons', 'lenda', 'Descarte uma carta de sua mão, mate uma lenda.'),
+            'assas'  => $this->c('Assassina Hexomante', 'lenda', 'Se essa lenda atacar um jogador diretamente, ele descarta duas cartas'),
+        ];
+        // sem carta na mão: não descarta e não mata
+        $e = $this->mesa($cartas);
+        [$e, $alvo] = $this->poe($e, 'b', 'x');
+        $e = $this->joga($e, 'a', 'isaque');
+        $this->assertNull($e['escolha']);
+        $this->assertCount(1, $e['lados']['b']['mesa'], 'sem descarte, ninguém morre');
+        // com carta: o descarte não pode ser pulado e depois vem a morte
+        $e = $this->mesa($cartas);
+        [$e, $alvo] = $this->poe($e, 'b', 'x');
+        $e['lados']['a']['mao'][] = ['i' => 9300, 'c' => 'x'];
+        $e = $this->joga($e, 'a', 'isaque');
+        $this->assertTrue($e['escolha']['obrig']);
+        $e = Gladio::escolher($e, 'a', 9300);
+        $this->assertContains($alvo, $e['escolha']['opcoes']);
+        $e = Gladio::escolher($e, 'a', $alvo);
+        $this->assertSame([], $e['lados']['b']['mesa']);
+        // o adversário atacado pela Assassina não pode recusar o descarte
+        $e = $this->mesa($cartas);
+        [$e, $assas] = $this->poe($e, 'a', 'assas');
+        $e['lados']['b']['mao'] = [['i' => 9301, 'c' => 'x'], ['i' => 9302, 'c' => 'x'], ['i' => 9303, 'c' => 'x']];
+        $e = Gladio::defender(Gladio::atacar($e, 'a', [$assas], 'b'), 'b');
+        $this->assertSame(['b', true], [$e['escolha']['lado'], $e['escolha']['obrig']]);
+    }
+
+    public function test_balinha_prisao_e_josael(): void
+    {
+        $e = $this->mesa([
+            'balinha' => $this->c('Balinha', 'lenda', 'Sempre que Balinha entrar, atacar ou morrer, cause 2 de dano a duas lendas alvo'),
+            'prisao'  => $this->c('Prisão', 'feitico', 'Exile a carta alvo'),
+            'enc'     => $this->c('Confiança', 'encanto', 'Mantido. Todo início de turno, suas lendas ganham +0/+2'),
+            'josael'  => $this->c('Josael', 'lenda', 'Quando um jogador recuperar dinheiro, recupere metade daquele valor. Quando um jogador perder ao menos 10$, compre uma carta.'),
+            'cura'    => $this->c('Cura', 'feitico', 'Recupere 10$'),
+        ]);
+        // Balinha: o segundo dano é em outra Lenda
+        [$f, $l1] = $this->poe($e, 'b', 'x');
+        [$f, $l2] = $this->poe($f, 'b', 'x');
+        $f = $this->joga($f, 'a', 'balinha');
+        $f = Gladio::escolher($f, 'a', $l1);
+        $this->assertNotContains($l1, $f['escolha']['opcoes']);
+        $this->assertContains($l2, $f['escolha']['opcoes']);
+        // Prisão: também exila um encantamento (não vai para o cemitério)
+        $f = $this->joga($e, 'b', 'enc');
+        $enc = (int) $f['lados']['b']['feiticos'][0]['i'];
+        $f = $this->joga($f, 'a', 'prisao');
+        $f = Gladio::escolher($f, 'a', '1');
+        $f = Gladio::escolher($f, 'a', (string) $enc);
+        $this->assertSame([], $f['lados']['b']['feiticos']);
+        $this->assertNotContains($enc, array_map(fn ($c) => (int) $c['i'], $f['lados']['b']['cemiterio']));
+        // Josael não reage à própria cura: 10 de cura dá 5 a mais, não 5 + 2 + 1
+        [$f] = $this->poe($e, 'a', 'josael');
+        $f['lados']['a']['vida'] = 10;
+        $f['lados']['a']['max'] = 80;
+        $f = $this->joga($f, 'a', 'cura');
+        $this->assertSame(25, $f['lados']['a']['vida']);
+    }
+
+    public function test_arqueiro_tem_iniciativa_e_luzinha_rouba_ao_comprar(): void
+    {
+        $e = $this->mesa([
+            'arq' => $this->c('Arqueiro Hexocida', 'lenda', 'Esta lenda sempre ataca primeiro. Quando ela mata uma Lenda e sai vivo, recupere 15$.', ['ataque' => 5, 'vida' => 1]),
+            'luz' => $this->c('Luzinha', 'lenda', 'Toda vez que uma carta for comprada ou descartada por você, roube 1$', ['ataque' => 0, 'vida' => 1]),
+            'compra' => $this->c('Leitura', 'feitico', 'Compre uma carta'),
+        ]);
+        [$e] = $this->poe($e, 'a', 'arq');
+        $this->assertContains('iniciativa', $e['lados']['a']['mesa'][0]['pal']);
+        [$e] = $this->poe($e, 'a', 'luz');
+        $antes = [$e['lados']['a']['vida'], $e['lados']['b']['vida']];
+        $e = $this->joga($e, 'a', 'compra');
+        if ($e['escolha']) { // de quem roubar
+            $e = Gladio::escolher($e, 'a', 'j:b');
+        }
+        $this->assertSame([$antes[0] + 1, $antes[1] - 1], [$e['lados']['a']['vida'], $e['lados']['b']['vida']]);
+    }
+
     public function test_fisiomancia_animal_aplica_qualquer_propriedade_nas_fichas(): void
     {
         $prop = ['subtipos' => 'propriedade fisiomântica'];

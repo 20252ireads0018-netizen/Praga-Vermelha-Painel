@@ -54,6 +54,32 @@ class GladioRoteiro
 
         return [
             /* ---------------- feitiços, encantamentos e equipamentos ---------------- */
+            // Isaque Solomons: sem descarte, não mata
+            'Descarte uma carta de sua mão, mate uma lenda' => ['hab' => [['g' => 'entrar', 'passos' => [
+                ['a' => 'descartar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true], ['a' => 'se', 'c' => 'descartou', 'passos' => [['a' => 'destruir'] + $lenda()]]]]]],
+            // Lucas: a Lenda comprada só entra se outra carta for descartada
+            'Quando Lucas mata uma Lenda, compre uma carta. Se a carta comprada for uma lenda, você pode invocá-la ao descartar uma carta de sua mão' => ['hab' => [['g' => 'matar', 'passos' => [
+                ['a' => 'comprar', 'n' => 1, 'alvo' => 'eu', 'marca' => true],
+                ['a' => 'se', 'c' => 'comprada_lenda', 'passos' => [['a' => 'confirmar', 'resto' => 2],
+                    ['a' => 'descartar', 'n' => 1, 'alvo' => 'eu', 'fora_comprada' => true, 'obrig' => true],
+                    ['a' => 'se', 'c' => 'descartou', 'passos' => [['a' => 'invocar_comprada']]]]]]]]],
+            // Selos de Lucius: só oferece com uma Lenda para sacrificar, e a energia vem do sacrifício
+            'Todo início de turno, você pode sacrificar uma lenda e ganhar 2 de energia' => ['hab' => [['g' => 'inicio', 'passos' => [
+                ['a' => 'se', 'c' => 'outras>=1', 'passos' => [['a' => 'confirmar', 'resto' => 2], ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true],
+                    ['a' => 'se', 'c' => 'sacrificou', 'passos' => [['a' => 'energia', 'n' => 2, 'alvo' => 'eu']]]]]]]]],
+            // Balinha: duas Lendas diferentes
+            'Sempre que Balinha entrar, atacar ou morrer, cause 2 de dano a duas lendas alvo' => ['hab' => [
+                ['g' => 'entrar', 'passos' => [['a' => 'dano', 'n' => 2] + ['alvo' => 'lenda', 'filtro' => 'qualquer'], ['a' => 'dano', 'n' => 2, 'outra' => true] + ['alvo' => 'lenda', 'filtro' => 'qualquer']]], ['g' => 'atacar', 'passos' => [['a' => 'dano', 'n' => 2] + ['alvo' => 'lenda', 'filtro' => 'qualquer'], ['a' => 'dano', 'n' => 2, 'outra' => true] + ['alvo' => 'lenda', 'filtro' => 'qualquer']]], ['g' => 'morrer', 'passos' => [['a' => 'dano', 'n' => 2] + ['alvo' => 'lenda', 'filtro' => 'qualquer'], ['a' => 'dano', 'n' => 2, 'outra' => true] + ['alvo' => 'lenda', 'filtro' => 'qualquer']]]]],
+            // Prisão: qualquer carta em campo (Lenda, encantamento ou equipamento)
+            'Exile a carta alvo' => ['hab' => [['g' => 'conjurar', 'passos' => [['a' => 'ou', 'ops' => [
+                ['Exilar uma Lenda', [['a' => 'exilar'] + $lenda()]], ['Exilar um encantamento ou equipamento', [['a' => 'destruir_campo', 'banir' => true]]]]]]]]],
+            // Arqueiro Hexocida: "sempre ataca primeiro" é Iniciativa
+            'Esta lenda sempre ataca primeiro. Quando ela mata uma Lenda e sai vivo, recupere 15$' => ['est' => [['q' => 'fonte', 'pal' => ['iniciativa']]],
+                'hab' => [['g' => 'matar', 'passos' => [['a' => 'ganhar', 'n' => 15, 'alvo' => 'eu']]]]],
+            // Luzinha
+            'Toda vez que uma carta for comprada ou descartada por você, roube 1$' => ['hab' => [
+                ['g' => 'comprar_meu', 'passos' => [['a' => 'roubar', 'n' => 1, 'alvo' => 'jogador', 'filtro' => 'inimigo']]],
+                ['g' => 'descartar_meu', 'passos' => [['a' => 'roubar', 'n' => 1, 'alvo' => 'jogador', 'filtro' => 'inimigo']]]]],
             // Propriedade: Forte
             'A lenda alvo ganha +4/+4 ou sobrepujar' => ['hab' => [['g' => 'conjurar', 'passos' => [
                 ['a' => 'ou', 'ops' => [['+4/+4', [$buff(4, 4, $lenda())]], ['Sobrepujar', [['a' => 'palavra', 'pal' => 'sobrepujar', 'temp' => false] + $lenda()]]]]]]]],
@@ -118,8 +144,8 @@ class GladioRoteiro
             'Invoque uma ficha de mão 1/1' => ['hab' => [['g' => 'entrar', 'passos' => [self::ficha('Mão', 1, 1)]]]],
             'Quando Amir atacar, crie X fichas de lança 1/1 atacando, onde X é o número de vezes que Amir já atacou' => ['hab' => [['g' => 'atacar', 'passos' => [
                 self::ficha('Lança', 1, 1, [], ['n' => '#ataques', 'atacando' => true])]]]],
-            'Quando invocado, sacrifique uma lenda, compre duas cartas' => ['hab' => [['g' => 'entrar', 'passos' => [ // Barill: sem sacrifício, sem compra
-                ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu'], ['a' => 'se', 'c' => 'sacrificou', 'passos' => [['a' => 'comprar', 'n' => 2, 'alvo' => 'eu']]]]]]],
+            'Quando invocado, sacrifique uma lenda, compre duas cartas' => ['hab' => [['g' => 'entrar', 'passos' => [ // Barill: o sacrifício é obrigatório (sozinho na mesa, ele mesmo)
+                ['a' => 'sacrificar', 'n' => 1, 'alvo' => 'eu', 'obrig' => true, 'propria' => true], ['a' => 'se', 'c' => 'sacrificou', 'passos' => [['a' => 'comprar', 'n' => 2, 'alvo' => 'eu']]]]]]],
             'Quando Aporium atacar, ele se torna posse do jogador defensor. Se Aporium terminou seu turno em seu campo, perca 10$' => ['hab' => [
                 ['g' => 'atacar', 'passos' => [['a' => 'posse']]], ['g' => 'fim_meu', 'passos' => [['a' => 'perder', 'n' => 10, 'alvo' => 'eu']]]]],
             'Toda vez que uma lenda for invocada para você, você pode transformá-la em um cara-lata' => ['hab' => [['g' => 'entra_minha', 'passos' => [
@@ -189,7 +215,7 @@ class GladioRoteiro
             'Sempre que uma forma hexomante for conjurada, cause 3 de dano a algo' => ['hab' => [['g' => 'feitico', 'f' => ['sub' => 'forma'], 'passos' => [
                 ['a' => 'dano', 'n' => 3, 'alvo' => 'qualquer', 'filtro' => 'qualquer']]]]],
             'Quando um jogador recuperar dinheiro, recupere metade daquele valor. Quando um jogador perder ao menos 10$, compre uma carta' => ['hab' => [
-                ['g' => 'ganha', 'passos' => [['a' => 'ganhar', 'n' => '#metade', 'alvo' => 'eu']]],
+                ['g' => 'ganha', 'f' => ['nao_proprio' => true], 'passos' => [['a' => 'ganhar', 'n' => '#metade', 'alvo' => 'eu']]],
                 ['g' => 'perde', 'f' => ['min' => 10], 'passos' => [['a' => 'comprar', 'n' => 1, 'alvo' => 'eu']]]]],
             'Toda vez que uma carta for comprada ou descartada por você, roube 10$' => ['hab' => array_map(fn ($g) => ['g' => $g, 'passos' => [
                 ['a' => 'roubar', 'n' => 10, 'alvo' => 'jogador', 'filtro' => 'inimigo']]], ['comprar_meu', 'descartar_meu'])],

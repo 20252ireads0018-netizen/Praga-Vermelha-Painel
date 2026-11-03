@@ -456,6 +456,9 @@ trait GladioRegras
         if ($c === 'sacrificou') { // Barill: o efeito só segue se o sacrifício pedido antes aconteceu
             return !empty($ef['sacrificou']);
         }
+        if ($c === 'descartou') { // Isaque Solomons, Lucas: só se o descarte pedido antes aconteceu
+            return !empty($ef['descartou']);
+        }
         if ($q = $num($c, 'cont')) {
             return $cmp((int) ($fonte['mk'][$q[0]] ?? 0), $q[1], $q[2]);
         }
@@ -1853,8 +1856,8 @@ trait GladioRegras
                     $e = self::desequipar($e, $o[0], (int) $esc);
                     $f = $e['lados'][$o[0]]['feiticos'][$o[2]];
                     array_splice($e['lados'][$o[0]]['feiticos'], $o[2], 1);
-                    self::cem($e, $o[0], $f);
-                    self::log($e, "$fonte destruiu " . self::nome($e, $f['c']) . '.');
+                    self::cem($e, $o[0], $f + (!empty($p['banir']) ? ['banir' => true] : []));
+                    self::log($e, "$fonte " . (!empty($p['banir']) ? 'exilou ' : 'destruiu ') . self::nome($e, $f['c']) . '.');
                 }
 
                 return $e;

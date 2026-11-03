@@ -597,27 +597,6 @@ class GladioRoteiroTest extends TestCase
         $this->assertSame(3, $this->m($e, 'a', $apo)['vida']);
     }
 
-    public function test_barill_so_compra_se_sacrificar(): void
-    {
-        $barill = ['nome' => 'Barill', 'tipo' => 'lenda', 'custo' => 1, 'ataque' => 1, 'vida' => 4, 'palavras' => '', 'descricao' => 'Quando invocado, sacrifique uma lenda, compre duas cartas'];
-        $e = $this->mesa(['bar' => $barill]);
-        $e = $this->joga($e, 'a', 'bar'); // sozinho: não tem o que sacrificar
-        $this->assertSame([], $e['lados']['a']['mao'], 'sem sacrifício, não compra');
-
-        $e = $this->mesa(['bar' => $barill]);
-        [$e, $x] = $this->poe($e, 'a', 'x');
-        $e = $this->joga($e, 'a', 'bar');
-        $this->assertSame([$x], $e['escolha']['opcoes']);
-        $e = Gladio::escolher($e, 'a', null); // pulou o sacrifício
-        $this->assertSame([], $e['lados']['a']['mao']);
-
-        $e = $this->mesa(['bar' => $barill]);
-        [$e, $x] = $this->poe($e, 'a', 'x');
-        $e = $this->joga($e, 'a', 'bar');
-        $e = Gladio::escolher($e, 'a', (string) $x);
-        $this->assertCount(2, $e['lados']['a']['mao'], 'sacrificou: compra duas');
-    }
-
     public function test_mundo_conjurado_ataca_as_lendas_de_todos_os_inimigos(): void
     {
         $cartas = self::BASE + [

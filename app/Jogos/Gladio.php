@@ -270,7 +270,7 @@ class Gladio
                     $hab[] = ['g' => 'conjurar', 'passos' => [['a' => 'equipar', 'alvo' => 'lenda', 'filtro' => $rot['mods']['alvo'] ?? 'meu', 'atk' => 0, 'vida' => 0, 'pal' => []]]];
                 }
                 $cartas[$id] = array_merge($cartas[$id], array_intersect_key($rot, array_flip(['est', 'ativ', 'regen', 'sac', 'resp', 'mods', 'cmd'])));
-                $cartas[$id]['hab'] = $hab;
+                $cartas[$id]['hab'] = self::custosObrigatorios($hab);
                 $cartas[$id]['parcial'] = false;
                 $cartas[$id]['auto'] = GladioTexto::resumo($hab);
                 continue;
@@ -287,12 +287,37 @@ class Gladio
             if (($c['tipo'] ?? '') === 'equipo' && !$r['hab']) { // equipamento sem texto: o bônus vem dos campos e palavras-chave
                 $r['hab'] = [['g' => 'conjurar', 'passos' => [['a' => 'equipar', 'alvo' => 'lenda', 'filtro' => 'meu', 'atk' => 0, 'vida' => 0, 'pal' => []]]]];
             }
-            $cartas[$id]['hab'] = $r['hab'];
+            $cartas[$id]['hab'] = self::custosObrigatorios($r['hab']);
             $cartas[$id]['parcial'] = $r['parcial'];
             $cartas[$id]['auto'] = GladioTexto::resumo($r['hab']);
         }
 
         return $cartas;
+    }
+
+    /**
+     * "Descarte…" e "sacrifique…" no texto são ordens: o jogador não pode pular a escolha (o "você pode" das cartas vem
+     * antes, num passo confirmar; depois do "sim", pagar é obrigatório). Sem carta para escolher, o passo é pulado.
+     */
+    private static function custosObrigatorios(array $hab): array
+    {
+        $fix = function (array $passos) use (&$fix): array {
+            foreach ($passos as $k => $p) {
+                if (in_array($p['a'] ?? '', ['descartar', 'sacrificar'], true) && empty($p['tudo']) && empty($p['aleatorio'])) {
+                    $passos[$k]['obrig'] = true;
+                }
+                if (isset($p['passos'])) {
+                    $passos[$k]['passos'] = $fix($p['passos']);
+                }
+                if (isset($p['ops'])) {
+                    $passos[$k]['ops'] = array_map(fn ($o) => [$o[0], $fix($o[1])], $p['ops']);
+                }
+            }
+
+            return $passos;
+        };
+
+        return array_map(fn ($h) => ['passos' => $fix($h['passos'] ?? [])] + $h, $hab);
     }
 
     /** Em 2 jogadores, o outro lado. */
@@ -1056,7 +1081,7 @@ class Gladio
         $l['vida'] += $quanto;
         $l['max'] = max($l['max'], $l['vida']);
         unset($l);
-        self::sinal($e, 'ganha', ['lado' => $lado, 'i' => null, 'valor' => $quanto]); // Josael, Makkatrakiano
+        self::sinal($e, 'ganha', ['lado' => $lado, 'i' => null, 'valor' => $quanto, 'fonte_i' => $e['fila'][0]['i'] ?? null]); // Josael, Makkatrakiano
     }
 
     /**
@@ -2427,6 +2452,9 @@ class Gladio
                 if ($a === 'copia') { // Diego não copia a si mesmo
                     $ops = array_values(array_filter($ops, fn ($i) => $i !== (int) $ef['i']));
                 }
+                if (!empty($p['outra']) && isset($ef['ult'])) { // "duas lendas alvo": a segunda não é a mesma da primeira
+                    $ops = array_values(array_filter($ops, fn ($i) => $i !== (int) $ef['ult']));
+                }
 
                 return self::pedir($e, $p, $dono, 'lenda', $ops, "$fonte: escolha " . GladioTexto::textoPasso($p));
             }
@@ -2832,6 +2860,7 @@ class Gladio
                         self::cem($e, $l, $c);
                         self::sinal($e, 'descartar', ['lado' => $l, 'i' => (int) $c['i'], 'c' => $c['c']]);
                         self::log($e, "$fonte: $quem descartou " . self::nome($e, $c['c']) . '.');
+                        $e['fila'][0]['descartou'] = true; // "descarte… mate": o resto do efeito confere isso
                     }
                     break;
                 case 'sacrificar':
@@ -2840,6 +2869,9 @@ class Gladio
 
                         // a própria carta que pede o sacrifício não entra na conta
                         $ops = array_values(array_filter(array_map(fn ($m) => (int) $m['i'], $e['lados'][$l]['mesa']), fn ($i) => $i !== (int) $ef['i']));
+                        if (!$ops && !empty($p['propria']) && self::idx($e['lados'][$l]['mesa'], (int) $ef['i']) >= 0) {
+                            $ops = [(int) $ef['i']]; // Barill: sem outra Lenda, o sacrifício obrigatório é ela mesma
+                        }
 
                         return self::pedir($e, $p, $l, 'lenda', $ops, "$fonte: sacrifique uma Lenda sua");
                     }
