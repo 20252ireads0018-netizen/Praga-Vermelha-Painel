@@ -4,6 +4,7 @@
 $u = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $V = __DIR__;
 @mkdir($V . '/out');
+if ($u === '/') { echo 'ok'; return true; } // sem cair no Laravel (sem banco ele trava este servidor)
 if ($u === '/gravador') { readfile(__DIR__ . '/gravador.html'); return true; }
 if (str_starts_with($u, '/vid/')) {
     $f = $V . '/' . basename($u);

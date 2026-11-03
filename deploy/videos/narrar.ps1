@@ -8,7 +8,7 @@ foreach ($video in @('eletrico', 'fisiomancia')) {
     foreach ($c in $json.$video) {
         $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
         $s.SelectVoice('Microsoft Maria Desktop')
-        $s.Rate = 3
+        $s.Rate = $(if ($video -eq 'eletrico') { 4 } else { 3 }) # o da Atração Elétrica fala mais rápido para caber em 30 s
         $arq = Join-Path $dir ("{0}-{1:D2}.wav" -f $video, $i)
         $s.SetOutputToWaveFile($arq)
         $s.Speak($c.fala)

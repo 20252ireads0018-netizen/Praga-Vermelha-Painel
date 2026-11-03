@@ -8,7 +8,7 @@ return [
     [
         'id'        => 'atracao-eletrica-imbuir',
         'titulo'    => 'Atração Elétrica: Imbuir Maldição',
-        'descricao' => 'Como conduzir a eletricidade de uma fonte até um alvo sem que ela atravesse os seus órgãos, o custo, o teste e os aprimoramentos.',
+        'descricao' => 'Tomada mata, a não ser que você pense. Técnica não se compra: você declara a lógica. Imbuir ou conduzir, o caminho certo da corrente e a declaração que apaga um cérebro.',
         'tema'      => 'Maldições',
         'arquivo'   => 'videos/atracao-eletrica-imbuir.mp4',
         'capa'      => 'videos/atracao-eletrica-imbuir.jpg',
@@ -16,7 +16,7 @@ return [
     [
         'id'        => 'fisiomancia-imbuir-propriedades',
         'titulo'    => 'Fisiomancia: Imbuir Propriedades',
-        'descricao' => 'O fogo que consome um material e passa as propriedades dele para um alvo: metal, borracha, ar, âncora e correntes.',
+        'descricao' => 'Queime uma âncora e vire uma: o fogo da Fisiomancia passa as propriedades do metal, da borracha, do ar e das correntes para o alvo.',
         'tema'      => 'Fisiomancia',
         'arquivo'   => 'videos/fisiomancia-imbuir-propriedades.mp4',
         'capa'      => 'videos/fisiomancia-imbuir-propriedades.jpg',

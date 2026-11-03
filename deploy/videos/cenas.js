@@ -1,297 +1,380 @@
-/* Vídeos explicativos do Praga Vermelha: animação vertical 1080×1920 sincronizada com a narração (linha.json). */
+/* Vídeos explicativos do Praga Vermelha: animação vertical 1080×1920 com bonecos de palito, sincronizada com a narração
+   (linha.json, gerado por narrar.ps1). Ver LEIA-ME.md. */
 (async function () {
     const qs = new URLSearchParams(location.search);
     const VIDEO = qs.get('v') || 'eletrico';
     const L = await (await fetch('/vid/linha.json')).json();
     const cenas = L[VIDEO];
-    const GAP = 0.35, INICIO = 0.6, FIM_EXTRA = 1.4;
+    const GAP = 0.12, INICIO = 0.25, FIM_EXTRA = 0.8;
     let t = INICIO;
     cenas.forEach(c => { c.t0 = t; t += c.dur + GAP; });
     const TOTAL = t + FIM_EXTRA;
 
     const cv = document.getElementById('c'), g = cv.getContext('2d');
-    const W = 1080, H = 1920, CX = W / 2;
+    const W = 1080, H = 1920, CX = W / 2, CHAO = 1250;
     await document.fonts.load('800 80px Cinzel'); await document.fonts.load('800 60px Inter'); await document.fonts.load('600 40px Inter');
 
     /* ---------- utilitários ---------- */
     const lerp = (a, b, k) => a + (b - a) * k;
     const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
     const ease = k => 1 - Math.pow(1 - clamp(k), 3);
-    const pop = k => { k = clamp(k); return k < .7 ? ease(k / .7) * 1.08 : lerp(1.08, 1, (k - .7) / .3); };
-    const RED = '#d63c3c', BLOOD = '#a51e1e', GOLD = '#e9c27a', INK = '#f5ecec', DIM = 'rgba(245,236,236,.65)';
-    function txt(s, x, y, size, cor = INK, peso = 800, fonte = 'Inter', alinha = 'center', sombra = true) {
+    const fase = (k, a, b) => clamp((k - a) / (b - a)); // 0→1 entre a e b
+    const pop = k => { k = clamp(k); return k < .6 ? ease(k / .6) * 1.15 : lerp(1.15, 1, (k - .6) / .4); };
+    const RED = '#d63c3c', BLOOD = '#a51e1e', GOLD = '#e9c27a', INK = '#f5ecec', AZUL = '#9fdcff';
+    let tremor = 0;
+    function txt(s, x, y, size, cor = INK, peso = 800, fonte = 'Inter', alinha = 'center') {
         g.save(); g.font = `${peso} ${size}px ${fonte}`; g.textAlign = alinha; g.textBaseline = 'middle'; g.fillStyle = cor;
-        if (sombra) { g.shadowColor = 'rgba(0,0,0,.85)'; g.shadowBlur = 18; }
-        g.fillText(s, x, y); g.restore();
+        g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 20; g.fillText(s, x, y); g.restore();
+    }
+    /** Texto que bate na tela: entra grande e assenta. */
+    function bate(s, x, y, size, k, cor = INK, fonte = 'Cinzel', ang = -.04) {
+        if (k <= 0) return;
+        const e = pop(k);
+        g.save(); g.translate(x, y); g.rotate(ang); g.scale(e, e); g.globalAlpha = clamp(k * 4);
+        txt(s, 0, 0, size, cor, 800, fonte); g.restore();
     }
     function caixa(x, y, w, h, r, fill, stroke, lw = 3) {
         g.beginPath(); g.roundRect(x, y, w, h, r);
         if (fill) { g.fillStyle = fill; g.fill(); }
         if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); }
     }
-    function icone(d, x, y, s, cor = INK, lw = 1.8, fill = false) { // caminhos 24×24 (mesmo traço dos ícones do site)
-        g.save(); g.translate(x - s / 2, y - s / 2); g.scale(s / 24, s / 24);
-        g.lineWidth = lw; g.strokeStyle = cor; g.fillStyle = cor; g.lineCap = 'round'; g.lineJoin = 'round';
-        [].concat(d).forEach(p => { const P = new Path2D(p); fill ? g.fill(P) : g.stroke(P); }); g.restore();
+    function chip(texto, x, y, k, cor = BLOOD, w = 640) {
+        if (k <= 0) return;
+        const s = pop(k);
+        g.save(); g.translate(x, y); g.scale(s, s); g.globalAlpha = clamp(k * 4);
+        caixa(-w / 2, -62, w, 124, 62, 'rgba(12,6,8,.9)', cor, 5); txt(texto, 0, 2, 56, INK, 800); g.restore();
     }
-    const I = {
-        raio: 'M13 2.5 4.5 14h7l-1 7.5L19 10h-7Z',
-        coracao: 'M12 20s-8-4.7-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6.3-8 11-8 11Z',
-        escudo: ['M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6Z', 'M12 7v10M8 11h8'],
-        dado: ['M12 2.5 20.5 7.5v9L12 21.5 3.5 16.5v-9Z', 'M12 2.5 7.5 10h9ZM3.5 7.5 7.5 10 12 17l4.5-7 4-2.5M7.5 10l-4 6.5M16.5 10l4 6.5M12 17v4.5'],
-        tomada: ['M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z', 'M9 9v3M15 9v3M9.5 16h5'],
-        fio: ['M3 18c4 0 4-12 9-12s5 12 9 12', 'M3 18h-1M22 18h-1'],
-        luva: ['M7 21v-6L4 11c-1-1 0-3 2-2l2 2V5a1.5 1.5 0 0 1 3 0v5V3.5a1.5 1.5 0 0 1 3 0V10V5a1.5 1.5 0 0 1 3 0v7c0 5-2 9-6 9Z'],
-        bota: ['M8 3h5v10l6 3c2 1 2 3 2 5H4V3Z', 'M4 17h17'],
-        cerebro: ['M12 4a3 3 0 0 0-5 1 3 3 0 0 0-3 4 3 3 0 0 0 0 5 3 3 0 0 0 3 4 3 3 0 0 0 5 1Z', 'M12 4a3 3 0 0 1 5 1 3 3 0 0 1 3 4 3 3 0 0 1 0 5 3 3 0 0 1-3 4 3 3 0 0 1-5 1Z', 'M12 4v16'],
-        ancora: ['M12 7v14M5 13a7 7 0 0 0 14 0M3 13h4M17 13h4', 'M12 2.5a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5Z', 'M9 10h6'],
-        corrente: ['M9 7H7a5 5 0 0 0 0 10h2', 'M15 7h2a5 5 0 0 1 0 10h-2', 'M8 12h8'],
-        vento: ['M3 8h11a3 3 0 1 0-3-3', 'M3 12h16a3 3 0 1 1-3 3', 'M3 16h8'],
-        bloco: ['M12 2 21 7v10l-9 5-9-5V7Z', 'M12 12 21 7M12 12 3 7M12 12v10'],
-        olho: ['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z', 'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z'],
-        alvo: ['M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z', 'M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z', 'M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4'],
-        chama: ['M12 22c4 0 7-3 7-7 0-5-5-7-5-12-3 2-4 5-4 7-1-1-2-2-2-4-2 2-3 5-3 8 0 4 3 8 7 8Z'],
-    };
-    function raioZig(x1, y1, x2, y2, seed, cor = '#bfe3ff', lw = 6) { // um relâmpago irregular
-        let r = seed; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-        g.save(); g.strokeStyle = cor; g.lineWidth = lw; g.shadowColor = '#7cc7ff'; g.shadowBlur = 30; g.lineJoin = 'round';
-        g.beginPath(); g.moveTo(x1, y1); const n = 9;
-        for (let i = 1; i < n; i++) { const k = i / n; g.lineTo(lerp(x1, x2, k) + (rnd() - .5) * 90, lerp(y1, y2, k) + (rnd() - .5) * 40); }
+    function raio(x1, y1, x2, y2, seed, cor = '#d9f1ff', lw = 8) {
+        let r = Math.abs(seed * 9973) % 233280 || 7; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+        g.save(); g.strokeStyle = cor; g.lineWidth = lw; g.shadowColor = '#5cbcff'; g.shadowBlur = 36; g.lineJoin = 'round'; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x1, y1); const n = 8;
+        for (let i = 1; i < n; i++) { const k = i / n; g.lineTo(lerp(x1, x2, k) + (rnd() - .5) * 70, lerp(y1, y2, k) + (rnd() - .5) * 70); }
         g.lineTo(x2, y2); g.stroke(); g.lineWidth = lw / 3; g.strokeStyle = '#fff'; g.stroke(); g.restore();
     }
-    function chip(texto, x, y, k, cor = BLOOD, w = 760) {
-        const s = pop(k); if (s <= 0) return;
-        g.save(); g.translate(x, y); g.scale(s, s); g.globalAlpha = clamp(k * 3);
-        caixa(-w / 2, -58, w, 116, 58, 'rgba(12,6,8,.85)', cor, 4);
-        txt(texto, 0, 2, 50, INK, 800); g.restore();
-    }
-    function cartao(x, y, w, h, k, titulo, icn, linhas, corIcn = GOLD) {
-        h = 260 + linhas.length * 150; y = 300 + h / 2 + 40; // começa logo abaixo do título e nunca desce até a legenda
-        const s = pop(k); if (s <= 0) return;
-        g.save(); g.translate(x, y); g.scale(s, s); g.globalAlpha = clamp(k * 2.5);
-        caixa(-w / 2, -h / 2, w, h, 36, 'rgba(20,8,10,.92)', 'rgba(233,194,122,.55)', 4);
-        icone(icn, -w / 2 + 110, -h / 2 + 110, 120, corIcn, 1.6);
-        txt(titulo, -w / 2 + 210, -h / 2 + 110, 70, GOLD, 800, 'Cinzel', 'left');
-        linhas.forEach((l, i) => {
-            const kk = clamp((k - .25 - i * .18) * 3); if (!kk) return;
-            g.save(); g.globalAlpha = kk;
-            if (l[0]) { caixa(-w / 2 + 40, -h / 2 + 230 + i * 150, 260, 90, 45, BLOOD, null); txt(l[0], -w / 2 + 170, -h / 2 + 276 + i * 150, 38, '#fff', 800); }
-            txt(l[1], -w / 2 + (l[0] ? 325 : 60), -h / 2 + 276 + i * 150, 42, INK, 600, 'Inter', 'left');
-            g.restore();
-        });
-        g.restore();
-    }
-    function corpo(x, y, s, brilho = 0) { // silhueta humana estilizada (membros arredondados)
-        const pele = `rgb(${Math.round(52 + brilho * 150)},${Math.round(24 + brilho * 90)},${Math.round(30 + brilho * 90)})`;
-        g.save(); g.translate(x, y); g.scale(s, s); g.lineCap = 'round'; g.lineJoin = 'round';
-        const membro = (pts, w) => {
-            g.beginPath(); g.moveTo(...pts[0]); pts.slice(1).forEach(p => g.lineTo(...p));
-            g.strokeStyle = 'rgba(233,194,122,.55)'; g.lineWidth = w + 7; g.stroke(); g.strokeStyle = pele; g.lineWidth = w; g.stroke();
-        };
-        membro([[-38, 60], [-52, 225], [-60, 380]], 50); membro([[38, 60], [52, 225], [60, 380]], 50);
-        g.beginPath(); g.roundRect(-88, -205, 176, 290, 46); g.fillStyle = pele; g.fill(); g.strokeStyle = 'rgba(233,194,122,.55)'; g.lineWidth = 4; g.stroke();
-        membro([[-82, -175], [-122, -40], [-150, 85]], 40); membro([[82, -175], [122, -40], [150, 85]], 40);
-        g.beginPath(); g.arc(0, -275, 60, 0, Math.PI * 2); g.fillStyle = pele; g.fill(); g.strokeStyle = 'rgba(233,194,122,.55)'; g.lineWidth = 4; g.stroke();
-        g.restore();
-        const P = (a, b) => [x + a * s, y + b * s];
-        return { peE: P(-60, 395), quadrilE: P(-90, 60), ladoE: P(-96, -120), ombroE: P(-82, -212), pescoco: P(0, -214), ombroD: P(82, -212),
-            bracoD: P(128, -40), maoD: P(152, 100), maoE: P(-152, 100), coracao: P(-22, -110), cabeca: P(0, -275) };
-    }
-    function sigiloFundo(tt) {
-        const grd = g.createRadialGradient(CX, H * .42, 50, CX, H * .42, 1300);
-        grd.addColorStop(0, '#3a0b10'); grd.addColorStop(.55, '#140608'); grd.addColorStop(1, '#070304');
-        g.fillStyle = grd; g.fillRect(0, 0, W, H);
-        g.save(); g.translate(CX, H * .42); g.rotate(tt * .05); g.strokeStyle = 'rgba(214,60,60,.12)'; g.lineWidth = 3;
-        [520, 470, 300].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); });
-        for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 4; i++) { const a = -Math.PI / 2 + k * Math.PI + i * Math.PI * 2 / 3; g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 470, Math.sin(a) * 470); } g.stroke(); }
-        g.restore();
-        for (let i = 0; i < 40; i++) { // brasas subindo
-            const sx = (i * 263) % W, sp = 40 + (i * 37) % 60, y = H - ((tt * sp + i * 211) % (H + 200));
-            g.fillStyle = `rgba(255,${120 + (i * 13) % 100},80,${.25 + (i % 5) * .08})`; g.beginPath(); g.arc(sx + Math.sin(tt + i) * 20, y, 2 + (i % 3), 0, 7); g.fill();
-        }
-    }
-    function legenda(cena, lt) { // a fala, palavra por palavra
-        const palavras = cena.fala.split(' '), feitas = Math.floor(clamp(lt / (cena.dur * .92)) * palavras.length + .999);
-        g.save(); g.font = '800 54px Inter'; const linhas = []; let atual = [];
-        palavras.forEach((p, i) => { const tent = atual.concat(p).map(x => x.w).join(' '); if (g.measureText(atual.map(x => x.w).concat(p).join(' ')).width > 920 && atual.length) { linhas.push(atual); atual = []; } atual.push({ w: p, i }); });
-        if (atual.length) linhas.push(atual);
-        const y0 = 1470;
-        caixa(60, y0 - 70, 960, linhas.length * 76 + 70, 30, 'rgba(0,0,0,.55)', 'rgba(214,60,60,.35)', 2);
-        linhas.forEach((ln, li) => {
-            const larg = g.measureText(ln.map(x => x.w).join(' ')).width; let x = CX - larg / 2;
-            ln.forEach(({ w, i }) => {
-                const ww = g.measureText(w + ' ').width;
-                g.fillStyle = i < feitas - 1 ? INK : (i === feitas - 1 ? GOLD : 'rgba(245,236,236,.35)');
-                g.textBaseline = 'middle'; g.fillText(w, x, y0 + li * 76); x += ww;
-            });
-        });
-        g.restore();
-    }
-    function cabecalho(titulo, k) {
-        txt('PRAGA VERMELHA RPG', CX, 120, 36, RED, 800, 'Cinzel');
-        g.save(); g.globalAlpha = clamp(k * 3); txt(titulo, CX, 185, 34, DIM, 600); g.restore();
-    }
+    function clarao(k, cor = '255,255,255') { if (k > 0 && k < 1) { g.fillStyle = `rgba(${cor},${(1 - k) * .32})`; g.fillRect(0, 0, W, H); } }
 
-    /* ---------- cenas ---------- */
-    const CENAS = {
-        eletrico: {
-            titulo: 'Atração Elétrica · Imbuir Maldição',
-            abertura(k, lt) {
-                for (let i = 0; i < 3; i++) if (Math.sin(lt * 9 + i * 2) > .2) raioZig(200 + i * 340, 280, 360 + i * 180, 760, Math.floor(lt * 8) + i * 7);
-                icone(I.tomada, CX, 980, 300 * pop(k * 1.4), GOLD, 1.4);
-                txt('ATRAÇÃO', CX, 1240, 110 * pop(k), INK, 800, 'Cinzel'); txt('ELÉTRICA', CX, 1360, 110 * pop(k - .1), RED, 800, 'Cinzel');
-            },
-            tecnica(k, lt) {
-                g.save(); g.globalAlpha = clamp(k * 3); icone(I.raio, CX, 760, 340, GOLD, 1.5); g.restore();
-                txt('IMBUIR', CX, 1080, 120 * pop(k), INK, 800, 'Cinzel'); txt('MALDIÇÃO', CX, 1210, 120 * pop(k - .1), RED, 800, 'Cinzel');
-                chip('maldição comum · ameaça 0+', CX, 1360, k - .3, 'rgba(233,194,122,.6)');
-            },
-            custo(k) {
-                chip('15 DE AURA', CX, 640, k * 1.6); chip('NÍVEL DE MALDIÇÃO 1', CX, 840, k * 1.6 - .5); chip('UMA FONTE ELÉTRICA', CX, 1040, k * 1.6 - 1);
-                icone(I.tomada, CX, 1250, 160 * pop(k * 1.6 - 1.2), GOLD);
-            },
-            processo(k, lt) {
-                chip('AÇÃO COMPLETA', CX, 560, k * 2);
-                const rodar = clamp((k - .25) * 2); g.save(); g.translate(CX, 900); g.rotate(rodar < 1 ? lt * 6 : 0); icone(I.dado, 0, 0, 380 * pop(k * 2 - .3), GOLD, 1.3); g.restore();
-                txt(rodar < 1 ? String(1 + Math.floor((lt * 23) % 30)) : 'D30', CX, 905, 90, INK, 800);
-                chip('TESTE DE MALDIÇÃO (D30)', CX, 1260, k * 2 - 1);
-            },
-            caminho(k, lt) {
-                const c = corpo(CX, 840, 1.15, .1);
-                icone(I.coracao, c.coracao[0], c.coracao[1], 90, 'rgba(255,90,90,.95)', 1.8);
-                g.save(); g.strokeStyle = RED; g.lineWidth = 9; g.beginPath(); g.arc(c.coracao[0], c.coracao[1], 62, 0, 7); g.moveTo(c.coracao[0] - 44, c.coracao[1] - 44); g.lineTo(c.coracao[0] + 44, c.coracao[1] + 44); g.stroke(); g.restore();
-                // caminho pela pele: pé esquerdo → perna → lado do corpo → ombros → braço direito → mão
-                const pts = [c.peE, c.quadrilE, c.ladoE, c.ombroE, c.pescoco, c.ombroD, c.bracoD, c.maoD];
-                const pr = clamp(k * 1.3); g.save(); g.strokeStyle = '#9fdcff'; g.shadowColor = '#7cc7ff'; g.shadowBlur = 30; g.lineWidth = 12; g.lineCap = 'round';
-                g.beginPath(); const n = Math.max(1, pr * (pts.length - 1)); g.moveTo(...pts[0]);
-                for (let i = 1; i <= Math.floor(n); i++) g.lineTo(...pts[i]);
-                if (n % 1 && Math.ceil(n) < pts.length) { const a = pts[Math.floor(n)], b = pts[Math.ceil(n)]; g.lineTo(lerp(a[0], b[0], n % 1), lerp(a[1], b[1], n % 1)); }
-                g.stroke(); g.restore();
-                chip('PÉ  →  MÃO OPOSTA', CX, 300, k * 2, 'rgba(124,199,255,.75)', 760);
-            },
-            erro(k, lt) {
-                const c = corpo(CX, 840, 1.15, .15 + Math.max(0, Math.sin(lt * 20)) * .6 * clamp(k * 3));
-                raioZig(c.peE[0], c.peE[1], c.coracao[0], c.coracao[1], Math.floor(lt * 10), '#ffd0d0', 9);
-                raioZig(c.coracao[0], c.coracao[1], c.maoD[0], c.maoD[1], Math.floor(lt * 10) + 3, '#ffd0d0', 7);
-                icone(I.coracao, c.coracao[0], c.coracao[1], 120 * (1 + Math.sin(lt * 12) * .1), RED, 2.2, true);
-                txt('MORTE', CX, 330, 130 * pop(k - .3), RED, 800, 'Cinzel');
-            },
-            protecao(k) {
-                [[I.fio, 'FIO DE METAL'], [I.luva, 'LUVAS'], [I.bota, 'ISOLANTES']].forEach((it, i) => {
-                    const kk = k * 1.8 - i * .45, x = 210 + i * 330;
-                    g.save(); g.globalAlpha = clamp(kk * 3); caixa(x - 140, 700, 280, 300, 30, 'rgba(20,8,10,.9)', 'rgba(233,194,122,.5)'); icone(it[0], x, 810, 150 * pop(kk), GOLD, 1.5); txt(it[1], x, 940, 34, INK, 800); g.restore();
-                });
-                icone(I.escudo, CX, 1200, 200 * pop(k * 2 - 1), '#9fdcff', 1.5);
-            },
-            efeito(k, lt) {
-                txt('TENSÃO DA FONTE', CX, 290, 40, DIM, 800);
-                for (let i = 0; i < 5; i++) { const on = clamp(k * 2 - i * .2); caixa(CX - 260 + i * 110, 330, 90, 90, 16, on > .5 ? '#ffd76a' : 'rgba(255,255,255,.08)', GOLD); txt(String(i + 1), CX - 215 + i * 110, 376, 40, on > .5 ? '#2a1500' : DIM, 800); }
-                const a = corpo(300, 860, .8), b = corpo(780, 860, .8, Math.max(0, Math.sin(lt * 18)) * .7 * clamp(k * 2 - .3));
-                if (k > .2) raioZig(a.maoD[0], a.maoD[1], b.maoE[0], b.maoE[1], Math.floor(lt * 12), '#bfe3ff', 8);
-                chip('DANO: SUA AMEAÇA E A TENSÃO', CX, 1290, k * 2 - .8, BLOOD, 900);
-            },
-            aprim1(k, lt) {
-                chip('+7 DE AURA', CX, 560, k * 2);
-                const n = 1 + Math.min(3, Math.floor(clamp(k * 1.3) * 4)); txt(`+${n * 5} DE DANO`, CX, 900, 150 * pop(k * 2 - .4), GOLD, 800, 'Cinzel');
-                chip('ACUMULATIVO', CX, 1200, k * 2 - 1, 'rgba(233,194,122,.6)', 560);
-            },
-            aprim2(k, lt) {
-                chip('+10 DE AURA', CX, 520, k * 2);
-                const c = corpo(220, 860, .75);
-                const pr = clamp(k * 1.6 - .3); if (pr > 0) { g.save(); g.strokeStyle = '#bfe3ff'; g.shadowColor = '#7cc7ff'; g.shadowBlur = 40; g.lineWidth = 22; g.lineCap = 'round'; g.beginPath(); g.moveTo(c.maoD[0], c.maoD[1]); g.lineTo(lerp(c.maoD[0], 1020, pr), c.maoD[1]); g.stroke(); g.restore(); }
-                txt('EM LINHA', CX + 140, 760, 90 * pop(k * 2 - .6), INK, 800, 'Cinzel');
-                chip('ALCANCE = ALMA × 3', CX, 1290, k * 2 - 1);
-            },
-            aprim3(k, lt) {
-                chip('+60 DE AURA', CX, 480, k * 2);
-                icone(I.cerebro, CX, 800, 330 * pop(k * 2 - .3), '#ffb0b0', 1.5);
-                if (k > .3) for (let i = 0; i < 4; i++) raioZig(CX, 800, CX + Math.cos(i * 1.6 + lt) * 440, 800 + Math.sin(i * 1.6 + lt) * 240, Math.floor(lt * 10) + i, '#bfe3ff', 5);
-                chip('INCONSCIENTE', CX, 1140, k * 2 - .9, BLOOD, 620); chip('HEXO-FRACO · DANO CEREBRAL', CX, 1285, k * 2 - 1.2, BLOOD, 860);
-            },
-            fim(k, lt) {
-                if (Math.sin(lt * 7) > .4) raioZig(200, 300, 880, 760, Math.floor(lt * 6));
-                txt('ATRAÇÃO ELÉTRICA', CX, 900, 92 * pop(k * 2), INK, 800, 'Cinzel');
-                txt('PRAGA VERMELHA', CX, 1060, 110 * pop(k * 2 - .3), RED, 800, 'Cinzel');
-            },
-        },
-        fisiomancia: {
-            titulo: 'Fisiomancia · Imbuir Propriedades',
-            abertura(k, lt) {
-                fogo(CX, 900, 1.3, lt, k);
-                icone(I.ancora, CX, 860, 300 * pop(k * 1.5), '#d9d4cc', 1.6);
-                txt('IMBUIR', CX, 1250, 110 * pop(k - .2), INK, 800, 'Cinzel'); txt('PROPRIEDADES', CX, 1370, 96 * pop(k - .3), GOLD, 800, 'Cinzel');
-            },
-            fisio(k) {
-                txt('FISIOMANCIA', CX, 470, 100 * pop(k * 2), RED, 800, 'Cinzel');
-                [[I.bloco, 'METAL', 'Duro'], [I.chama, 'FOGO', 'Quente'], [I.vento, 'AR', 'Leve']].forEach((it, i) => {
-                    const kk = k * 1.6 - .3 - i * .3, y = 700 + i * 250;
-                    g.save(); g.globalAlpha = clamp(kk * 3); caixa(140, y - 100, 800, 200, 30, 'rgba(20,8,10,.9)', 'rgba(233,194,122,.5)');
-                    icone(it[0], 260, y, 130 * pop(kk), GOLD); txt(it[1], 380, y - 30, 56, INK, 800, 'Cinzel', 'left'); txt('→ ' + it[2], 380, y + 40, 46, GOLD, 800, 'Inter', 'left'); g.restore();
-                });
-            },
-            custo(k) { chip('8 DE AURA', CX, 700, k * 1.6); chip('FISIOMANCIA NÍVEL 3', CX, 920, k * 1.6 - .6); },
-            processo(k, lt) {
-                chip('AÇÃO PRINCIPAL', CX, 520, k * 2);
-                const rodar = clamp((k - .2) * 2); g.save(); g.translate(CX, 830); g.rotate(rodar < 1 ? lt * 6 : 0); icone(I.dado, 0, 0, 330 * pop(k * 2 - .3), GOLD, 1.3); g.restore();
-                txt(rodar < 1 ? String(1 + Math.floor((lt * 23) % 30)) : 'D30', CX, 835, 80, INK, 800);
-                chip('MALDIÇÃO (D30)', CX, 1130, k * 2 - .9); chip('ou contra a RESILIÊNCIA do alvo', CX, 1270, k * 2 - 1.3, 'rgba(233,194,122,.6)', 900);
-            },
-            fogo(k, lt) {
-                icone(I.bloco, 280, 880, 220, '#d9d4cc', 1.6); fogo(280, 900, 1, lt, k);
-                corpo(800, 900, .8, .3 + Math.sin(lt * 4) * .2);
-                for (let i = 0; i < 26; i++) { // propriedades indo para o alvo
-                    const p = ((lt * .7 + i / 26) % 1); const x = lerp(330, 760, p), y = 880 - Math.sin(p * Math.PI) * 220 + (i % 5) * 8;
-                    g.fillStyle = corFogo(lt + i * .1, .9); g.beginPath(); g.arc(x, y, 9, 0, 7); g.fill();
-                }
-                txt('LARANJA → BRANCO', CX, 560, 44, DIM, 800); chip('ATÉ O FIM DA CENA', CX, 1290, k * 2 - .8);
-            },
-            metal(k) { cartao(CX, 960, 920, 900, k * 1.4, 'METAL', I.bloco, [['DURO 5', '+4 armadura natural/ameaça'], ['COND. 1', 'dano elétrico dobrado'], ['PESO 4', 'desvantagem em destreza']]); },
-            borracha(k) { cartao(CX, 960, 920, 760, k * 1.4, 'BORRACHA', I.bloco, [['', 'imune a dano elétrico'], ['MALEÁV. 4', '-12/ameaça em destreza']], '#f2a65a'); },
-            ar(k) { cartao(CX, 960, 920, 760, k * 1.4, 'AR', I.vento, [['INVIS. 10', '+10/ameaça em furtividade'], ['PROP. 3', 'arremessa o alvo']], '#bfe3ff'); },
-            ancora(k) { cartao(CX, 960, 920, 900, k * 1.4, 'ÂNCORA', I.ancora, [['PESADO 25', 'muito, muito pesado'], ['DURO 15', 'armadura de sobra'], ['FATOR 15', 'resiliência para se mover']], '#d9d4cc'); },
-            correntes(k) { cartao(CX, 960, 920, 760, k * 1.4, 'CORRENTES', I.corrente, [['RESTR. 10', 'resiliência a cada ação'], ['', 'se falhar, perde a ação']], '#d9d4cc'); },
-            regras(k) {
-                [['Objetos são consumidos', I.chama], ['Seres vivos queimam e ficam', I.olho], ['Um Imbuir por alvo', I.alvo]].forEach((r, i) => {
-                    const kk = k * 1.6 - i * .4, y = 640 + i * 260;
-                    g.save(); g.globalAlpha = clamp(kk * 3); caixa(110, y - 100, 860, 200, 30, 'rgba(20,8,10,.9)', 'rgba(214,60,60,.5)');
-                    icone(r[1], 230, y, 110 * pop(kk), GOLD); txt(r[0], 320, y, 44, INK, 800, 'Inter', 'left'); g.restore();
-                });
-            },
-            aprim(k) { chip('+4 AURA · +3 m de alcance', CX, 680, k * 1.8, BLOOD, 880); chip('+6 AURA · +1 alvo', CX, 880, k * 1.8 - .5, BLOOD, 880); chip('+6 AURA · forma inversa', CX, 1080, k * 1.8 - 1, BLOOD, 880); },
-            fim(k, lt) {
-                fogo(CX, 900, 1.4, lt, k);
-                txt('FISIOMANCIA', CX, 1180, 100 * pop(k * 2), GOLD, 800, 'Cinzel');
-                txt('PRAGA VERMELHA', CX, 1320, 110 * pop(k * 2 - .3), RED, 800, 'Cinzel');
-            },
-        },
+    /* ---------- boneco de palito ----------
+       Ângulos medidos a partir de "para baixo"; positivo gira para a direita da tela.
+       o: { pose, cor, brilho, olhos ('ok'|'x'|'fechados'), arrepiado, queda (rad, gira nos pés), alpha, olhar (±1) }
+       Devolve as posições (na tela) de pés, mãos, ombros, quadril, cabeça e coração. */
+    const POSES = {
+        parado: { bE: -.32, bD: .32, cE: .15, cD: -.15, pE: -.2, pD: .2, jE: 0, jD: 0 },
+        tocar: { bE: -.35, bD: 1.5, cE: .1, cD: 0, pE: -.25, pD: .25, jE: 0, jD: 0 },
+        tocarAlto: { bE: -.35, bD: 2.3, cE: .1, cD: 0, pE: -.25, pD: .25, jE: 0, jD: 0 },
+        cima: { bE: -2.6, bD: 2.6, cE: -.3, cD: .3, pE: -.28, pD: .28, jE: 0, jD: 0 },
+        poder: { bE: -1.9, bD: 1.9, cE: -.6, cD: .6, pE: -.35, pD: .35, jE: .2, jD: -.2 },
+        pesado: { bE: -.8, bD: .8, cE: .9, cD: -.9, pE: -.55, pD: .55, jE: .9, jD: -.9 },
+        preso: { bE: -.15, bD: .15, cE: .5, cD: -.5, pE: -.08, pD: .08, jE: 0, jD: 0 },
+        defesa: { bE: .9, bD: 1.9, cE: 1.4, cD: .7, pE: -.3, pD: .3, jE: .2, jD: 0 },
     };
-    function corFogo(tt, a = 1) { // o fogo do imbuir: do laranja ao branco
-        const f = (Math.sin(tt * 1.5) + 1) / 2;
-        return `rgba(${255},${Math.round(lerp(140, 245, f))},${Math.round(lerp(40, 235, f))},${a})`;
+    function misturar(a, b, k) { const r = {}; for (const c in a) r[c] = lerp(a[c], b[c], k); return r; }
+    function andando(t) { const s = Math.sin(t * 9); return { bE: -.45 * s, bD: .45 * s, cE: .3, cD: -.3, pE: .45 * s, pD: -.45 * s, jE: Math.max(0, -s) * .6, jD: Math.max(0, s) * .6 }; }
+    function boneco(x, y, s, o = {}) {
+        const p = typeof o.pose === 'string' ? POSES[o.pose] : (o.pose || POSES.parado);
+        const cor = o.cor || INK, lw = 14;
+        const pt = {};
+        g.save(); g.globalAlpha = o.alpha ?? 1;
+        g.translate(x, y); g.rotate(o.queda || 0); g.scale(s, s);
+        g.strokeStyle = cor; g.fillStyle = cor; g.lineWidth = lw; g.lineCap = 'round'; g.lineJoin = 'round';
+        if (o.brilho) { g.shadowColor = o.brilho; g.shadowBlur = 40; }
+        const quadril = [0, -125], ombro = [0, -235];
+        const seg = (de, ang, L) => [de[0] + Math.sin(ang) * L, de[1] + Math.cos(ang) * L];
+        const membro = (de, a1, a2, L1, L2) => { const m = seg(de, a1, L1), f = seg(m, a1 + a2, L2); g.beginPath(); g.moveTo(...de); g.lineTo(...m); g.lineTo(...f); g.stroke(); return f; };
+        const peE = membro(quadril, p.pE, p.jE, 64, 64), peD = membro(quadril, p.pD, p.jD, 64, 64);
+        g.beginPath(); g.moveTo(...quadril); g.lineTo(...ombro); g.stroke();
+        const maoE = membro(ombro, p.bE, p.cE, 58, 56), maoD = membro(ombro, p.bD, p.cD, 58, 56);
+        g.beginPath(); g.arc(0, -282, 44, 0, Math.PI * 2); g.lineWidth = lw; g.stroke();
+        g.shadowBlur = 0;
+        if (o.arrepiado) for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 12, -322); g.lineTo(i * 22, -362 - (i % 2) * 14); g.lineWidth = 7; g.stroke(); }
+        const ol = o.olhar ?? 1, olhos = o.olhos || 'ok';
+        g.lineWidth = 6;
+        [[-14, -288], [14, -288]].forEach(([ex, ey]) => {
+            ex += ol * 10;
+            if (olhos === 'x') { g.beginPath(); g.moveTo(ex - 7, ey - 7); g.lineTo(ex + 7, ey + 7); g.moveTo(ex + 7, ey - 7); g.lineTo(ex - 7, ey + 7); g.stroke(); }
+            else if (olhos === 'fechados') { g.beginPath(); g.moveTo(ex - 8, ey); g.lineTo(ex + 8, ey); g.stroke(); }
+            else { g.beginPath(); g.arc(ex, ey, 5.5, 0, 7); g.fill(); }
+        });
+        const tela = q => { const m = g.getTransform(); return [m.a * q[0] + m.c * q[1] + m.e, m.b * q[0] + m.d * q[1] + m.f]; };
+        Object.assign(pt, { peE: tela(peE), peD: tela(peD), maoE: tela(maoE), maoD: tela(maoD), ombro: tela(ombro), quadril: tela(quadril),
+            cabeca: tela([0, -282]), coracao: tela([-14, -205]), ombroE: tela([-20, -232]), ombroD: tela([20, -232]) });
+        g.restore();
+        return pt;
     }
-    function fogo(x, y, s, tt, k) {
-        g.save(); g.globalAlpha = clamp(k * 3); g.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 34; i++) {
-            const p = ((tt * .9 + i / 34) % 1), xx = x + Math.sin(i * 7.1 + tt * 3) * 90 * s * (1 - p), yy = y + 120 * s - p * 360 * s, r = (40 - p * 30) * s;
-            const grd = g.createRadialGradient(xx, yy, 0, xx, yy, r); grd.addColorStop(0, corFogo(tt + i * .05, .55 * (1 - p))); grd.addColorStop(1, 'rgba(255,60,20,0)');
+    /** Lâmpada da ideia, acesa e pulsando. */
+    function lampada(x, y, s, tt) {
+        g.save(); g.translate(x, y); g.scale(s, s); g.shadowColor = GOLD; g.shadowBlur = 50 + Math.sin(tt * 8) * 20;
+        g.fillStyle = '#ffe7a3'; g.beginPath(); g.arc(0, 0, 52, Math.PI * .8, Math.PI * .2); g.lineTo(20, 70); g.lineTo(-20, 70); g.closePath(); g.fill();
+        g.shadowBlur = 0; g.fillStyle = '#9a8f80'; g.fillRect(-24, 72, 48, 26);
+        g.strokeStyle = GOLD; g.lineWidth = 7; g.lineCap = 'round';
+        for (let i = 0; i < 5; i++) { const an = -Math.PI / 2 + (i - 2) * .55; g.beginPath(); g.moveTo(Math.cos(an) * 78, Math.sin(an) * 78); g.lineTo(Math.cos(an) * 110, Math.sin(an) * 110); g.stroke(); }
+        g.restore();
+    }
+    /** Balão de fala que estoura com o texto. */
+    function balao(x, y, texto, k) {
+        if (k <= 0) return;
+        g.save(); g.translate(x, y); g.scale(pop(k), pop(k)); g.globalAlpha = clamp(k * 4);
+        caixa(-190, -70, 380, 140, 40, '#f5ecec'); g.fillStyle = '#f5ecec'; g.beginPath(); g.moveTo(-120, 60); g.lineTo(-170, 130); g.lineTo(-60, 66); g.fill();
+        g.font = '900 70px Inter'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = BLOOD; g.fillText(texto, 0, 4); g.restore();
+    }
+    /** Chapéu do mestre. */
+    function chapeu(x, y) { g.save(); g.fillStyle = GOLD; g.beginPath(); g.moveTo(x - 90, y - 50); g.lineTo(x + 90, y - 50); g.lineTo(x + 10, y - 190); g.closePath(); g.fill(); g.restore(); }
+    function chao() { g.save(); g.strokeStyle = 'rgba(233,194,122,.35)'; g.lineWidth = 4; g.beginPath(); g.moveTo(80, CHAO + 8); g.lineTo(W - 80, CHAO + 8); g.stroke(); g.restore(); }
+    function caminho(pts, k, cor = AZUL, lw = 14) {
+        const n = Math.max(0, clamp(k) * (pts.length - 1)); if (n <= 0) return;
+        g.save(); g.strokeStyle = cor; g.shadowColor = '#5cbcff'; g.shadowBlur = 30; g.lineWidth = lw; g.lineCap = 'round'; g.lineJoin = 'round';
+        g.beginPath(); g.moveTo(...pts[0]); for (let i = 1; i <= Math.floor(n); i++) g.lineTo(...pts[i]);
+        if (n % 1 && Math.ceil(n) < pts.length) { const a = pts[Math.floor(n)], b = pts[Math.ceil(n)]; g.lineTo(lerp(a[0], b[0], n % 1), lerp(a[1], b[1], n % 1)); }
+        g.stroke(); g.restore();
+    }
+    function coracao(x, y, s, cor = RED) {
+        g.save(); g.translate(x, y); g.scale(s / 24, s / 24); g.translate(-12, -12); g.fillStyle = cor;
+        g.fill(new Path2D('M12 21s-8-4.7-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.3-8 11-8 11Z')); g.restore();
+    }
+    function proibido(x, y, r) { g.save(); g.strokeStyle = RED; g.lineWidth = 9; g.beginPath(); g.arc(x, y, r, 0, 7); g.moveTo(x - r * .7, y - r * .7); g.lineTo(x + r * .7, y + r * .7); g.stroke(); g.restore(); }
+    function tomada(x, y, s) {
+        g.save(); g.translate(x, y); g.scale(s, s); caixa(-70, -90, 140, 180, 22, '#e8e2d6', '#9a8f80', 5);
+        g.fillStyle = '#2a2420'; g.beginPath(); g.ellipse(-24, -10, 10, 18, 0, 0, 7); g.ellipse(24, -10, 10, 18, 0, 0, 7); g.fill();
+        g.beginPath(); g.arc(0, 40, 9, 0, 7); g.fill(); g.restore();
+    }
+    function ancora(x, y, s, cor = '#cfc8bd') {
+        g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = cor; g.lineWidth = 16; g.lineCap = 'round';
+        g.beginPath(); g.arc(0, -150, 26, 0, 7); g.moveTo(0, -124); g.lineTo(0, 60); g.moveTo(-60, -80); g.lineTo(60, -80);
+        g.moveTo(-110, -10); g.quadraticCurveTo(-90, 70, 0, 70); g.quadraticCurveTo(90, 70, 110, -10); g.stroke(); g.restore();
+    }
+    function cubo(x, y, s, cor) {
+        g.save(); g.translate(x, y); g.scale(s, s); g.strokeStyle = cor; g.lineWidth = 10; g.lineJoin = 'round';
+        g.stroke(new Path2D('M0 -90 80 -45v90L0 90-80 45v-90Z M0 0 80 -45 M0 0-80 -45 M0 0v90')); g.restore();
+    }
+    function corFogo(tt, a = 1) { const f = (Math.sin(tt * 2.2) + 1) / 2; return `rgba(255,${Math.round(lerp(130, 245, f))},${Math.round(lerp(40, 235, f))},${a})`; }
+    function fogo(x, y, s, tt, a = 1) {
+        g.save(); g.globalAlpha = a; g.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 30; i++) {
+            const p = ((tt * 1.1 + i / 30) % 1), xx = x + Math.sin(i * 7.1 + tt * 3) * 70 * s * (1 - p), yy = y - p * 300 * s, r = (46 - p * 34) * s;
+            const grd = g.createRadialGradient(xx, yy, 0, xx, yy, r); grd.addColorStop(0, corFogo(tt + i * .05, .6 * (1 - p))); grd.addColorStop(1, 'rgba(255,60,20,0)');
             g.fillStyle = grd; g.beginPath(); g.arc(xx, yy, r, 0, 7); g.fill();
         }
         g.restore();
     }
+    function particulas(de, para, tt, n = 22, cor) {
+        for (let i = 0; i < n; i++) {
+            const p = ((tt * .9 + i / n) % 1);
+            const x = lerp(de[0], para[0], p), y = lerp(de[1], para[1], p) - Math.sin(p * Math.PI) * 180 + (i % 4) * 6;
+            g.fillStyle = cor || corFogo(tt + i * .1, .95); g.beginPath(); g.arc(x, y, 10, 0, 7); g.fill();
+        }
+    }
+    function fundo(tt) {
+        const grd = g.createRadialGradient(CX, 850, 60, CX, 850, 1300);
+        grd.addColorStop(0, '#3a0b10'); grd.addColorStop(.6, '#140608'); grd.addColorStop(1, '#070304');
+        g.fillStyle = grd; g.fillRect(0, 0, W, H);
+        g.save(); g.translate(CX, 850); g.rotate(tt * .06); g.strokeStyle = 'rgba(214,60,60,.1)'; g.lineWidth = 3;
+        [520, 470].forEach(r => { g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); });
+        for (let k = 0; k < 2; k++) { g.beginPath(); for (let i = 0; i < 4; i++) { const a = -Math.PI / 2 + k * Math.PI + i * Math.PI * 2 / 3; g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * 470, Math.sin(a) * 470); } g.stroke(); }
+        g.restore();
+    }
+    function legenda(cena, lt) {
+        const palavras = cena.fala.split(' '), feitas = Math.floor(clamp(lt / (cena.dur * .9)) * palavras.length + .999);
+        g.save(); g.font = '800 66px Inter'; const linhas = []; let atual = [];
+        palavras.forEach((p, i) => { if (g.measureText(atual.map(x => x.w).concat(p).join(' ')).width > 900 && atual.length) { linhas.push(atual); atual = []; } atual.push({ w: p, i }); });
+        if (atual.length) linhas.push(atual);
+        const y0 = 1500;
+        linhas.forEach((ln, li) => {
+            const larg = g.measureText(ln.map(x => x.w).join(' ')).width; let x = CX - larg / 2;
+            ln.forEach(({ w, i }) => {
+                const ww = g.measureText(w + ' ').width, atualP = i === feitas - 1;
+                g.textBaseline = 'middle'; g.lineWidth = 14; g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineJoin = 'round';
+                g.strokeText(w, x, y0 + li * 84);
+                g.fillStyle = i < feitas - 1 ? INK : (atualP ? GOLD : 'rgba(245,236,236,.32)');
+                g.fillText(w, x, y0 + li * 84); x += ww;
+            });
+        });
+        g.restore();
+    }
+
+    /* ---------- cenas: k = 0→1 ao longo da fala, lt = segundos ---------- */
+    const CENAS = {
+        eletrico: {
+            titulo: 'Atração Elétrica',
+            gancho(k, lt) {
+                chao(); tomada(840, CHAO - 200, 1);
+                const anda = fase(k, 0, .35), recua = fase(k, .42, .55), ideia = fase(k, .55, .75);
+                const x = lerp(220, 600, ease(anda)) - 60 * ease(recua);
+                const pose = anda < 1 ? andando(lt) : misturar(POSES.tocar, POSES.parado, ease(recua));
+                const quase = anda >= 1 && recua < 1;
+                const p = boneco(x, CHAO, 1.55, { pose, arrepiado: quase, brilho: quase ? '#5cbcff' : null });
+                if (quase && Math.sin(lt * 40) > 0) raio(p.maoD[0] + 10, p.maoD[1], 790, CHAO - 210, Math.floor(lt * 20), '#d9f1ff', 5);
+                if (ideia === 0) bate('MATA.', 700, 420, 130, fase(k, .12, .3), RED);
+                if (ideia > 0) lampada(p.cabeca[0], p.cabeca[1] - 190, pop(ideia), lt);
+                bate('PENSE.', CX, 330, 130, fase(k, .7, .88), GOLD);
+            },
+            declarar(k, lt) {
+                chao();
+                const fala = fase(k, .45, .6), carta = fase(k, .65, .85);
+                const j = boneco(260, CHAO, 1.35, { pose: fala > 0 ? 'poder' : 'parado' });
+                const m = boneco(820, CHAO, 1.35, { pose: 'parado', cor: GOLD, olhar: -1 });
+                chapeu(m.cabeca[0], m.cabeca[1]);
+                txt('MESTRE', 820, CHAO + 60, 34, GOLD, 700);
+                if (carta < .25) balao(j.cabeca[0] + 150, j.cabeca[1] - 190, 'IMBUIR!', fala);
+                bate('NÃO SE COMPRA.', CX, 380, 84, fase(k, .05, .3), RED, 'Inter', 0);
+                if (carta > 0) { // a técnica aparece entre os dois: descoberta
+                    g.save(); g.translate(CX, 760); g.rotate((1 - ease(carta)) * .5); g.scale(pop(carta), pop(carta));
+                    caixa(-170, -230, 340, 460, 24, 'rgba(12,6,8,.95)', AZUL, 6);
+                    raio(-100, -150, 100, 60, Math.floor(lt * 12), '#d9f1ff', 6);
+                    txt('TÉCNICA', 0, 120, 44, AZUL); txt('DESCOBERTA', 0, 175, 40, INK); g.restore();
+                }
+            },
+            imbuir(k, lt) {
+                chao();
+                const toca = fase(k, .2, .35), sofre = toca >= 1 ? fase(k, .35, .9) : 0;
+                const a = boneco(330, CHAO, 1.45, { pose: misturar(POSES.parado, POSES.tocar, toca), brilho: '#5cbcff' });
+                const sacode = sofre > 0 ? Math.sin(lt * 34) * .14 : 0;
+                const b = boneco(600 + sacode * 40, CHAO, 1.35, { pose: sofre > 0 ? misturar(POSES.cima, POSES.preso, Math.abs(Math.sin(lt * 20))) : 'parado', olhar: -1, arrepiado: sofre > 0, brilho: sofre > 0 ? '#5cbcff' : null, olhos: sofre > .7 ? 'x' : 'ok' });
+                if (sofre > 0 && sofre < .8) { raio(a.maoD[0], a.maoD[1], b.ombro[0], b.ombro[1], Math.floor(lt * 22)); raio(b.cabeca[0], b.cabeca[1] - 50, b.cabeca[0] + 120, b.cabeca[1] - 200, Math.floor(lt * 22) + 3, '#d9f1ff', 5); tremor = 10; }
+                chip('IMBUIR', CX, 380, fase(k, 0, .2), AZUL, 420);
+                bate('ELE SOFRE.', CX, 560, 100, fase(k, .55, .75), INK);
+            },
+            conduzir(k, lt) {
+                chao(); tomada(110, CHAO - 120, .7);
+                const p = boneco(330, CHAO, 1.45, { pose: { ...POSES.poder, bE: -.9, bD: 1.57, cE: .2, cD: 0 }, brilho: '#5cbcff' });
+                const corre = fase(k, .15, .55), dispara = fase(k, .55, .7), caem = fase(k, .68, .9);
+                caminho([[150, CHAO - 120], [p.peE[0], p.peE[1]], [p.quadril[0] - 45, p.quadril[1]], [p.ombro[0] - 45, p.ombro[1] + 10], [p.ombro[0] + 20, p.ombro[1]], p.maoD], corre, AZUL, 14);
+                [580, 730].forEach((x, i) => boneco(x, CHAO, 1, { pose: caem > 0 ? 'cima' : 'defesa', olhar: -1, arrepiado: dispara > 0, olhos: caem > .6 ? 'x' : 'ok', queda: 1.2 * ease(fase(caem, i * .2, .8 + i * .2)) }));
+                if (dispara > 0 && caem < .5) { raio(p.maoD[0], p.maoD[1], 1060, p.maoD[1] + 10, Math.floor(lt * 24), '#d9f1ff', 12); tremor = 12; }
+                clarao(fase(k, .55, .62));
+                chip('CONDUZIR', CX, 380, fase(k, 0, .2), AZUL, 480);
+                bate('EM LINHA!', CX, 560, 110, fase(k, .62, .8), AZUL, 'Inter', .05);
+            },
+            caminho(k, lt) {
+                chao();
+                const p = boneco(CX, CHAO, 2.0, { pose: { ...POSES.poder, bE: -1.45, bD: 1.45, cE: 0, cD: 0 } });
+                // o "corpo" em volta do palito: os órgãos ficam dentro; a corrente corre pela borda
+                const tx = p.ombro[0], topo = p.ombro[1] - 10, base = p.quadril[1] + 10, larg = 95;
+                g.save(); g.fillStyle = 'rgba(214,60,60,.12)'; g.strokeStyle = 'rgba(255,154,154,.5)'; g.lineWidth = 4; g.setLineDash([14, 10]);
+                g.beginPath(); g.roundRect(tx - larg, topo, larg * 2, base - topo, 60); g.fill(); g.stroke(); g.restore();
+                coracao(p.coracao[0], p.coracao[1] + 20, 80); proibido(p.coracao[0], p.coracao[1] + 20, 66);
+                txt('ÓRGÃOS', tx, base - 50, 34, 'rgba(255,154,154,.85)');
+                caminho([p.peE, [p.quadril[0] - larg, base], [tx - larg, topo + 40], [tx - larg + 30, topo], [tx + larg, topo], p.maoD], fase(k, .1, .85), AZUL, 18);
+                bate('PÉ → MÃO OPOSTA', CX, 300, 76, fase(k, .45, .65), AZUL, 'Inter', 0);
+            },
+            erro(k, lt) {
+                chao();
+                const cai = fase(k, .55, .75);
+                const p = boneco(lerp(CX, 250, ease(cai)), CHAO, 1.9, { pose: cai > 0 ? 'parado' : misturar(POSES.poder, POSES.cima, Math.abs(Math.sin(lt * 26))), olhos: cai > 0 ? 'x' : 'ok', arrepiado: true, queda: Math.PI / 2 * ease(cai), brilho: cai > 0 ? null : '#ff6b6b' });
+                if (cai === 0 && k > .1) { raio(p.peE[0], p.peE[1], p.coracao[0], p.coracao[1], Math.floor(lt * 18), '#ffd0d0', 10); tremor = 14; }
+                coracao(p.coracao[0], p.coracao[1], 70 * (1 + Math.sin(lt * 20) * .15 * (1 - cai)));
+                clarao(fase(k, .1, .2), '255,80,80');
+                bate('CORAÇÃO.', CX, 320, 120, fase(k, .5, .7), RED);
+            },
+            combo(k, lt) {
+                // cada palavra da declaração entra quando é dita
+                [['IMBUIR', .22, AZUL], ['FOCALIZAR', .42, GOLD], ['REVERTER', .62, '#ff9a9a'], ['NA CABEÇA', .8, INK]].forEach(([s, t, cor], i) => {
+                    chip(s, CX, 470 + i * 170, fase(k, t, t + .1), cor, 600);
+                    if (i) bate('+', CX - 330, 385 + i * 170, 70, fase(k, t, t + .1), GOLD, 'Inter', 0);
+                });
+                bate('DECLARE:', CX, 300, 90, fase(k, 0, .15), GOLD, 'Cinzel', 0);
+                if (k > .9) lampada(860, 300, 1, lt);
+            },
+            cerebro(k, lt) {
+                chao();
+                const toca = fase(k, .1, .25), apaga = fase(k, .55, .75);
+                const a = boneco(330, CHAO, 1.4, { pose: misturar(POSES.parado, POSES.tocarAlto, toca), brilho: '#5cbcff' });
+                const b = boneco(560, CHAO, 1.3, { pose: 'parado', olhar: -1, olhos: apaga > 0 ? 'fechados' : 'ok', queda: Math.PI / 2 * ease(apaga), arrepiado: toca >= 1 && apaga === 0 });
+                // reverso: a eletricidade sai da cabeça dele, não entra
+                if (toca >= 1 && apaga === 0) { for (let i = 0; i < 4; i++) raio(b.cabeca[0], b.cabeca[1], b.cabeca[0] + (i - 1.5) * 150, b.cabeca[1] - 240, Math.floor(lt * 22) + i + 4, '#ffd0ff', 6); tremor = 10; }
+                if (apaga > .5) for (let i = 0; i < 3; i++) txt('z', b.cabeca[0] + 40 + i * 40, b.cabeca[1] - 80 - i * 50 - ((lt * 60) % 30), 60 + i * 16, AZUL);
+                bate('APAGOU.', CX, 480, 120, fase(k, .7, .85), INK);
+            },
+            fim(k, lt) {
+                if (Math.sin(lt * 9) > .3) raio(220, 260, 860, 640, Math.floor(lt * 8));
+                bate('?', CX, 600, 260, fase(k, 0, .25), GOLD, 'Cinzel', 0);
+                bate('QUAL LÓGICA?', CX, 840, 96, fase(k, .2, .5), INK);
+                bate('PRAGA VERMELHA', CX, 990, 84, fase(k, .55, .85), RED);
+            },
+        },
+        fisiomancia: {
+            titulo: 'Fisiomancia',
+            ancora(k, lt) {
+                chao();
+                const queima = fase(k, .15, .55), vira = fase(k, .5, .8);
+                if (queima < 1) { ancora(800, CHAO - 120, 1.1 * (1 - queima * .7)); fogo(800, CHAO - 40, 1.1, lt, clamp(queima * 3)); }
+                const p = boneco(330, CHAO, 1.5, { pose: misturar(POSES.tocar, POSES.pesado, ease(vira)), cor: vira > 0 ? `rgb(${Math.round(lerp(245, 160, vira))},${Math.round(lerp(236, 160, vira))},${Math.round(lerp(236, 170, vira))})` : INK, brilho: queima > 0 && vira < 1 ? '#ff9a3a' : null });
+                if (queima > 0 && queima < 1) particulas([800, CHAO - 150], p.ombro, lt);
+                if (vira > .6) { g.save(); g.strokeStyle = 'rgba(233,194,122,.7)'; g.lineWidth = 6; g.beginPath(); for (let i = 0; i < 5; i++) { g.moveTo(330 + (i - 2) * 30, CHAO + 8); g.lineTo(330 + (i - 2) * 90, CHAO + 70 + (i % 2) * 30); } g.stroke(); g.restore(); tremor = vira < .8 ? 12 : 0; }
+                bate('VIROU UMA ÂNCORA.', CX, 400, 84, fase(k, .65, .85), GOLD, 'Cinzel');
+            },
+            nome(k) {
+                bate('IMBUIR', CX, 700, 150, fase(k, 0, .3));
+                bate('PROPRIEDADES', CX, 860, 110, fase(k, .15, .45), GOLD);
+                bate('fisiomancia', CX, 1010, 64, fase(k, .45, .7), RED, 'Inter', 0);
+            },
+            fogo(k, lt) {
+                chao();
+                cubo(280, CHAO - 120, 1.1, '#cfc8bd'); fogo(280, CHAO - 30, 1.2, lt);
+                const p = boneco(780, CHAO, 1.5, { pose: 'cima', olhar: -1, brilho: corFogo(lt, 1) });
+                particulas([300, CHAO - 180], p.ombro, lt, 26);
+                bate('LARANJA → BRANCO', CX, 380, 70, fase(k, .3, .5), corFogo(lt, 1), 'Inter', 0);
+            },
+            metal(k, lt) {
+                chao();
+                const golpe = fase(k, .3, .5);
+                const p = boneco(430, CHAO, 1.6, { pose: 'parado', cor: '#b9c2cc', brilho: '#dfe8f2' });
+                const ang = lerp(-1.3, .2, ease(golpe));
+                g.save(); g.translate(800, CHAO - 300); g.rotate(ang); g.strokeStyle = '#e6e6e6'; g.lineWidth = 12; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, 0); g.lineTo(-300, 0); g.stroke(); g.strokeStyle = GOLD; g.beginPath(); g.moveTo(10, -30); g.lineTo(10, 30); g.stroke(); g.restore();
+                if (golpe >= 1) { for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + lt; g.strokeStyle = '#ffe9a8'; g.lineWidth = 6; g.beginPath(); g.moveTo(p.ombroD[0] + 20, p.ombroD[1]); g.lineTo(p.ombroD[0] + 20 + Math.cos(a) * 70, p.ombroD[1] + Math.sin(a) * 70); g.stroke(); } tremor = fase(k, .5, .6) < 1 ? 10 : 0; }
+                bate('TINK!', 760, 520, 120, fase(k, .5, .65), '#dfe8f2', 'Inter', .1);
+                chip('DURO 5', CX, 330, fase(k, 0, .2), 'rgba(185,194,204,.8)', 420);
+            },
+            borracha(k, lt) {
+                chao();
+                const p = boneco(CX, CHAO, 1.7, { pose: 'defesa', cor: '#f2a65a' });
+                const r = fase(k, .2, .6);
+                if (r > 0 && r < 1) { raio(CX + 40, 220, p.cabeca[0], p.cabeca[1] - 50, Math.floor(lt * 20)); raio(p.cabeca[0] - 30, p.cabeca[1] - 50, 120, 400, Math.floor(lt * 20) + 2, '#ffe0a0', 6); }
+                bate('IMUNE!', CX, 420, 140, fase(k, .55, .75), '#f2a65a');
+            },
+            ar(k, lt) {
+                chao();
+                const some = ease(fase(k, .15, .65));
+                boneco(CX, CHAO, 1.7, { pose: 'parado', alpha: lerp(1, .08, some), cor: '#bfe3ff' });
+                g.save(); g.strokeStyle = 'rgba(191,227,255,.6)'; g.lineWidth = 6; g.lineCap = 'round';
+                for (let i = 0; i < 5; i++) { const y = 700 + i * 110, x = ((lt * 500 + i * 230) % 1400) - 200; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 220, y); g.stroke(); }
+                g.restore();
+                bate('INVISÍVEL', CX, 420, 120, fase(k, .5, .7), '#bfe3ff');
+            },
+            correntes(k, lt) {
+                chao();
+                const luta = Math.sin(lt * 18) * .12 * clamp(k * 3);
+                const p = boneco(CX, CHAO, 1.7, { pose: { ...POSES.preso, bE: POSES.preso.bE + luta, bD: POSES.preso.bD - luta } });
+                g.save(); g.strokeStyle = '#d9d4cc'; g.lineWidth = 8;
+                for (let i = 0; i < 9; i++) { const y = p.ombro[1] + 20 + i * 34; const x = CX + Math.sin(i * 1.3) * 20; g.beginPath(); g.ellipse(x, y, 70, 20, (i % 2 ? .3 : -.3), 0, 7); g.stroke(); }
+                g.restore();
+                chip('RESILIÊNCIA?', CX, 380, fase(k, .3, .5), BLOOD, 620);
+                bate('FALHOU: PERDE A AÇÃO', CX, 540, 64, fase(k, .65, .85), RED, 'Inter', 0);
+            },
+            fim(k, lt) {
+                fogo(CX, 760, 1.3, lt, .9);
+                chip('8 AURA · NÍVEL 3', CX, 900, fase(k, 0, .3), BLOOD, 700);
+                bate('PRAGA VERMELHA', CX, 1080, 92, fase(k, .4, .8), RED);
+            },
+        },
+    };
 
     /* ---------- desenho de um instante ---------- */
     const D = CENAS[VIDEO];
     function quadro(tt) {
-        sigiloFundo(tt);
+        tremor = 0;
         const c = cenas.find((x, i) => tt >= x.t0 && (i === cenas.length - 1 || tt < cenas[i + 1].t0)) || cenas[0];
-        const lt = Math.max(0, tt - c.t0), k = clamp(lt / Math.min(1.6, c.dur));
-        cabecalho(D.titulo, tt);
-        g.save(); const sai = tt > c.t0 + c.dur + GAP * .2 && c !== cenas[cenas.length - 1]; g.globalAlpha = sai ? .6 : 1;
-        D[c.cena](k, lt); g.restore();
-        if (tt < c.t0 + c.dur + .2) legenda(c, lt);
-        // barra de progresso no alto
+        const lt = Math.max(0, tt - c.t0), k = clamp(lt / c.dur);
+        fundo(tt);
+        g.save(); D[c.cena](k, lt); g.restore();
+        if (tremor) { // impacto: a tela treme
+            const img = g.getImageData(0, 0, W, H); fundo(tt);
+            const tmp = quadro.tmp || (quadro.tmp = Object.assign(document.createElement('canvas'), { width: W, height: H }));
+            tmp.getContext('2d').putImageData(img, 0, 0);
+            g.drawImage(tmp, Math.sin(tt * 90) * tremor, Math.cos(tt * 77) * tremor);
+        }
+        txt('PRAGA VERMELHA RPG', CX, 110, 34, RED, 800, 'Cinzel');
+        txt(D.titulo, CX, 165, 32, 'rgba(245,236,236,.6)', 600);
+        if (tt < c.t0 + c.dur + .1) legenda(c, lt);
         caixa(60, 40, 960, 8, 4, 'rgba(255,255,255,.12)'); caixa(60, 40, 960 * clamp(tt / TOTAL), 8, 4, RED);
-        if (tt > TOTAL - FIM_EXTRA) { g.fillStyle = `rgba(0,0,0,${clamp((tt - (TOTAL - FIM_EXTRA)) / FIM_EXTRA) * .6})`; g.fillRect(0, 0, W, H); }
     }
 
     /* ---------- áudio ---------- */
@@ -304,18 +387,14 @@
     }
     const st = document.getElementById('st');
     let rodando = null;
-    function animar(t0, aoFim) {
-        const passo = () => {
-            const tt = ac.currentTime - t0;
-            quadro(Math.max(0, tt));
-            st.textContent = `${tt.toFixed(1)} / ${TOTAL.toFixed(1)} s`;
-            if (tt < TOTAL) rodando = setTimeout(passo, 1000 / 60); else aoFim && aoFim();
-        };
+    function animar(t0) {
+        const passo = () => { const tt = ac.currentTime - t0; quadro(Math.max(0, tt)); st.textContent = `${tt.toFixed(1)} / ${TOTAL.toFixed(1)} s`; if (tt < TOTAL) rodando = setTimeout(passo, 1000 / 60); };
         passo();
     }
-    quadro(4);
-    window.__quadro = quadro; window.__total = TOTAL;
+    quadro(1.2);
+    window.__quadro = quadro; window.__total = TOTAL; window.__cenas = cenas;
     document.getElementById('ver').onclick = async () => { await ac.resume(); clearTimeout(rodando); animar(tocar(ac.destination)); };
+
     /* ---------- exportação quadro a quadro: MP4 normal (H.264 + AAC), com duração certa e busca ---------- */
     window.__exportar = async (fps = 30, bitrate = 3000000) => {
         const SR = 48000, N = Math.ceil(TOTAL * fps);
@@ -326,7 +405,6 @@
         ve.configure({ codec: 'avc1.640028', width: W, height: H, bitrate, framerate: fps, avc: { format: 'avc' } });
         const ae = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => { erro = e; } });
         ae.configure({ codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 1, bitrate: 128000 });
-        // áudio: as falas nas mesmas posições da animação
         const off = new OfflineAudioContext(1, Math.ceil(TOTAL * SR), SR);
         cenas.forEach((c, i) => { const src = off.createBufferSource(); src.buffer = buffers[i]; src.connect(off.destination); src.start(c.t0); });
         const pcm = (await off.startRendering()).getChannelData(0);
@@ -347,27 +425,10 @@
         muxer.finalize();
         const buf = muxer.target.buffer;
         await fetch('/salvar?nome=' + VIDEO + '.mp4', { method: 'POST', body: buf });
-        quadro(cenas[0].t0 + 1.4);
+        quadro(cenas[0].t0 + cenas[0].dur * .8); // capa: o gancho no auge
         await fetch('/salvar?nome=' + VIDEO + '.jpg', { method: 'POST', body: await new Promise(r => cv.toBlob(r, 'image/jpeg', .86)) });
         st.textContent = 'pronto: ' + (buf.byteLength / 1e6).toFixed(1) + ' MB';
         return buf.byteLength;
     };
-    document.getElementById('gravar').onclick = async () => {
-        await ac.resume(); clearTimeout(rodando);
-        const dest = ac.createMediaStreamDestination();
-        const fluxo = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
-        const rec = new MediaRecorder(fluxo, { mimeType: 'video/mp4;codecs=avc1.640028,mp4a.40.2', videoBitsPerSecond: 6000000, audioBitsPerSecond: 128000 });
-        const partes = []; rec.ondataavailable = e => e.data.size && partes.push(e.data);
-        rec.onstop = async () => {
-            const blob = new Blob(partes, { type: 'video/mp4' });
-            st.textContent = 'enviando ' + (blob.size / 1e6).toFixed(1) + ' MB…';
-            await fetch('/salvar?nome=' + VIDEO + '.mp4', { method: 'POST', body: blob });
-            quadro(cenas[0].t0 + 1.4); // capa: a primeira cena já formada
-            const capa = await new Promise(r => cv.toBlob(r, 'image/jpeg', .86));
-            await fetch('/salvar?nome=' + VIDEO + '.jpg', { method: 'POST', body: capa });
-            st.textContent = 'pronto: ' + (blob.size / 1e6).toFixed(1) + ' MB'; window.__pronto = blob.size;
-        };
-        rec.start(1000);
-        animar(tocar(dest), () => setTimeout(() => rec.stop(), 300));
-    };
+    document.getElementById('gravar').onclick = () => window.__exportar();
 })();
