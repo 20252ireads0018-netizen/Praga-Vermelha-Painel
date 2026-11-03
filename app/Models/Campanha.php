@@ -13,6 +13,7 @@ class Campanha extends Model
     protected $fillable = ['nome', 'descricao', 'mestre_id', 'banner_path', 'chave_maldicoes'];
 
     protected $casts = [
+        'trilha'        => 'array',
         'sessao_ativa'  => 'boolean',
         'sessao_inicio' => 'datetime',
         'som_em'        => 'datetime',

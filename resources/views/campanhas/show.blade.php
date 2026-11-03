@@ -522,6 +522,64 @@
                 @endif
             </section>
 
+            @if (Route::has('campanhas.trilha'))
+            {{-- ===== Trilha: música ou vídeo que o mestre toca para todos (public/js/campanha-trilha.js) ===== --}}
+            <style>
+                .trilha-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+                .trilha-status strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+                .trilha-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+                .trilha-linha select { flex: 1 1 200px; min-width: 0; }
+                .trilha-barra { flex: 1; min-width: 120px; }
+                .trilha-tempo { font-size: .8rem; opacity: .7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+                .trilha-video { aspect-ratio: 16 / 9; width: 100%; border-radius: 10px; overflow: hidden; background: #000; margin: 6px 0; }
+                .trilha-video[hidden] { display: none; }
+                .trilha-link { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+                .trilha-link input { flex: 1 1 160px; min-width: 0; }
+                #camp-trilha [hidden] { display: none !important; }
+                .trilha-erro { color: #fca5a5; font-size: .85rem; min-height: 1em; margin: 4px 0 0; }
+            </style>
+            <section class="camp-card" id="camp-trilha" data-config="{{ json_encode([
+                'mestre'    => $souMestre,
+                'csrf'      => csrf_token(),
+                'estadoUrl' => route('campanhas.estado', $campanha),
+                'trilhaUrl' => route('campanhas.trilha', $campanha),
+                'sonsUrl'   => route('campanhas.sons.arquivo', [$campanha, '__ID__']),
+                'sons'      => $souMestre ? $sons->map(fn ($s) => ['id' => $s->id, 'nome' => $s->nome])->values() : [],
+            ]) }}">
+                <div class="camp-card-cab"><h2>🎵 Trilha</h2></div>
+                <div class="trilha-status">
+                    <strong id="trilha-titulo">Nada tocando agora.</strong>
+                    <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-ouvir" hidden title="O navegador só toca som depois de um clique">🔊 Ouvir a trilha</button>
+                    <label class="trilha-tempo">Volume <input type="range" id="trilha-volume" min="0" max="100" aria-label="Volume"></label>
+                </div>
+                <div class="trilha-video" id="trilha-video" hidden><div id="trilha-yt"></div></div>
+                <div class="trilha-linha">
+                    <input type="range" class="trilha-barra" id="trilha-barra" min="0" max="1" value="0" aria-label="Posição" @unless ($souMestre) disabled @endunless>
+                    <span class="trilha-tempo" id="trilha-tempo"></span>
+                </div>
+                @if ($souMestre)
+                    <div class="trilha-linha">
+                        <select id="trilha-fonte" aria-label="O que tocar"></select>
+                        <button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="trilha-tocar">▶ Tocar para todos</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-apagar-link" hidden>Tirar da lista</button>
+                    </div>
+                    <div class="trilha-linha">
+                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-pausar" disabled>⏸ Pausar</button>
+                        <button type="button" class="camp-btn camp-btn-pequeno" id="trilha-parar" disabled>⏹ Parar</button>
+                        <label class="trilha-tempo"><input type="checkbox" id="trilha-loop"> Repetir</label>
+                    </div>
+                    <form class="trilha-link" id="trilha-link-form">
+                        <input type="text" name="url" maxlength="300" placeholder="Link do YouTube" aria-label="Link do YouTube">
+                        <input type="text" name="titulo" maxlength="100" placeholder="Nome (opcional)" aria-label="Nome do vídeo">
+                        <button class="camp-btn camp-btn-pequeno">+ Guardar vídeo</button>
+                    </form>
+                    <p class="camp-dica">Áudios: envie em Efeitos sonoros (até 20 MB) e escolha aqui. Quem está na página da campanha ouve junto; cada um ajusta o próprio volume.</p>
+                    <p class="trilha-erro" id="trilha-erro"></p>
+                @endif
+            </section>
+            <script src="{{ asset('js/campanha-trilha.js') }}?v={{ @filemtime(public_path('js/campanha-trilha.js')) }}" defer></script>
+            @endif
+
             {{-- ===== Efeitos sonoros (mestre) ===== --}}
             @if ($souMestre)
                 <section class="camp-card">
@@ -568,7 +626,7 @@
                         <label>Nome do efeito
                             <input type="text" name="nome" maxlength="60" required>
                         </label>
-                        <label>Arquivo (mp3, wav, ogg, m4a ou aac — até 8 MB)
+                        <label>Arquivo (mp3, wav, ogg, m4a ou aac — até 20 MB)
                             <input type="file" name="arquivo" accept=".mp3,.wav,.ogg,.m4a,.aac,audio/*" required>
                         </label>
                         <button class="camp-btn camp-btn-primario camp-lateral-botao">Enviar som</button>

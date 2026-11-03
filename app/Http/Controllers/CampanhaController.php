@@ -538,7 +538,126 @@ class CampanhaController extends Controller
             'som_seq'      => (int) $campanha->som_seq,
             'som_id'       => $campanha->som_id,
             'som_acao'     => $campanha->som_acao,
+            'trilha'       => $this->trilhaPublica($campanha),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    // ------------------------------------------------------------------
+    // Trilha: música ou vídeo que o mestre toca para todos na página da campanha
+    // ------------------------------------------------------------------
+
+    /** O que os jogadores precisam para tocar junto (null sem a coluna). */
+    private function trilhaPublica(Campanha $campanha): ?array
+    {
+        if (!Schema::hasColumn('campanhas', 'trilha')) {
+            return null;
+        }
+        $t = (array) ($campanha->trilha ?? []);
+
+        return [
+            'seq' => (int) ($t['seq'] ?? 0), 'tipo' => $t['tipo'] ?? null, 'som_id' => $t['som_id'] ?? null, 'yt' => $t['yt'] ?? null,
+            'titulo' => (string) ($t['titulo'] ?? ''), 'tocando' => !empty($t['tocando']), 'pos' => (float) ($t['pos'] ?? 0),
+            'em' => (float) ($t['em'] ?? 0), 'loop' => !empty($t['loop']), 'agora' => microtime(true),
+            'links' => array_values((array) ($t['links'] ?? [])),
+        ];
+    }
+
+    /**
+     * Comandos do mestre: tocar (um som da campanha ou um vídeo do YouTube), pausar, continuar, posicionar, parar,
+     * repetir e guardar/apagar links do YouTube. A posição é guardada com a hora: os jogadores calculam onde estar.
+     */
+    public function trilha(Request $request, Campanha $campanha)
+    {
+        $this->exigirMestre($campanha);
+        if (!Schema::hasColumn('campanhas', 'trilha')) {
+            return response()->json(['erro' => 'O banco ainda não tem a coluna da Trilha: rode o SQL da migração 2026_11_02_000022.'], 422);
+        }
+        $d = $request->validate([
+            'acao'   => 'required|in:tocar,pausar,continuar,posicao,parar,repetir,link,apagar_link',
+            'tipo'   => 'nullable|in:som,youtube',
+            'som_id' => 'nullable|integer',
+            'url'    => 'nullable|string|max:300',
+            'titulo' => 'nullable|string|max:100',
+            'pos'    => 'nullable|numeric|min:0|max:86400',
+            'loop'   => 'nullable|boolean',
+            'id'     => 'nullable|string|max:20',
+        ]);
+        $t = (array) ($campanha->trilha ?? []);
+        $agora = microtime(true);
+        $posAtual = !empty($t['tocando']) ? (float) ($t['pos'] ?? 0) + ($agora - (float) ($t['em'] ?? $agora)) : (float) ($t['pos'] ?? 0);
+        switch ($d['acao']) {
+            case 'tocar':
+                if (($d['tipo'] ?? '') === 'som') {
+                    $som = CampanhaSom::where('campanha_id', $campanha->id)->find((int) ($d['som_id'] ?? 0));
+                    if (!$som) {
+                        return response()->json(['erro' => 'Escolha um áudio da campanha.'], 422);
+                    }
+                    $t = ['tipo' => 'som', 'som_id' => $som->id, 'yt' => null, 'titulo' => $som->nome] + $t;
+                } else {
+                    $yt = $this->idYoutube((string) ($d['url'] ?? ''));
+                    if (!$yt) {
+                        return response()->json(['erro' => 'Link do YouTube inválido.'], 422);
+                    }
+                    $t = ['tipo' => 'youtube', 'yt' => $yt, 'som_id' => null, 'titulo' => trim((string) ($d['titulo'] ?? '')) ?: 'Vídeo do YouTube'] + $t;
+                }
+                $t['tocando'] = true;
+                $t['pos'] = 0;
+                $t['em'] = $agora;
+                break;
+            case 'pausar':
+                $t['tocando'] = false;
+                $t['pos'] = isset($d['pos']) ? (float) $d['pos'] : $posAtual;
+                break;
+            case 'continuar':
+                if (empty($t['tipo'])) {
+                    return response()->json(['erro' => 'Nada para continuar.'], 422);
+                }
+                $t['tocando'] = true;
+                $t['em'] = $agora;
+                break;
+            case 'posicao':
+                $t['pos'] = (float) ($d['pos'] ?? 0);
+                $t['em'] = $agora;
+                break;
+            case 'parar':
+                $t['tocando'] = false;
+                $t['tipo'] = null;
+                $t['pos'] = 0;
+                break;
+            case 'repetir':
+                $t['loop'] = !empty($d['loop']);
+                break;
+            case 'link':
+                $yt = $this->idYoutube((string) ($d['url'] ?? ''));
+                if (!$yt) {
+                    return response()->json(['erro' => 'Link do YouTube inválido.'], 422);
+                }
+                $links = array_values(array_filter((array) ($t['links'] ?? []), fn ($l) => $l['yt'] !== $yt));
+                $links[] = ['id' => substr(md5($yt . microtime()), 0, 10), 'yt' => $yt, 'titulo' => trim((string) ($d['titulo'] ?? '')) ?: 'Vídeo do YouTube'];
+                $t['links'] = array_slice($links, -40);
+                break;
+            case 'apagar_link':
+                $t['links'] = array_values(array_filter((array) ($t['links'] ?? []), fn ($l) => $l['id'] !== ($d['id'] ?? '')));
+                break;
+        }
+        $t['seq'] = (int) ($t['seq'] ?? 0) + 1;
+        $campanha->forceFill(['trilha' => $t])->save();
+
+        return response()->json(['ok' => true, 'trilha' => $this->trilhaPublica($campanha)]);
+    }
+
+    /** Id do vídeo de um link do YouTube (youtu.be, watch?v=, shorts, embed) ou null. */
+    private function idYoutube(string $url): ?string
+    {
+        $url = trim($url);
+        if (preg_match('~^[A-Za-z0-9_-]{11}$~', $url)) {
+            return $url;
+        }
+        if (preg_match('~^(?:https?://)?(?:www\.|m\.|music\.)?(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})~', $url, $m)) {
+            return $m[1];
+        }
+
+        return null;
     }
 
     // ------------------------------------------------------------------
@@ -551,7 +670,7 @@ class CampanhaController extends Controller
 
         $request->validate([
             'nome'    => 'required|string|max:60',
-            'arquivo' => 'required|file|mimes:mp3,wav,ogg,m4a,aac|max:8192', // 8 MB
+            'arquivo' => 'required|file|mimes:mp3,wav,ogg,m4a,aac|max:20480', // 20 MB (também serve de música na Trilha)
         ]);
 
         if (CampanhaSom::where('campanha_id', $campanha->id)->count() >= self::MAX_SONS) {
