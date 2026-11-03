@@ -18,6 +18,9 @@
         @if (session('limite'))
             <div class="pl-alerta pl-alerta--limite">{{ session('limite') }}</div>
         @endif
+        @if ($pixAdmin)
+            <a href="{{ route('admin.pix') }}" class="pl-alerta px-admin-link">Pagamentos Pix: {{ $pixParaConferir ? $pixParaConferir . ' para conferir' : 'nenhum para conferir' }} →</a>
+        @endif
 
         @auth
             <div class="pl-atual">
@@ -77,7 +80,14 @@
                     <li>Todos os livros de histórias em info-produto</li>
                 </ul>
                 @if ($plano !== 'vitalicio')
-                    @if (!$compraDisponivel)
+                    @if ($pixDisponivel)
+                        @auth
+                            <a href="{{ route('livro.pix') }}" class="pv-btn pv-btn--primary">Comprar com Pix por {{ $preco }}</a>
+                            <small class="pl-atual__uso">Pix direto, sem cadastro extra. Depois de pagar, clique em "Já paguei": conferimos e ativamos o plano na sua conta.</small>
+                        @else
+                            <a href="{{ route('login') }}" class="pv-btn pv-btn--primary">Entre na conta para comprar por {{ $preco }}</a>
+                        @endauth
+                    @elseif (!$compraDisponivel)
                         <span class="pv-btn pv-btn--outline is-breve">Compra em breve</span>
                     @else
                         @auth

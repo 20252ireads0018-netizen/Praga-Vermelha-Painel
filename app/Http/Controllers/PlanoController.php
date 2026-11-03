@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PixPedido;
 use App\Support\AsaasCliente;
+use App\Support\Pix;
 use App\Support\CompraLivro;
 use App\Support\Plano;
 use Illuminate\Http\Request;
@@ -28,6 +30,10 @@ class PlanoController extends Controller
             'diasPlano'  => (int) config('planos.dias_teste', 45),
             'preco'            => CompraLivro::precoTexto(),
             'compraDisponivel' => CompraLivro::disponivel(),
+            // Pix direto na chave do dono tem preferência sobre o Asaas
+            'pixDisponivel'    => Pix::disponivel(),
+            'pixAdmin'         => Pix::admin($user) && Pix::disponivel(),
+            'pixParaConferir'  => Pix::admin($user) && Pix::disponivel() ? PixPedido::where('status', 'informado')->count() : 0,
             'fisicos'    => (array) config('planos.livros_fisicos'),
             'compradoEm' => $user && Plano::comprouLivro($user) ? $user->livro_comprado_em : null,
         ]);

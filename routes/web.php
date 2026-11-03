@@ -18,6 +18,7 @@ use App\Http\Controllers\TimeSkipController;
 use App\Http\Controllers\MinijogoController;
 use App\Http\Controllers\PlanoController;
 use App\Http\Controllers\CompraLivroController;
+use App\Http\Controllers\PixController;
 
 Route::get('/', [PersonagemController::class, 'home']);
 
@@ -48,6 +49,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/planos/livro/dados', [CompraLivroController::class, 'dados'])->name('livro.compra.dados');
     Route::post('/planos/livro/dados', [CompraLivroController::class, 'salvarDados'])
         ->middleware('throttle:10,1')->name('livro.compra.dados.salvar');
+
+    // Compra do livro do sistema por Pix direto: QR Code, "Já paguei" e a aprovação do administrador
+    Route::get('/planos/livro/pix', [PixController::class, 'pagar'])->middleware('throttle:30,1')->name('livro.pix');
+    Route::post('/planos/livro/pix/paguei', [PixController::class, 'informar'])->middleware('throttle:10,1')->name('livro.pix.paguei');
+    Route::get('/admin/pix', [PixController::class, 'admin'])->name('admin.pix');
+    Route::post('/admin/pix/{id}', [PixController::class, 'decidir'])->whereNumber('id')->middleware('throttle:60,1')->name('admin.pix.decidir');
 
 
     // Fichas
@@ -247,6 +254,11 @@ Route::get('/livro/acesso', [LivroController::class, 'acesso'])->name('livro.ace
 Route::post('/livro/acesso', [LivroController::class, 'verificar'])
     ->middleware('throttle:10,1')
     ->name('livro.verificar');
+// "Sou mestre": abre o livro do mestre; quem joga em campanhas pede permissão aos mestres delas
+Route::post('/livro/mestre', [LivroController::class, 'souMestre'])
+    ->middleware(['auth', 'throttle:10,1'])->name('livro.mestre');
+Route::post('/livro/mestre/pedidos/{id}', [LivroController::class, 'decidirPedido'])
+    ->whereNumber('id')->middleware(['auth', 'throttle:30,1'])->name('livro.mestre.decidir');
 Route::get('/livro/players', [LivroController::class, 'players'])->name('livro.players');
 Route::get('/livro/talentos', [LivroController::class, 'talentos'])->name('livro.talentos');
 Route::get('/livro/pdf/{versao}', [LivroController::class, 'pdf'])

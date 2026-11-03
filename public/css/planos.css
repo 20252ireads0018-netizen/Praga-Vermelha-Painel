@@ -49,3 +49,38 @@
 
 /* Selo do plano no menu da conta */
 .pv-plano-selo { display: block; font-size: .75rem; color: var(--pv-gold); }
+
+/* Compra por Pix direto */
+.px-admin-link { display: block; color: var(--pv-gold); text-decoration: none; }
+.px-admin-link:hover { border-color: var(--pv-gold); }
+.px-pagar { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 28px; align-items: start; }
+.px-qr-caixa { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; text-align: center;
+    background: var(--pv-surface); border: 1px solid var(--pv-gold); border-radius: var(--pv-radius); }
+.px-qr { width: 100%; max-width: 260px; aspect-ratio: 1; background: #fff; border-radius: 10px; padding: 6px; color: #222; display: grid; place-items: center; }
+.px-qr svg { width: 100%; height: auto; display: block; }
+.px-valor { font-family: 'Cinzel', serif; font-size: 1.6rem; color: var(--pv-gold); }
+.px-codigo { font-family: ui-monospace, Consolas, monospace; letter-spacing: .05em; color: var(--pv-text); }
+.px-passos ol { margin: 0 0 18px; padding-left: 20px; line-height: 1.7; }
+.px-rotulo { display: block; margin: 0 0 6px; font-weight: 600; }
+.px-copia { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.px-copia textarea, .px-paguei input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--pv-border);
+    background: var(--pv-bg); color: var(--pv-text); font: inherit; }
+.px-copia textarea { font-family: ui-monospace, Consolas, monospace; font-size: .85rem; resize: none; word-break: break-all; }
+.px-copia .pv-btn { align-self: flex-start; }
+.px-paguei { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.px-paguei .pv-btn { align-self: flex-start; min-width: 180px; }
+.px-informado { margin-bottom: 14px; }
+.px-voltar { color: var(--pv-muted); font-size: .95rem; }
+.px-titulo { font-family: 'Cinzel', serif; font-size: 1.15rem; margin: 26px 0 12px; }
+.px-pedido { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; margin-bottom: 10px;
+    background: var(--pv-surface); border: 1px solid var(--pv-border); border-radius: var(--pv-radius); }
+.px-pedido--informado { border-color: var(--pv-gold); }
+.px-pedido--feito { opacity: .8; }
+.px-pedido__dados { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.px-pedido__acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.px-pedido__acoes form { margin: 0; }
+.px-selo { display: inline-block; font-size: .8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--pv-border); color: var(--pv-muted); }
+.px-selo--informado { border-color: var(--pv-gold); color: var(--pv-gold); }
+.px-selo--ok { border-color: #2f6b3a; color: #8fd19e; }
+.px-selo--nao { border-color: var(--pv-red-dark); color: #e88; }
+@media (max-width: 700px) { .px-pagar { grid-template-columns: 1fr; } .px-qr-caixa { max-width: 340px; margin: 0 auto; width: 100%; } }
