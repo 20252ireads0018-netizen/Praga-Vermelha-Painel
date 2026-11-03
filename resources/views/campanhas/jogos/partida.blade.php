@@ -11,6 +11,7 @@
         <a href="{{ route('campanhas.jogos.index', $campanha) }}" class="camp-voltar">← Jogos da campanha</a>
         <h1>@if ($partida->jogo === 'gladio')<x-icone n="espadas"/> Gladio @else ♛ Pela Dama @endif</h1>
         <p class="jg-status" id="jg-status">Carregando…</p>
+        <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia jg-avisos" id="jg-avisos" hidden title="Som e notificação do navegador quando for a sua vez (a notificação aparece com a aba fora de vista)"><x-icone n="som"/> <span>Avisos de vez</span></button>
         @if ($partida->jogo === 'gladio')
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-pausar" hidden title="Só o mestre vê: ninguém age e o relógio para enquanto estiver pausada"><x-icone n="pausa"/> Pausar</button>
             <button type="button" class="camp-btn camp-btn-pequeno jg-tela-cheia" id="jg-miniatura" hidden title="Sai da mesa e continua jogando numa janelinha, em qualquer página do site">⇲ Miniatura</button>
@@ -50,6 +51,7 @@
         'lobby'  => route('campanhas.jogos.index', $campanha),
     ],
 ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+<script src="{{ asset('js/jogos-aviso.js') }}?v={{ @filemtime(public_path('js/jogos-aviso.js')) }}"></script>
 <script src="{{ asset('js/jogos-comum.js') }}?v={{ @filemtime(public_path('js/jogos-comum.js')) }}"></script>
 <script src="{{ asset('js/jogos-partida.js') }}?v={{ @filemtime(public_path('js/jogos-partida.js')) }}"></script>
 @endsection

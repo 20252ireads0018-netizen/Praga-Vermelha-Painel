@@ -102,6 +102,49 @@
 
     function status(t) { $('#jg-status').innerHTML = t; }
 
+    /* ---------- aviso de vez: som e notificação do navegador quando a partida passa a esperar por mim ---------- */
+    const AV = window.JGAviso;
+    const dentroDaMini = window.self !== window.top; // na miniatura, quem avisa é a página de fora
+    const botaoAvisos = document.getElementById('jg-avisos');
+    function pintarAvisos() {
+        if (!botaoAvisos || !AV) return;
+        botaoAvisos.hidden = !D.lado || dentroDaMini || D.status !== 'andamento';
+        const on = AV.ligado();
+        botaoAvisos.classList.toggle('jg-avisos--off', !on);
+        botaoAvisos.querySelector('span').textContent = !on ? 'Avisos desligados' : (AV.permitido() ? 'Avisos ligados' : 'Avisos: só som');
+        botaoAvisos.title = !on ? 'Ligar o som e a notificação de quando for a sua vez'
+            : (AV.permitido() ? 'Som e notificação do navegador quando for a sua vez (a notificação aparece com a aba fora de vista). Clique para desligar'
+                : 'Toca um som quando for a sua vez. Clique para permitir também a notificação do navegador');
+    }
+    if (botaoAvisos && AV) botaoAvisos.addEventListener('click', async () => {
+        const on = await AV.alternar();
+        pintarAvisos();
+        if (on && AV.suporta && Notification.permission === 'denied') msg('O navegador bloqueou as notificações deste site: libere no cadeado ao lado do endereço. O som continua.', true);
+        else msg(on ? (AV.permitido() ? 'Avisos de vez ligados: som e notificação.' : 'Avisos de vez ligados: só o som.') : 'Avisos de vez desligados.');
+    });
+    function marcarTitulo(minha) {
+        document.title = (minha ? '(Sua vez) ' : '') + document.title.replace(/^\(Sua vez\) /, '');
+    }
+    function avisarVez(titulo, texto) {
+        if (!AV || dentroDaMini) return;
+        AV.vez({ titulo, texto, url: location.href.split('#')[0], tag: 'jg-vez-' + location.pathname });
+    }
+    // Gladio: a vez, a defesa ou uma escolha esperando por mim (fora da mão inicial e da pausa)
+    function esperaPorMim(e) {
+        return !!(e && D.status === 'andamento' && D.lado && !e.fim && !e.pausa && e.fase !== 'mulligan'
+            && e.lados[D.lado] && !e.lados[D.lado].fora && esperandoDe(e) === D.lado);
+    }
+    function avisoGladio(a, b) {
+        const minha = esperaPorMim(b);
+        marcarTitulo(minha);
+        if (!a || !minha || esperaPorMim(a)) return; // abrir a página não avisa; só quando a vez chega
+        let texto = `Turno ${b.turno || 1}: sua vez de jogar.`;
+        if (b.escolha && b.escolha.lado === D.lado) texto = 'Uma escolha está esperando por você.';
+        else if (b.fase === 'defesa') texto = `${nomeDe(b.vez)} está atacando você: escolha os bloqueadores.`;
+        if (!document.hidden && !dentroDaMini) faixa('<strong>Sua vez</strong>', 'pd-faixa--vez', 1300);
+        avisarVez('Gladio: sua vez!', texto);
+    }
+
     /* ---------- Como jogar: regras rápidas e palavras-chave (Gladio) ---------- */
     const guia = document.getElementById('jg-como-jogar');
     if (guia) guia.addEventListener('click', () => {
@@ -978,13 +1021,15 @@
         const agora = { vez: e.vez, xeque: !!e.xeque, fim: e.fim ? e.fim.motivo + ':' + e.fim.vencedor : null, lances: e.lances, status: D.status };
         const antes = pdAntes;
         pdAntes = agora;
-        document.title = (D.status === 'andamento' && D.lado && e.vez === D.lado && !e.fim ? '(Sua vez) ' : '') + document.title.replace(/^\(Sua vez\) /, '');
+        marcarTitulo(D.status === 'andamento' && D.lado && e.vez === D.lado && !e.fim);
+        pintarAvisos();
         if (!antes) return; // abrir a página não anuncia nada
         if (agora.fim && agora.fim !== antes.fim) return fimPelaDama(e);
         if (D.status === 'cancelada' && antes.status !== 'cancelada') return faixa('Partida cancelada pelo mestre', 'pd-faixa--neutra', 2600);
         if (agora.lances === antes.lances) return;
         if (agora.xeque) faixa((D.lado === e.vez ? 'Seu Rei está em ' : '') + '<strong>Xeque!</strong>', 'pd-faixa--xeque');
         else if (D.lado && e.vez === D.lado) faixa('<strong>Sua vez</strong>', 'pd-faixa--vez', 1300);
+        if (D.lado && e.vez === D.lado && antes.vez !== e.vez && D.status === 'andamento') avisarVez('Pela Dama: sua vez!', agora.xeque ? 'Seu Rei está em xeque.' : 'O adversário jogou.');
     }
     function fimPelaDama(e) {
         const v = e.fim.vencedor;
@@ -1385,6 +1430,8 @@
         dicaDoTurno();
         if (foto) animar(estadoAnterior, D.estado, foto);
         foraPorShots(estadoAnterior, D.estado);
+        avisoGladio(estadoAnterior, D.estado);
+        pintarAvisos();
         estadoAnterior = D.estado;
         desenharCombate();
         renderSocial();

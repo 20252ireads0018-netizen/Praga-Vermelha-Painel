@@ -72,11 +72,27 @@
         render();
     });
 
+    // som e notificação (jogos-aviso.js) quando uma partida passa a esperar por ele; a primeira consulta só anota
+    let minhasAntes = null;
+    function avisar(lista) {
+        const agora = new Set(lista.filter(p => p.minha).map(p => p.id));
+        if (minhasAntes && window.JGAviso) {
+            const nova = lista.find(p => p.minha && !minhasAntes.has(p.id));
+            if (nova) {
+                let caminho = nova.url;
+                try { caminho = new URL(nova.url, location.href).pathname; } catch (_) { /* fica a url */ }
+                window.JGAviso.vez({ titulo: 'Gladio: sua vez!', texto: `Turno ${nova.turno}${nova.campanha ? ' · ' + nova.campanha : ''}. Toque para abrir a mesa.`, url: nova.url, tag: 'jg-vez-' + caminho });
+            }
+        }
+        minhasAntes = agora;
+    }
+
     async function atualizar() {
         try {
             const r = await fetch(raiz.dataset.url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
             if (!r.ok) return;
             const lista = (await r.json()).partidas || [];
+            avisar(lista);
             const st = ler();
             // a partida que ele expandiu continua; senão, a que espera por ele (ou a mais recente)
             atual = lista.find(p => p.id === st.aberta) || lista[0] || null;
@@ -90,5 +106,7 @@
     }
     atualizar();
     setInterval(() => { if (!document.hidden) atualizar(); }, 6000);
+    // com a aba fora de vista, só segue consultando (mais devagar) se as notificações estiverem ligadas e permitidas
+    setInterval(() => { if (document.hidden && window.JGAviso && window.JGAviso.ligado() && window.JGAviso.permitido()) atualizar(); }, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizar(); });
 })();

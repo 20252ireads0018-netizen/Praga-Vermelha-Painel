@@ -1032,3 +1032,7 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
     .gl-ko-shots { animation: gl-ko-some 3.2s steps(1) both; }
 }
 @keyframes gl-ko-some { 100% { opacity: 0; } }
+
+/* aviso de vez (som e notificação): desligado fica apagado */
+.jg-avisos.jg-avisos--off { opacity: .55; }
+.jg-avisos.jg-avisos--off svg { filter: grayscale(1); }

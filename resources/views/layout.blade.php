@@ -234,6 +234,7 @@
             {{-- miniatura do Gladio: a partida em andamento acompanha o jogador pelo site --}}
             <div id="jg-mini" data-url="{{ route('campanhas.jogos.ativas') }}" hidden></div>
             <link rel="stylesheet" href="{{ asset('css/jogos-mini.css') }}?v={{ @filemtime(public_path('css/jogos-mini.css')) }}">
+            <script src="{{ asset('js/jogos-aviso.js') }}?v={{ @filemtime(public_path('js/jogos-aviso.js')) }}" defer></script>
             <script src="{{ asset('js/jogos-mini.js') }}?v={{ @filemtime(public_path('js/jogos-mini.js')) }}" defer></script>
         @endif
     @endauth
