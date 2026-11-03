@@ -870,7 +870,7 @@
                 if (legais[k]) cls.push('pd-movivel');
                 h += `<button type="button" class="${cls.join(' ')}" data-k="${k}"` +
                     (p ? ` title="${esc(t.nome)} ${p.c === 'b' ? 'branca' : 'preta'}"` : '') + '>' +
-                    (p ? `<span class="pd-peca pd-${p.c}${CUSTOM.test(p.t) ? ' pd-custom' : ''}">${esc(t.simbolo)}</span>` : '') +
+                    (p ? window.JG.peca(t, p.c, CUSTOM.test(p.t)) : '') +
                     (j === 0 ? `<small class="pd-rot pd-rot-y">${y + 1}</small>` : '') +
                     (i === 7 ? `<small class="pd-rot pd-rot-x">${'abcdefgh'[x]}</small>` : '') +
                     '</button>';
@@ -886,7 +886,7 @@
                 `<div class="pd-jog${e.vez === 'p' && !e.fim ? ' pd-vez' : ''}"><span class="pd-peca pd-p">♚</span> ${nomeJ('j2')}</div></div>` +
                 `<p class="camp-dica">Lances: ${e.lances}</p>` +
                 (D.lado && D.status === 'andamento' ? `<button type="button" class="camp-btn camp-btn-pequeno" data-pd="desistir">Desistir</button>` : '') +
-                (custom.length ? `<h3>Peças customizadas</h3>` + custom.map(id => `<div class="pd-legenda"><span class="pd-peca pd-b pd-custom">${esc(e.tipos[id].simbolo)}</span>` +
+                (custom.length ? `<h3>Peças customizadas</h3>` + custom.map(id => `<div class="pd-legenda">${window.JG.peca(e.tipos[id], 'b', true)}` +
                     `<div><strong>${esc(e.tipos[id].nome)}</strong>${window.JG.diagrama(e.tipos[id], 8)}</div></div>`).join('') : '') +
             `</aside>`;
         box.innerHTML = `<div class="pd-area">${h}${lateral}</div>`;

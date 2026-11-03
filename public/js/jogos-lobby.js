@@ -809,7 +809,7 @@
     const tipos = () => {
         const t = {};
         Object.keys(D.padrao).forEach(k => { t[k] = D.padrao[k]; });
-        pecas.forEach(p => { t[p.tipo] = { nome: p.nome, simbolo: p.simbolo, regras: p.regras }; });
+        pecas.forEach(p => { t[p.tipo] = { nome: p.nome, simbolo: p.simbolo, regras: p.regras, foto: p.foto }; });
         return t;
     };
     function exercito() {
@@ -826,7 +826,7 @@
         const cols = 'abcdefgh';
         $('#jg-exercito').innerHTML = [0, 8].map(ini => `<div class="jg-ex-linha"><span class="jg-ex-rot">${ini ? 'Fila 2' : 'Fila 1'}</span>` +
             ex.slice(ini, ini + 8).map((id, i) => `<label class="jg-ex-casa"><small>${cols[i]}${ini ? 2 : 1}</small>` +
-                `<span class="jg-ex-simb">${esc(t[id].simbolo)}</span><select data-casa="${ini + i}">${opcoes(id)}</select></label>`).join('') +
+                `<span class="jg-ex-simb">${t[id].foto ? window.JG.peca(t[id], 'b', true) : esc(t[id].simbolo)}</span><select data-casa="${ini + i}">${opcoes(id)}</select></label>`).join('') +
             '</div>').reverse().join('');
         const reis = ex.filter(id => id === 'rei').length;
         $('#jg-exercito-aviso').textContent = reis === 1 ? '' : 'Atenção: o exército precisa de exatamente um Rei.';
@@ -844,12 +844,14 @@
     /* ---------- peças (Pela Dama) ---------- */
     function renderPecas() {
         $('#jg-cont-pecas').textContent = pecas.length;
-        $('#jg-pecas').innerHTML = pecas.length ? pecas.map(p =>
-            `<div class="jg-peca-item"><span class="jg-peca-simb">${esc(p.simbolo)}</span>` +
-            `<div class="jg-peca-info"><strong>${esc(p.nome)}</strong>${window.JG.diagrama(p, 9)}</div>` +
-            `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-peca="${p.id}">Editar</button>` +
-            `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-peca="${p.id}">Excluir</button></div></div>`).join('')
-            : '<p class="camp-vazio">Você ainda não criou peças. As peças padrão do xadrez estão sempre disponíveis.</p>';
+        // as minhas primeiro; as do mestre (que valem para todos da campanha) só o mestre edita
+        const lista = pecas.slice().sort((a, b) => (b.minha - a.minha) || a.nome.localeCompare(b.nome, 'pt-BR'));
+        $('#jg-pecas').innerHTML = lista.length ? lista.map(p =>
+            `<div class="jg-peca-item"><span class="jg-peca-simb">${p.foto ? window.JG.peca(p, 'b', true) : esc(p.simbolo)}</span>` +
+            `<div class="jg-peca-info"><strong>${esc(p.nome)}</strong>${p.mestre ? (p.minha ? ' <small class="camp-dica">vale para todos</small>' : ' <small class="camp-dica">do mestre</small>') : ''}${window.JG.diagrama(p, 9)}</div>` +
+            (p.minha ? `<div class="jg-carta-acoes"><button type="button" class="camp-btn camp-btn-pequeno" data-editar-peca="${p.id}">Editar</button>` +
+            `<button type="button" class="camp-btn camp-btn-pequeno" data-excluir-peca="${p.id}">Excluir</button></div>` : '') + '</div>').join('')
+            : '<p class="camp-vazio">Nenhuma peça criada ainda. As peças padrão do xadrez estão sempre disponíveis.</p>';
         renderExercito();
     }
 
@@ -932,8 +934,39 @@
         $('#jg-peca-resumo').textContent = resumoPeca(regras);
         $$('[data-pincel]', fp).forEach(b => b.classList.toggle('ativo', b.dataset.pincel === pincel));
     }
+    /* foto da peça: a tela recorta o centro e reduz para 256 px em JPEG antes de enviar */
+    let fotoNova = null, fotoTirar = false, fotoAtual = null;
+    function mostrarFoto() {
+        const url = fotoNova ? URL.createObjectURL(fotoNova) : (fotoTirar ? null : fotoAtual);
+        $('#jg-peca-foto-previa').innerHTML = url ? `<span class="pd-peca pd-b pd-custom pd-foto"><img src="${esc(url)}" alt=""></span>` : '<span class="camp-dica">Sem foto: aparece o símbolo.</span>';
+        $('#jg-peca-foto-tirar').hidden = !url;
+    }
+    function reduzir(arquivo) {
+        return new Promise((ok, falha) => {
+            const img = new Image();
+            img.onload = () => {
+                const lado = Math.min(img.width, img.height), t = Math.min(256, lado);
+                const cv = document.createElement('canvas'); cv.width = cv.height = t;
+                cv.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, t, t);
+                cv.toBlob(b => (b ? ok(new File([b], 'peca.jpg', { type: 'image/jpeg' })) : falha(new Error('Não foi possível ler a imagem.'))), 'image/jpeg', 0.86);
+                URL.revokeObjectURL(img.src);
+            };
+            img.onerror = () => falha(new Error('Esse arquivo não é uma imagem.'));
+            img.src = URL.createObjectURL(arquivo);
+        });
+    }
+    $('#jg-peca-foto').addEventListener('change', async e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        try { fotoNova = await reduzir(f); fotoTirar = false; mostrarFoto(); } catch (err) { falhou(err); }
+        e.target.value = '';
+    });
+    $('#jg-peca-foto-tirar').addEventListener('click', () => { fotoNova = null; fotoTirar = true; mostrarFoto(); });
+
     function abrirPeca(p) {
         fp.reset();
+        fotoNova = null; fotoTirar = false; fotoAtual = p ? p.foto : null;
+        mostrarFoto();
         saltos = {}; raios = {};
         pincel = 'ambos';
         fp.registro.value = p ? p.id : '';
@@ -1013,7 +1046,8 @@
         if (!fp.simbolo.value.trim()) return msg('Escolha um símbolo para a peça.', true);
         if (!regras.length) return msg('Marque pelo menos um movimento para a peça (ou comece de um modelo).', true);
         try {
-            const r = await post(D.url.pecas, { id: fp.registro.value || null, nome: fp.nome.value.trim(), simbolo: fp.simbolo.value.trim(), regras: JSON.stringify(regras) }, D.csrf);
+            const r = await post(D.url.pecas, { id: fp.registro.value || null, nome: fp.nome.value.trim(), simbolo: fp.simbolo.value.trim(), regras: JSON.stringify(regras),
+                foto: fotoNova, sem_foto: fotoTirar && !fotoNova ? 1 : null }, D.csrf);
             const i = pecas.findIndex(p => p.id === r.peca.id);
             if (i >= 0) pecas[i] = r.peca; else pecas.push(r.peca);
             fp.hidden = true;

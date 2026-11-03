@@ -196,5 +196,12 @@ window.JG = (function () {
         setTimeout(() => { if (balao === este) { este.remove(); balao = null; } }, 4000);
     }, true);
 
-    return { esc, post, carta, textoEfeito, diagrama, PALAVRA, TIPOS };
+    /** Peça de Pela Dama para desenhar: a foto (num medalhão da cor do lado) ou o símbolo. */
+    function peca(tipo, cor, custom) {
+        tipo = tipo || { simbolo: '?' };
+        if (tipo.foto) return `<span class="pd-peca pd-${cor} pd-custom pd-foto"><img src="${esc(tipo.foto)}" alt="" loading="lazy" draggable="false"></span>`;
+        return `<span class="pd-peca pd-${cor}${custom ? ' pd-custom' : ''}">${esc(tipo.simbolo)}</span>`;
+    }
+
+    return { esc, post, carta, textoEfeito, diagrama, peca, PALAVRA, TIPOS };
 })();

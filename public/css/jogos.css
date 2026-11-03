@@ -911,3 +911,13 @@ button.gl-energia small { opacity: .7; font-size: .75em; }
 .gl-foco .gl-social .gl-bolao { display: none; }
 .gl-foco .gl-chat-lista { max-height: 110px; }
 @media (prefers-reduced-motion: reduce) { .gl-balao { animation: none; } }
+
+/* Pela Dama: peça com foto (medalhão redondo, aro na cor do lado) */
+.pd-foto { padding: 0; overflow: hidden; }
+.pd-foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; pointer-events: none; }
+.pd-foto.pd-p img { filter: grayscale(.25) brightness(.85); }
+.jg-peca-simb .pd-foto, .jg-ex-simb .pd-foto { font-size: 1.4rem; }
+.jg-peca-foto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+#jg-peca-foto-previa .pd-foto { font-size: 1.6rem; }
+.pd-legenda .pd-foto, .jg-peca-simb .pd-foto, .jg-ex-simb .pd-foto, #jg-peca-foto-previa .pd-foto { width: 1.8em; height: 1.8em; flex: none; }
+.pd-legenda .pd-foto { font-size: 1.2rem; }

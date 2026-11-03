@@ -275,7 +275,7 @@
             <div class="jg-col">
                 <section class="camp-card">
                     <div class="camp-card-cab">
-                        <h2>Minhas peças</h2>
+                        <h2>Peças</h2>
                         <span class="camp-contagem" id="jg-cont-pecas">0</span>
                     </div>
                     <button type="button" class="camp-btn camp-btn-primario" id="jg-nova-peca">+ Criar peça</button>
@@ -286,6 +286,12 @@
                             <label>Símbolo<input type="text" name="simbolo" maxlength="8" required placeholder="A, ✦ ou 🏹"></label>
                         </div>
                         <div class="jg-simbolos" id="jg-simbolos" aria-label="Símbolos sugeridos"></div>
+                        <div class="jg-peca-foto">
+                            <div id="jg-peca-foto-previa"></div>
+                            <label class="camp-btn camp-btn-pequeno">Foto do personagem<input type="file" id="jg-peca-foto" accept="image/jpeg,image/png,image/webp" hidden></label>
+                            <button type="button" class="camp-btn camp-btn-pequeno" id="jg-peca-foto-tirar" hidden>Tirar foto</button>
+                            <span class="camp-dica">{{ $souMestre ? 'Opcional: a foto aparece no tabuleiro no lugar do símbolo. Suas peças valem para todos os jogadores.' : 'Opcional: a foto aparece no tabuleiro no lugar do símbolo.' }}</span>
+                        </div>
                         <div class="jg-peca-passo"><strong>1. Comece de um modelo</strong> <span class="camp-dica">(opcional: depois é só ajustar)</span>
                             <div class="jg-modelos" id="jg-modelos"></div></div>
                         <div class="jg-peca-passo"><strong>2. Escolha o pincel</strong> e pinte as casas (dá para arrastar). Pintar de novo com o mesmo pincel apaga.
@@ -332,7 +338,7 @@
     'csrf'      => csrf_token(),
     'membros'   => $membros,
     'cartas'    => $cartas->map(fn ($c) => ['id' => $c->id] + $c->paraJogo() + ['imagem' => $c->imagem])->values(),
-    'pecas'     => $pecas->map(fn ($p) => ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: []])->values(),
+    'pecas'     => $pecas,
     'imagens'   => $imagens,
     'decks'     => $decks,
     'playmat'   => $playmat ?? null,

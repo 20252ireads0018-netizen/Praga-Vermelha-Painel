@@ -55,7 +55,7 @@ class CampanhaJogoController extends Controller
             'podeCartas' => $this->donoDasCartas(), // só a conta dona do Gladio cria e edita cartas
             'membros'   => $this->membros($campanha),
             'cartas'    => GladioCarta::whereIn('campanha_id', $this->campanhasOficiais($campanha))->orderBy('tipo')->orderBy('custo')->orderBy('nome')->get(),
-            'pecas'     => PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->orderBy('nome')->get(),
+            'pecas'     => $this->pecasVisiveis($campanha, $uid)->map(fn ($p) => $this->pecaJson($p, $uid))->values(),
             'imagens'   => $this->listaImagens($campanha),
             'decks'     => $this->listaDecks($campanha, $uid),
             'playmat'   => $this->playmatUrl($campanha, $uid),
@@ -204,7 +204,7 @@ class CampanhaJogoController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /** Criador de peças (cada membro tem as suas). */
+    /** Criador de peças (cada membro tem as suas; as do mestre valem para todos). A foto vem já reduzida em JPEG. */
     public function salvarPeca(Request $request, Campanha $campanha): JsonResponse
     {
         $this->exigirMembro($campanha);
@@ -214,7 +214,9 @@ class CampanhaJogoController extends Controller
             'nome'    => ['required', 'string', 'max:40'],
             'simbolo' => ['required', 'string', 'max:24'],
             'regras'  => ['required', 'string', 'max:20000'],
-        ]);
+            'foto'    => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:3072'], // KB
+            'sem_foto'=> ['nullable', 'boolean'],
+        ], ['foto.mimes' => 'A foto precisa ser uma imagem (JPG, PNG ou WebP).', 'foto.max' => 'A foto pode ter no máximo 3 MB.']);
         $regras = PelaDama::limparRegras(json_decode($d['regras'], true));
         if (!$regras) {
             return response()->json(['ok' => false, 'erro' => 'Marque pelo menos um movimento para a peça.'], 422);
@@ -232,8 +234,13 @@ class CampanhaJogoController extends Controller
             ? PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->findOrFail((int) $d['id'])
             : new PelaDamaPeca(['campanha_id' => $campanha->id, 'user_id' => $uid]);
         $peca->fill(['nome' => trim($d['nome']), 'simbolo' => $simbolo, 'regras' => $regras])->save();
+        if ($request->hasFile('foto')) {
+            Storage::disk('local')->put($peca->fotoCaminho(), (string) file_get_contents($request->file('foto')->getRealPath()));
+        } elseif ($request->boolean('sem_foto')) {
+            Storage::disk('local')->delete($peca->fotoCaminho());
+        }
 
-        return response()->json(['ok' => true, 'peca' => $this->pecaJson($peca)]);
+        return response()->json(['ok' => true, 'peca' => $this->pecaJson($peca, $uid)]);
     }
 
     /* ---------- Decks de Gladio (cada membro monta os seus com as cartas da campanha) ---------- */
@@ -410,9 +417,25 @@ class CampanhaJogoController extends Controller
     {
         $this->exigirMembro($campanha);
         abort_unless((int) $peca->campanha_id === (int) $campanha->id && (int) $peca->user_id === (int) auth()->id(), 404);
+        Storage::disk('local')->delete($peca->fotoCaminho());
         $peca->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    /** Foto de uma peça (para quem é da campanha). */
+    public function verFotoPeca(Campanha $campanha, PelaDamaPeca $peca)
+    {
+        $this->exigirMembro($campanha);
+        abort_unless((int) $peca->campanha_id === (int) $campanha->id, 404);
+        $caminho = Storage::disk('local')->path($peca->fotoCaminho());
+        abort_unless(is_file($caminho), 404);
+
+        return response()->file($caminho, [
+            'Content-Type'           => mime_content_type($caminho) ?: 'image/jpeg',
+            'Cache-Control'          => 'private, max-age=604800',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /* ================================================================== */
@@ -1284,11 +1307,17 @@ class CampanhaJogoController extends Controller
         return $lista;
     }
 
-    /** Tipos de peça que um membro pode escalar: os padrão e os que ele criou. */
+    /** Peças que um membro vê e pode escalar: as que ele criou e as do mestre. */
+    private function pecasVisiveis(Campanha $campanha, int $uid)
+    {
+        return PelaDamaPeca::where('campanha_id', $campanha->id)->whereIn('user_id', array_unique([$uid, (int) $campanha->mestre_id]))->orderBy('nome')->get();
+    }
+
+    /** Tipos de peça que um membro pode escalar: os padrão, os que ele criou e os do mestre. */
     private function tiposDe(Campanha $campanha, int $uid): array
     {
         $tipos = PelaDama::tiposPadrao();
-        foreach (PelaDamaPeca::where('campanha_id', $campanha->id)->where('user_id', $uid)->get() as $peca) {
+        foreach ($this->pecasVisiveis($campanha, $uid) as $peca) {
             $tipos[$peca->tipoId()] = $peca->paraJogo();
         }
 
@@ -1360,9 +1389,10 @@ class CampanhaJogoController extends Controller
         return ['id' => $c->id] + $c->paraJogo() + ['imagem' => $c->imagem];
     }
 
-    private function pecaJson(PelaDamaPeca $p): array
+    private function pecaJson(PelaDamaPeca $p, int $uid): array
     {
-        return ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: []];
+        return ['id' => $p->id, 'tipo' => $p->tipoId(), 'nome' => $p->nome, 'simbolo' => $p->simbolo, 'regras' => $p->regras ?: [],
+            'foto' => $p->fotoUrl(), 'minha' => (int) $p->user_id === $uid, 'mestre' => (int) $p->user_id === (int) $p->campanha?->mestre_id];
     }
 
     private function dadosLobby(Campanha $campanha): array

@@ -550,6 +550,40 @@ class CampanhaJogosTest extends TestCase
         Storage::disk('local')->assertExists($resto->caminho);
     }
 
+    public function test_peca_do_mestre_com_foto_vale_para_todos(): void
+    {
+        Storage::fake('local');
+        $regras = json_encode([['dx' => 0, 'dy' => 1, 'd' => true, 'alc' => 3]]);
+        // o mestre cria uma peça com a foto do personagem
+        $r = $this->actingAs($this->mestre)->post($this->url('/pecas'), ['nome' => 'Vassago', 'simbolo' => 'V', 'regras' => $regras,
+            'foto' => UploadedFile::fake()->image('vassago.jpg', 256, 256)], ['Accept' => 'application/json'])->assertOk();
+        $id = $r->json('peca.id');
+        $this->assertStringContainsString("/jogos/pecas/$id/foto?v=", $r->json('peca.foto'));
+        $this->assertTrue($r->json('peca.mestre'));
+        Storage::disk('local')->assertExists("pela_dama/pecas/$id.jpg");
+        $this->post($this->url('/pecas'), ['nome' => 'X', 'simbolo' => 'X', 'regras' => $regras, 'foto' => UploadedFile::fake()->create('x.pdf', 10, 'application/pdf')],
+            ['Accept' => 'application/json'])->assertStatus(422);
+
+        // a Ana vê a peça do mestre, a foto, e pode escalá-la; não pode editar nem excluir
+        $this->actingAs($this->ana)->get($this->url())->assertOk()->assertSee('Vassago');
+        $this->get($this->url("/pecas/$id/foto"))->assertOk();
+        $this->actingAs($this->estranho)->get($this->url("/pecas/$id/foto"))->assertForbidden();
+        $this->actingAs($this->ana)->post($this->url('/pecas'), ['id' => $id, 'nome' => 'Meu', 'simbolo' => 'M', 'regras' => $regras], ['Accept' => 'application/json'])->assertNotFound();
+        $this->deleteJson($this->url("/pecas/$id"))->assertNotFound();
+        $ex = ['torre', 'c' . $id, 'bispo', 'dama', 'rei', 'bispo', 'cavalo', 'torre', 'peao', 'peao', 'peao', 'peao', 'peao', 'peao', 'peao', 'peao'];
+        $this->postJson($this->url('/partidas'), ['jogo' => 'pela_dama', 'exercito' => json_encode($ex)])->assertOk();
+        $this->actingAs($this->bia)->postJson($this->url('/partidas/' . JogoPartida::firstOrFail()->id . '/aceitar'), [])->assertOk();
+        $e = JogoPartida::firstOrFail()->estado;
+        $this->assertSame('c' . $id, $e['tab'][0][1]['t']);
+        $this->assertStringContainsString('/foto?v=', $e['tipos']['c' . $id]['foto']); // o tabuleiro mostra a foto
+
+        // o mestre tira a foto; ao excluir a peça, o arquivo some
+        $this->actingAs($this->mestre)->post($this->url('/pecas'), ['id' => $id, 'nome' => 'Vassago', 'simbolo' => 'V', 'regras' => $regras, 'sem_foto' => 1],
+            ['Accept' => 'application/json'])->assertOk()->assertJsonPath('peca.foto', null);
+        Storage::disk('local')->assertMissing("pela_dama/pecas/$id.jpg");
+        $this->deleteJson($this->url("/pecas/$id"))->assertOk();
+    }
+
     public function test_pela_dama_com_peca_customizada_e_mate(): void
     {
         // a Bia cria uma peça e a coloca no lugar do cavalo b8

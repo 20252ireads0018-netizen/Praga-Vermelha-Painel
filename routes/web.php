@@ -167,6 +167,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/jogos/pecas', [CampanhaJogoController::class, 'salvarPeca'])
             ->middleware('throttle:60,1')->name('jogos.pecas.salvar');
         Route::delete('/{campanha}/jogos/pecas/{peca}', [CampanhaJogoController::class, 'excluirPeca'])->name('jogos.pecas.excluir');
+        Route::get('/{campanha}/jogos/pecas/{peca}/foto', [CampanhaJogoController::class, 'verFotoPeca'])->name('jogos.pecas.foto');
         Route::post('/{campanha}/jogos/partidas', [CampanhaJogoController::class, 'criarPartida'])
             ->middleware('throttle:30,1')->name('jogos.partidas.criar');
         Route::get('/{campanha}/jogos/partidas/{partida}', [CampanhaJogoController::class, 'partida'])->name('jogos.partida');
