@@ -86,6 +86,12 @@
                         <a href="/" class="pv-nav__link">Início</a>
                     </li>
 
+                    @if (Route::has('videos.index'))
+                    <li class="pv-nav__item">
+                        <a href="{{ route('videos.index') }}" class="pv-nav__link">Vídeos explicativos</a>
+                    </li>
+                    @endif
+
                     <li class="pv-nav__item pv-has-dropdown">
                         <a href="#" class="pv-nav__link">Praga Vermelha RPG <span class="pv-caret">▾</span></a>
                         <div class="pv-dropdown">

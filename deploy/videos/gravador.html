@@ -1,0 +1,8 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Gravador de vídeos</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#111;color:#eee;font-family:Inter,sans-serif}canvas{height:92vh;display:block;margin:0 auto;border:1px solid #333}#ctl{position:fixed;top:6px;left:6px;z-index:2;display:flex;gap:6px;flex-wrap:wrap}#ctl button{padding:6px 10px}#st{position:fixed;bottom:4px;left:6px;font-size:12px}</style>
+</head><body>
+<div id="ctl"><button id="ver">Ver</button><button id="gravar">Gravar</button><span id="st"></span></div>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script src="/vid/mp4-muxer.js"></script><script src="/vid/cenas.js"></script>
+</body></html>

@@ -1,0 +1,31 @@
+{
+  "eletrico": [
+    { "cena": "abertura", "fala": "Seu corpo atrai eletricidade. Uma tomada pode te matar. Mas e se você usasse isso como arma?" },
+    { "cena": "tecnica", "fala": "Essa é a técnica Imbuir Maldição, da maldição Atração Elétrica." },
+    { "cena": "custo", "fala": "Ela custa quinze de aura, pede nível de maldição um e uma fonte elétrica por perto." },
+    { "cena": "processo", "fala": "Gaste uma ação completa, toque a fonte e teste Maldição, dificuldade trinta." },
+    { "cena": "caminho", "fala": "A regra de ouro: a energia nunca passa pelos seus órgãos. Ela entra pelo pé e sai pela mão do lado oposto, ou o contrário." },
+    { "cena": "erro", "fala": "Um movimento errado, e a corrente atravessa o seu coração." },
+    { "cena": "protecao", "fala": "Fio de metal, luvas e equipamento isolante ajudam a conduzir com segurança." },
+    { "cena": "efeito", "fala": "Se passar no teste, o alvo que você tocar sofre dano conforme a sua ameaça e a tensão da fonte." },
+    { "cena": "aprim1", "fala": "Com mais sete de aura, o disparo causa mais cinco de dano. E dá para acumular." },
+    { "cena": "aprim2", "fala": "Com dez de aura, a descarga sai em linha, com alcance igual ao triplo do seu modificador de alma." },
+    { "cena": "aprim3", "fala": "E com sessenta de aura, você toca o cérebro do alvo e expulsa a eletricidade dele. Ele apaga, fica hexo fraco e sofre dano cerebral." },
+    { "cena": "fim", "fala": "Atração Elétrica. Praga Vermelha." }
+  ],
+  "fisiomancia": [
+    { "cena": "abertura", "fala": "E se você pudesse queimar uma âncora, e virar uma âncora?" },
+    { "cena": "fisio", "fala": "Isso é Fisiomancia. Ela manipula as propriedades naturais das coisas. O metal é duro. O fogo é quente. O ar é leve." },
+    { "cena": "custo", "fala": "A técnica Imbuir Propriedades custa oito de aura e pede nível três de Fisiomancia." },
+    { "cena": "processo", "fala": "Use uma ação principal e teste Maldição, dificuldade trinta. Se o alvo não quiser, é contra a resiliência dele." },
+    { "cena": "fogo", "fala": "Você toca quem entrega e quem recebe. Um fogo colorido queima o material e passa todas as propriedades dele para o alvo, até o fim da cena." },
+    { "cena": "metal", "fala": "Metal. Duro cinco: mais quatro de armadura natural por ameaça. Mas cuidado: o dano elétrico dobra, e o peso atrapalha a destreza." },
+    { "cena": "borracha", "fala": "Borracha. Imunidade a dano elétrico, e vantagem de doze por ameaça em destreza." },
+    { "cena": "ar", "fala": "Ar. Invisível dez: vantagem de dez por ameaça em furtividade. E Propulsão arremessa o alvo para longe." },
+    { "cena": "ancora", "fala": "Âncora. Pesado vinte e cinco, Duro quinze. Para se mover, o alvo precisa passar em resiliência." },
+    { "cena": "correntes", "fala": "Correntes. Restritiva dez: a cada ação, o alvo testa resiliência. Se falhar, perde a ação." },
+    { "cena": "regras", "fala": "Objetos são consumidos e somem. Seres vivos queimam, mas não somem. E cada alvo só aguenta um Imbuir de Propriedades por vez." },
+    { "cena": "aprim", "fala": "Aprimore: mais alcance, mais alvos, ou entregue as propriedades na forma inversa." },
+    { "cena": "fim", "fala": "Fisiomancia. Praga Vermelha." }
+  ]
+}

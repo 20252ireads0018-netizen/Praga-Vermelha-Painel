@@ -26,3 +26,9 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /.claude/settings.local.json
+
+# vídeos explicativos: arquivos grandes ficam fora do git (gerados por deploy/videos, enviados por FTP)
+/public/videos/*.mp4
+/deploy/videos/out/
+/deploy/videos/*.wav
+/deploy/videos/linha.json

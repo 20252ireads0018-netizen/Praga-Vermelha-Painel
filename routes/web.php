@@ -260,6 +260,9 @@ Route::get('/historias/{slug}/pdf', [HistoriaController::class, 'pdf'])->name('h
 // Planos (teste, grátis, vitalício com o livro do sistema) e links dos livros físicos
 Route::get('/planos', [PlanoController::class, 'index'])->name('planos.index');
 
+// Vídeos explicativos (público, sem login): config/videos.php, arquivos em public/videos (o endereço não pode ser /videos: é a pasta)
+Route::get('/videos-explicativos', [App\Http\Controllers\VideoController::class, 'index'])->name('videos.index');
+
 // Webhook do Asaas (sem login e sem CSRF; a autenticação é o token no header "asaas-access-token")
 Route::post('/webhooks/asaas', [CompraLivroController::class, 'webhook'])
     ->middleware('throttle:120,1')->name('webhooks.asaas');
