@@ -163,7 +163,7 @@ class GladioBot
         if ($alvo === null) {
             return null;
         }
-        $prontas = array_values(array_filter($e['lados'][$lado]['mesa'], fn ($m) => $m['pode'] && empty($m['virada']) && $m['atk'] > 0));
+        $prontas = array_values(array_filter($e['lados'][$lado]['mesa'], fn ($m) => Gladio::pronta($e, $m) && empty($m['virada']) && $m['atk'] > 0));
         $validas = [];
         foreach ($prontas as $m) { // cada uma sozinha diz se pode atacar (Defensor, presa, Redoma…)
             if (self::tentar(fn () => Gladio::atacar($e, $lado, [(int) $m['i']], $alvo)) !== null) {

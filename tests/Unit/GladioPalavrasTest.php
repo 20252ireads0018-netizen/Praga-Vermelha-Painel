@@ -69,6 +69,31 @@ class GladioPalavrasTest extends TestCase
         $this->assertTrue(end($e['lados']['a']['mesa'])['pode'], 'com Pressa ataca no turno em que entra');
     }
 
+    /** Pressa vinda de fora da carta (equipamento, aura, efeito) também tira o cansaço de quem acabou de entrar. */
+    public function test_pressa_de_qualquer_origem_tira_o_cansaco_de_entrada(): void
+    {
+        $e = $this->novo();
+        [$e, $veloz] = $this->por($e, 'a', 2, 2, ['impeto']);
+        [$e, $lenta] = $this->por($e, 'a', 2, 2);
+        foreach ($e['lados']['a']['mesa'] as $k => $m) {
+            $e['lados']['a']['mesa'][$k]['pode'] = false; // as duas acabaram de entrar
+        }
+        $this->assertTrue($this->lenda(Gladio::visao($e, 'a'), 'a', $veloz)['pode'], 'a tela mostra a de Pressa pronta');
+        $this->assertFalse($this->lenda(Gladio::visao($e, 'a'), 'a', $lenta)['pode'], 'a sem Pressa segue cansada');
+        try {
+            Gladio::atacar($e, 'a', [$lenta], 'b');
+            $this->fail('sem Pressa não ataca no turno em que entrou');
+        } catch (\InvalidArgumentException $x) {
+            $this->assertStringContainsString('ainda não pode atacar', $x->getMessage());
+        }
+        $depois = Gladio::atacar($e, 'a', [$veloz], 'b');
+        $this->assertSame('defesa', $depois['fase']);
+        $this->assertFalse(Gladio::pronta($depois, $this->lenda($depois, 'a', $veloz)), 'depois da onda de ataque não ataca de novo');
+
+        $e['lados']['a']['mesa'][0]['virada'] = true;
+        $this->assertFalse(Gladio::pronta($e, $e['lados']['a']['mesa'][0]), 'virada não ataca, nem com Pressa');
+    }
+
     public function test_imbloqueavel_sombra_e_furtividade(): void
     {
         $e = $this->novo();

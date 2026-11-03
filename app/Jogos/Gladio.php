@@ -949,7 +949,7 @@ class Gladio
             if (!empty($m['preso']) || self::fl($m, 'silhueta') || self::fl($m, 'preso_eq')) {
                 throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' não pode atacar.');
             }
-            if (!$m['pode']) {
+            if (!self::pronta($e, $m)) {
                 throw new \InvalidArgumentException(self::nomeLenda($e, $m) . ' ainda não pode atacar.');
             }
             if ($m['atk'] <= 0) {
@@ -987,10 +987,20 @@ class Gladio
         return self::seguir($e);
     }
 
+    /**
+     * Pronta para atacar: ficou pronta no começo do turno, ou tem Pressa (da carta, de equipamento, aura ou efeito,
+     * venha quando vier) e não está virada nem já atacou: Pressa tira o cansaço de quem acabou de entrar ou de mudar de
+     * campo. Depois da onda de ataque do turno ($e['atacou']) ninguém mais ataca, com ou sem Pressa.
+     */
+    public static function pronta(array $e, array $m): bool
+    {
+        return !empty($m['pode']) || (self::tem($m, 'impeto') && empty($m['virada']) && empty($m['preso']) && empty($e['atacou']));
+    }
+
     /** Lendas de $lado que devem atacar neste turno e ainda podem (Gabriel). */
     private static function obrigadas(array $e, string $lado): array
     {
-        return array_values(array_filter($e['lados'][$lado]['mesa'], fn ($m) => self::fl($m, 'deve_atacar') && $m['pode'] && $m['atk'] > 0
+        return array_values(array_filter($e['lados'][$lado]['mesa'], fn ($m) => self::fl($m, 'deve_atacar') && self::pronta($e, $m) && $m['atk'] > 0
             && empty($m['preso']) && !self::fl($m, 'silhueta') && !self::tem($m, 'defensor')));
     }
 
@@ -3082,6 +3092,11 @@ class Gladio
             ];
         }
         foreach ($e['ordem'] as $lado) {
+            if ($lado === ($e['vez'] ?? null)) { // a tela marca como pronta (e não "cansada") quem tem Pressa
+                foreach ($e['lados'][$lado]['mesa'] as $k => $m) {
+                    $e['lados'][$lado]['mesa'][$k]['pode'] = self::pronta($e, $m);
+                }
+            }
             if ($lado !== $eu) {
                 $e['lados'][$lado]['baralho'] = count($e['lados'][$lado]['baralho']);
                 $mostra = in_array($lado, $verMao, true);

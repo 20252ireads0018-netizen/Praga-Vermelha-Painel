@@ -1217,6 +1217,23 @@
             seta(de, para, 'gl-seta--efeito', 1700);
         }, 250 + k * 200));
     }
+    // alguém saiu da partida no 7º shot: os copinhos aparecem em fila e tombam um a um, a faixa diz quem caiu e o assento cambaleia
+    function foraPorShots(a, b) {
+        if (!a || !b || a === b || !a.lados || !b.lados) return;
+        for (const lado of b.ordem || []) {
+            const A = a.lados[lado], B = b.lados[lado];
+            if (!A || !B || A.fora || !B.fora || (B.shots || 0) < SHOTS) continue;
+            const eu = lado === D.lado;
+            const f = document.createElement('div');
+            f.className = 'gl-ko-shots' + (eu ? ' gl-ko-shots--eu' : '');
+            f.setAttribute('role', 'status');
+            f.innerHTML = '<div class="gl-ko-copos">' + Array.from({ length: SHOTS }, (_, k) => `<i style="--k:${k}"></i>`).join('') + '</div>' +
+                `<b>${eu ? 'Você tomou' : nomeDe(lado) + ' tomou'} o ${SHOTS}º shot</b><span>e está fora da partida</span>`;
+            camada().appendChild(f);
+            setTimeout(() => f.remove(), 3200);
+            marcar(box.querySelector(`[data-heroi="${lado}"]`), 'gl-anim-tonto');
+        }
+    }
     /* ---------- chat da partida (caixa + balões sobre o assento) e bolão de quem assiste ---------- */
     let chatVisto = null; // última mensagem já mostrada como balão
     function renderSocial() {
@@ -1367,6 +1384,7 @@
         renderGladio();
         dicaDoTurno();
         if (foto) animar(estadoAnterior, D.estado, foto);
+        foraPorShots(estadoAnterior, D.estado);
         estadoAnterior = D.estado;
         desenharCombate();
         renderSocial();
