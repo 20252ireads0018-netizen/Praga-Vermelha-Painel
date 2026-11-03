@@ -74,6 +74,7 @@
             const r = await fetch(estadoUrl, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
             if (!r.ok) return;
             const e = await r.json();
+            window.dispatchEvent(new CustomEvent('campanha:estado', { detail: e })); // outras partes da página (cenas) usam o mesmo polling
 
             // sessão iniciada/encerrada: recarrega para atualizar botões e painéis
             if (e.sessao_ativa !== sessaoInicial) {

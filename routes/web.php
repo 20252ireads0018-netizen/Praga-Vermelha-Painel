@@ -187,6 +187,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{campanha}/sessao/encerrar', [CampanhaController::class, 'encerrarSessao'])->name('sessao.encerrar');
         Route::get('/{campanha}/estado', [CampanhaController::class, 'estado'])->name('estado'); // polling dos jogadores
         Route::post('/{campanha}/trilha', [CampanhaController::class, 'trilha'])->middleware('throttle:120,1')->name('trilha'); // música/vídeo para todos
+        Route::post('/{campanha}/cena', [CampanhaController::class, 'cena'])->middleware('throttle:30,1')->name('cena'); // animação de tela cheia para os jogadores
 
         // Pote de dados (rolagens públicas da campanha)
         Route::get('/{campanha}/rolagens', [CampanhaRolagemController::class, 'index'])->name('rolagens.index'); // polling: novas rolagens

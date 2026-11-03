@@ -483,6 +483,36 @@
                 @else
                     <p class="camp-vazio">Os efeitos sonoros ficam disponíveis enquanto a sessão estiver ativa.</p>
                 @endif
+
+                @if ($souMestre && Route::has('campanhas.cena'))
+                    {{-- Cenas: animação de tela cheia para quem está na página da campanha --}}
+                    <form class="cena-form" id="cena-form" data-url="{{ route('campanhas.cena', $campanha) }}">
+                        <h3 class="cena-form-titulo">Animação para os jogadores</h3>
+                        <div class="cena-tipos" role="radiogroup" aria-label="Animação">
+                            <label><input type="radio" name="tipo" value="descobriu" checked> <span>🔍 Você descobriu…</span></label>
+                            <label><input type="radio" name="tipo" value="matar"> <span>🗡 Como você quer matar ele?</span></label>
+                        </div>
+                        <label class="cena-campo">Texto <span class="camp-dica">(o que foi descoberto, ou quem vai morrer)</span>
+                            <input type="text" name="texto" maxlength="300" placeholder="Ex.: o selo de Vassago no porão">
+                        </label>
+                        <label class="cena-campo">Título <span class="camp-dica">(opcional, troca o título padrão)</span>
+                            <input type="text" name="titulo" maxlength="80" placeholder="Você descobriu…">
+                        </label>
+                        <label class="cena-campo">Para
+                            <select name="alvo">
+                                <option value="">Todos na página</option>
+                                @foreach ($campanha->participantes->where('status', 'ativo') as $p)
+                                    @if ($p->user)<option value="{{ $p->user->id }}">{{ $p->user->name }}</option>@endif
+                                @endforeach
+                            </select>
+                        </label>
+                        <div class="cena-acoes">
+                            <button type="submit" class="camp-btn camp-btn-primario">Mostrar</button>
+                            <button type="button" class="camp-btn camp-btn-pequeno" id="cena-previa">Prévia só para mim</button>
+                        </div>
+                        <span class="camp-dica" id="cena-status" aria-live="polite"></span>
+                    </form>
+                @endif
             </section>
 
             {{-- ===== Jogadores ===== --}}
@@ -785,6 +815,8 @@
 
 
 {{-- Carregados aqui mesmo, para não depender de o layout ter @yield('script') --}}
+<link rel="stylesheet" href="{{ asset('css/campanha-cenas.css') }}?v={{ @filemtime(public_path('css/campanha-cenas.css')) }}">
+<script src="{{ asset('js/campanha-cenas.js') }}?v={{ @filemtime(public_path('js/campanha-cenas.js')) }}"></script>
 <script src="{{ asset('js/campanha.js') }}?v={{ @filemtime(public_path('js/campanha.js')) }}"></script>
 <script src="{{ asset('js/campanha-sync.js') }}?v={{ @filemtime(public_path('js/campanha-sync.js')) }}"></script>
 @if (Route::has('campanhas.rolagens.index'))

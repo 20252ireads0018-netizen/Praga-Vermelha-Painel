@@ -1,0 +1,85 @@
+/* Cenas de tela cheia que o mestre dispara na campanha ("Você descobriu…", "Como você quer matar ele?") */
+
+.cena { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    cursor: pointer; color: #f5ecec; font-family: var(--fonte-titulo, 'Cinzel', Georgia, serif); text-align: center;
+    animation: cena-entra .45s ease-out both; }
+.cena.saindo { animation: cena-sai .6s ease-in both; }
+@keyframes cena-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cena-sai { to { opacity: 0; filter: blur(6px); } }
+
+.cena-fundo { position: absolute; inset: 0; }
+.cena-conteudo { position: relative; z-index: 2; padding: 24px 16px; max-width: min(900px, 100%); box-sizing: border-box; }
+.cena-titulo { margin: 0; font-size: clamp(1.7rem, 6.5vw, 4.4rem); line-height: 1.1; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+.cena-titulo .p { display: inline-block; white-space: nowrap; }
+.cena-titulo .l { display: inline-block; opacity: 0; }
+.cena-texto { margin: 22px auto 0; font-family: var(--fonte-corpo, Georgia, serif); font-size: clamp(1.05rem, 3.4vw, 1.8rem); line-height: 1.35;
+    max-width: 34ch; overflow-wrap: anywhere; opacity: 0; }
+.cena-dica { position: absolute; z-index: 2; bottom: 18px; left: 0; right: 0; font-family: var(--fonte-corpo, Georgia, serif); font-size: .82rem;
+    letter-spacing: .08em; opacity: 0; animation: cena-aparece 1s 2.4s forwards; }
+@keyframes cena-aparece { to { opacity: .55; } }
+
+/* ---------- Você descobriu… : sigilo que gira, letras que acendem, revelação desfocada ---------- */
+.cena-descobriu .cena-fundo { background: radial-gradient(circle at 50% 50%, rgb(52, 8, 10), rgb(6, 3, 4) 65%); }
+.cena-descobriu .cena-sigilo { position: absolute; z-index: 1; width: min(88vmin, 720px); aspect-ratio: 1; left: 50%; top: 50%;
+    transform: translate(-50%, -50%); opacity: 0; animation: cena-sigilo-entra 1.6s .1s ease-out forwards; }
+.cena-descobriu .cena-sigilo svg { width: 100%; height: 100%; overflow: visible; }
+.cena-descobriu .cena-sigilo .gira { transform-box: fill-box; transform-origin: center; animation: cena-gira 26s linear infinite; }
+.cena-descobriu .cena-sigilo .gira-volta { transform-box: fill-box; transform-origin: center; animation: cena-gira 40s linear infinite reverse; }
+.cena-descobriu .cena-sigilo circle, .cena-descobriu .cena-sigilo path, .cena-descobriu .cena-sigilo polygon { fill: none; stroke: #d63c3c; stroke-width: 1.2;
+    stroke-dasharray: 2200; stroke-dashoffset: 2200; animation: cena-traco 2.4s .2s ease-out forwards; filter: drop-shadow(0 0 6px rgba(214, 60, 60, .8)); }
+@keyframes cena-sigilo-entra { from { opacity: 0; transform: translate(-50%, -50%) scale(.6) rotate(-40deg); } to { opacity: .55; transform: translate(-50%, -50%) scale(1) rotate(0); } }
+@keyframes cena-gira { to { transform: rotate(360deg); } }
+@keyframes cena-traco { to { stroke-dashoffset: 0; } }
+.cena-descobriu .cena-titulo { color: #f2d7a0; text-shadow: 0 0 18px rgba(201, 164, 92, .7), 0 0 42px rgba(214, 60, 60, .5); }
+.cena-descobriu .cena-titulo .l { animation: cena-letra-acende .5s calc(.6s + var(--i) * 55ms) ease-out forwards; }
+@keyframes cena-letra-acende { 0% { opacity: 0; transform: translateY(14px); filter: blur(8px); } 60% { opacity: 1; color: #fff; } 100% { opacity: 1; transform: none; filter: none; } }
+.cena-descobriu .cena-texto { animation: cena-revela 1.4s calc(.9s + var(--n) * 55ms) ease-out forwards; }
+@keyframes cena-revela { from { opacity: 0; filter: blur(14px); letter-spacing: .4em; } to { opacity: 1; filter: none; letter-spacing: normal; } }
+.cena-descobriu .cena-texto::before, .cena-descobriu .cena-texto::after { content: '✦'; color: #c9a45c; margin: 0 .5em; font-size: .7em; vertical-align: middle; }
+.cena-brasas { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cena-brasas i { position: absolute; bottom: -10px; width: var(--t); height: var(--t); border-radius: 50%; left: var(--x);
+    background: radial-gradient(circle, #ffd28a, #d63c3c 60%, transparent 70%); opacity: 0;
+    animation: cena-brasa var(--d) var(--a) linear infinite; }
+@keyframes cena-brasa { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(var(--v), -105vh); } }
+
+/* ---------- Como você quer matar ele? : clarão, corte, tremor e pulso de sangue ---------- */
+.cena-matar .cena-fundo { background: radial-gradient(ellipse at 50% 50%, rgb(34, 0, 0), rgb(0, 0, 0) 70%); }
+.cena-matar .cena-fundo::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 22vmin 4vmin rgba(165, 30, 30, .85);
+    animation: cena-pulso 1.1s .9s ease-in-out infinite; }
+@keyframes cena-pulso { 0%, 100% { opacity: .55; } 18% { opacity: 1; } 34% { opacity: .7; } 48% { opacity: .95; } }
+.cena-matar .cena-clarao { position: absolute; inset: 0; z-index: 3; background: #fff; pointer-events: none; animation: cena-clarao .55s ease-out forwards; }
+@keyframes cena-clarao { 0% { opacity: 0; } 12% { opacity: .9; background: #ffdede; } 100% { opacity: 0; background: #a51e1e; } }
+.cena-matar .cena-corte { position: absolute; z-index: 2; left: -10%; top: 50%; width: 120%; height: 6px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, #fff 30%, #ff5b5b 50%, #fff 70%, transparent);
+    box-shadow: 0 0 22px 6px rgba(255, 70, 70, .8); transform: rotate(-14deg) scaleX(0); transform-origin: 0 50%;
+    animation: cena-corte .45s .15s cubic-bezier(.2, .9, .3, 1) forwards, cena-corte-some .8s .7s forwards; }
+@keyframes cena-corte { to { transform: rotate(-14deg) scaleX(1); } }
+@keyframes cena-corte-some { to { opacity: 0; height: 1px; } }
+.cena-matar .cena-conteudo { animation: cena-tremor .5s .6s both; }
+@keyframes cena-tremor { 0%, 100% { transform: none; } 15% { transform: translate(-9px, 4px) rotate(-1deg); } 30% { transform: translate(8px, -5px) rotate(1deg); }
+    45% { transform: translate(-6px, -3px); } 60% { transform: translate(5px, 4px); } 80% { transform: translate(-2px, 1px); } }
+.cena-matar .cena-titulo { color: #ff4d4d; text-shadow: 0 0 2px #fff, 0 0 16px rgba(255, 40, 40, .9), 4px 4px 0 rgba(0, 0, 0, .8); }
+.cena-matar .cena-titulo .l { animation: cena-letra-golpe .35s calc(.55s + var(--i) * 32ms) cubic-bezier(.2, 1.6, .4, 1) forwards; }
+@keyframes cena-letra-golpe { from { opacity: 0; transform: scale(2.6) translateY(-12px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.cena-matar .cena-texto { color: #f5d0d0; font-style: italic; animation: cena-revela-seca .8s calc(.9s + var(--n) * 32ms) ease-out forwards; }
+@keyframes cena-revela-seca { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+.cena-gotas { position: absolute; inset: 0 0 auto; z-index: 1; height: 40vh; pointer-events: none; }
+.cena-gotas i { position: absolute; top: -30px; left: var(--x); width: var(--t); height: calc(var(--t) * 4); border-radius: 0 0 50% 50% / 0 0 30% 30%;
+    background: linear-gradient(#5c0b0b, #b62525); transform: scaleY(0); transform-origin: top;
+    animation: cena-escorre var(--d) var(--a) ease-in forwards; }
+@keyframes cena-escorre { to { transform: scaleY(1) translateY(calc(var(--t) * 3)); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .cena *, .cena *::before, .cena *::after, .cena { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
+    .cena-titulo .l, .cena-texto { opacity: 1; }
+    .cena-brasas, .cena-gotas, .cena-corte, .cena-clarao { display: none; }
+}
+
+/* ---------- painel do mestre (cartão Sessão) ---------- */
+.cena-form { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--pv-border, rgba(255, 255, 255, .12)); display: flex; flex-direction: column; gap: 8px; }
+.cena-form-titulo { margin: 0; font-size: .95rem; }
+.cena-tipos { display: flex; flex-direction: column; gap: 4px; }
+.cena-tipos label { display: flex; align-items: center; gap: 8px; font-size: .88rem; cursor: pointer; }
+.cena-campo { display: flex; flex-direction: column; gap: 3px; font-size: .84rem; }
+.cena-campo input, .cena-campo select { width: 100%; box-sizing: border-box; min-height: 34px; }
+.cena-acoes { display: flex; flex-wrap: wrap; gap: 6px; }

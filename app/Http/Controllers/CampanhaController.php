@@ -11,6 +11,7 @@ use App\Models\Mesa;
 use App\Models\Personagem;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -539,7 +540,59 @@ class CampanhaController extends Controller
             'som_id'       => $campanha->som_id,
             'som_acao'     => $campanha->som_acao,
             'trilha'       => $this->trilhaPublica($campanha),
+            'cena'         => $this->cenaPara($campanha, (int) auth()->id()),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    // ------------------------------------------------------------------
+    // Cenas: animações de tela cheia que o mestre dispara ("Você descobriu…", "Como você quer matar ele?")
+    // Ficam no cache (sem coluna nova): só a última importa, e os jogadores a pegam no polling do estado.
+    // ------------------------------------------------------------------
+
+    public const CENAS = ['descobriu' => 'Você descobriu…', 'matar' => 'Como você quer matar ele?'];
+
+    private function chaveCena(Campanha $campanha): string
+    {
+        return 'campanha:' . $campanha->id . ':cena';
+    }
+
+    /** A última cena, se for para esta pessoa (para todos, ou para ela). */
+    private function cenaPara(Campanha $campanha, int $uid): ?array
+    {
+        $c = Cache::get($this->chaveCena($campanha));
+        if (!is_array($c) || ($c['alvo'] && (int) $c['alvo'] !== $uid)) {
+            return null;
+        }
+        unset($c['alvo']);
+
+        return $c + ['agora' => time()];
+    }
+
+    public function cena(Request $request, Campanha $campanha)
+    {
+        $this->exigirMestre($campanha);
+        $d = $request->validate([
+            'tipo'   => ['required', 'in:' . implode(',', array_keys(self::CENAS))],
+            'titulo' => ['nullable', 'string', 'max:80'],
+            'texto'  => ['nullable', 'string', 'max:300'],
+            'alvo'   => ['nullable', 'integer'],
+        ]);
+        $alvo = (int) ($d['alvo'] ?? 0);
+        if ($alvo && !$campanha->temMembro($alvo)) {
+            return response()->json(['erro' => 'Essa pessoa não participa da campanha.'], 422);
+        }
+        $chave = $this->chaveCena($campanha);
+        $seq = (int) (Cache::get($chave)['seq'] ?? 0) + 1;
+        Cache::put($chave, [
+            'seq'    => $seq,
+            'tipo'   => $d['tipo'],
+            'titulo' => trim((string) ($d['titulo'] ?? '')) ?: self::CENAS[$d['tipo']],
+            'texto'  => trim((string) ($d['texto'] ?? '')),
+            'alvo'   => $alvo ?: null,
+            'em'     => time(),
+        ], now()->addDay());
+
+        return response()->json(['ok' => true, 'seq' => $seq]);
     }
 
     // ------------------------------------------------------------------
