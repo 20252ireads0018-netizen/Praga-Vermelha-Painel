@@ -987,7 +987,10 @@
     min-width: 280px; min-height: 240px;
     max-width: 96vw; max-height: calc(100vh - 136px) !important;
 }
-#form-ficha .card-talentos.redimensionavel { right: auto; width: clamp(340px, 32vw, 520px); }
+#form-ficha .card-talentos.redimensionavel { right: auto; width: clamp(380px, 38vw, 640px); }
+/* na pilha da esquerda os painéis já abrem grandes e crescem com o conteúdo: só a coluna rola (sem rolagem dentro de
+   rolagem). Quem arrastar o canto para mudar a altura passa a ter rolagem própria naquele painel. */
+#paineis-pilha > .card-rolagem.redimensionavel { min-height: min(58vh, 560px); max-height: none !important; }
 @media (max-width: 600px) {
     #form-ficha .card-rolagem.redimensionavel { max-height: calc(100vh - 86px) !important; }
 }
@@ -997,7 +1000,7 @@
 #form-ficha #card-rolagem { width: clamp(300px, 22vw, 380px); }
 #paineis-pilha > .card-rolagem, #form-ficha #card-rolagem { font-size: 15px; line-height: 1.55; padding: 22px 22px 24px; }
 #paineis-pilha textarea {
-    font-size: .95rem; line-height: 1.6; min-height: 96px; padding: 10px 12px;
+    font-size: .95rem; line-height: 1.6; min-height: 140px; padding: 10px 12px;
     resize: vertical; overflow-y: auto;
 }
 #paineis-pilha input[type="text"], #paineis-pilha input[type="number"], #paineis-pilha select { min-height: 40px; font-size: .92rem; }
@@ -2774,17 +2777,25 @@ window.PastasFicha = (function(){
         const card = document.getElementById(id);
         if(!card) return;
         card.classList.add("redimensionavel");
-        const chave = "ficha-painel-tamanho:" + id;
+        // chave nova (v2): os tamanhos guardados antes eram do padrão menor e deixariam o painel pequeno de novo
+        const chave = "ficha-painel-tamanho-v2:" + id;
         try {
             const salvo = JSON.parse(localStorage.getItem(chave) || "null");
-            if(salvo && salvo.w && salvo.h){ card.style.width = salvo.w + "px"; card.style.height = salvo.h + "px"; }
+            if(salvo && salvo.w) card.style.width = salvo.w + "px";
+            if(salvo && salvo.h) card.style.height = salvo.h + "px"; // só se a pessoa mudou a altura
         } catch(e) {}
-        let antes = "";
-        card.addEventListener("mousedown", function(){ antes = card.offsetWidth + "x" + card.offsetHeight; });
+        let antesW = 0, antesH = 0;
+        card.addEventListener("mousedown", function(){ antesW = card.offsetWidth; antesH = card.offsetHeight; });
         card.addEventListener("mouseup", function(){
             const w = Math.round(card.offsetWidth), h = Math.round(card.offsetHeight);
-            if(antes === "" || antes === w + "x" + h) return; // não foi um redimensionamento
-            try { localStorage.setItem(chave, JSON.stringify({ w: w, h: h })); } catch(e) {}
+            if(!antesW || (w === antesW && h === antesH)) return; // não foi um redimensionamento
+            let salvo = {};
+            try { salvo = JSON.parse(localStorage.getItem(chave) || "null") || {}; } catch(e) {}
+            if(w !== antesW) salvo.w = w;
+            if(h !== antesH) salvo.h = h;
+            // altura não mexida fica automática (cresce com o conteúdo, sem rolagem dentro do painel)
+            if(h === antesH && !salvo.h) card.style.height = "";
+            try { localStorage.setItem(chave, JSON.stringify(salvo)); } catch(e) {}
         });
     });
 })();
