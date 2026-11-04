@@ -57,6 +57,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/pix', [PixController::class, 'admin'])->name('admin.pix');
     Route::post('/admin/pix/{id}', [PixController::class, 'decidir'])->whereNumber('id')->middleware('throttle:60,1')->name('admin.pix.decidir');
 
+    // Promoção relâmpago do livro (só administradores): metade ou 1/4 do preço por alguns minutos
+    Route::get('/admin/promocao', [App\Http\Controllers\PromocaoController::class, 'index'])->name('admin.promocao');
+    Route::post('/admin/promocao', [App\Http\Controllers\PromocaoController::class, 'ligar'])->middleware('throttle:20,10')->name('admin.promocao.ligar');
+    Route::post('/admin/promocao/encerrar', [App\Http\Controllers\PromocaoController::class, 'encerrar'])->middleware('throttle:20,10')->name('admin.promocao.encerrar');
+
     // Backups do banco (só administradores): um automático por dia, mais o botão "Fazer backup agora"
     Route::get('/admin/backup', [BackupController::class, 'index'])->name('admin.backup');
     Route::post('/admin/backup', [BackupController::class, 'gerar'])->middleware('throttle:6,10')->name('admin.backup.gerar');
@@ -281,6 +286,8 @@ Route::get('/historias/{slug}/pdf', [HistoriaController::class, 'pdf'])->name('h
 
 // Planos (teste, grátis, vitalício com o livro do sistema) e links dos livros físicos
 Route::get('/planos', [PlanoController::class, 'index'])->name('planos.index');
+Route::view('/privacidade', 'privacidade')->name('privacidade');
+Route::view('/apresentacao', 'apresentacao')->name('apresentacao'); // cenas animadas para gravar o vídeo do sistema
 
 // Vídeos explicativos (público, sem login): config/videos.php, arquivos em public/videos (o endereço não pode ser /videos: é a pasta)
 Route::get('/videos-explicativos', [App\Http\Controllers\VideoController::class, 'index'])->name('videos.index');

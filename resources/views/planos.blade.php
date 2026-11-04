@@ -23,6 +23,7 @@
         @endif
         @if (\App\Support\Pix::admin(auth()->user()))
             <a href="{{ route('admin.backup') }}" class="pl-alerta px-admin-link">Backups do banco →</a>
+            <a href="{{ route('admin.promocao') }}" class="pl-alerta px-admin-link">Promoção relâmpago{{ \App\Support\Promocao::atual() ? ': valendo agora' : '' }} →</a>
         @endif
 
         @auth
@@ -75,7 +76,11 @@
 
             <article class="pl-plano pl-plano--destaque {{ $plano === 'vitalicio' ? 'pl-plano--atual' : '' }}">
                 <h2 class="pl-plano__titulo">Vitalício <span class="pl-selo">livro do sistema</span></h2>
-                <div class="pl-plano__preco">{{ $preco }} · compra única do livro do sistema (info-produto)</div>
+                @php $promo = \App\Support\Promocao::atual(); @endphp
+                <div class="pl-plano__preco">@if ($promo)<s class="pl-preco-cheio">{{ \App\Support\CompraLivro::precoTexto(\App\Support\CompraLivro::precoCheio()) }}</s> @endif{{ $preco }} · compra única do livro do sistema (info-produto)</div>
+                @if ($promo)
+                    <div class="pl-promo-selo">Promoção relâmpago: termina em <b data-promo-fim="{{ $promo['fim'] }}">…</b></div>
+                @endif
                 <ul>
                     <li>Painel sem anúncios, para sempre</li>
                     <li>Fichas e campanhas sem limite</li>

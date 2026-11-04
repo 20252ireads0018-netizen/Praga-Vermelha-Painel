@@ -39,14 +39,21 @@ class CompraLivro
         return self::temColunas() && AsaasCliente::configurado();
     }
 
-    public static function preco(): float
+    /** Preço cheio do livro (sem promoção). */
+    public static function precoCheio(): float
     {
         return (float) config('planos.preco_livro', 6.99);
     }
 
-    public static function precoTexto(): string
+    /** Preço de agora: com a promoção relâmpago, se houver uma valendo. */
+    public static function preco(): float
     {
-        return 'R$ ' . number_format(self::preco(), 2, ',', '.');
+        return Promocao::preco(self::precoCheio());
+    }
+
+    public static function precoTexto(?float $valor = null): string
+    {
+        return 'R$ ' . number_format($valor ?? self::preco(), 2, ',', '.');
     }
 
     /** Referência da cobrança no Asaas: o webhook acha a conta por ela. */

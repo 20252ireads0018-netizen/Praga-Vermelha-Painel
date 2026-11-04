@@ -26,7 +26,13 @@
     <link rel="stylesheet" href="{{ asset('css/tabletop.css') }}">
     <link rel="stylesheet" href="{{ asset('css/planos.css') }}?v={{ @filemtime(public_path('css/planos.css')) ?: 1 }}">
     {{-- Anúncios só no plano grátis (depois dos 45 dias, sem o livro). Com os anúncios automáticos ligados no AdSense, o mesmo script mostra anúncios de tela cheia entre as páginas, de tempos em tempos --}}
+    @if (config('planos.adsense_cliente'))
+        <meta name="google-adsense-account" content="{{ config('planos.adsense_cliente') }}">
+    @endif
     @if (config('planos.adsense_cliente') && \App\Support\Plano::veAnuncios(auth()->user()))
+        {{-- consentimento de cookies (partials/cookies): sem resposta, os anúncios esperam; "Só os essenciais" pede anúncios não personalizados --}}
+        <script>(function(){var c=(document.cookie.match(/(?:^|; )pv_cookies=([^;]*)/)||[])[1];window.adsbygoogle=window.adsbygoogle||[];
+            if(c==='essenciais')window.adsbygoogle.requestNonPersonalizedAds=1;if(!c)window.adsbygoogle.pauseAdRequests=1;})();</script>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ config('planos.adsense_cliente') }}" crossorigin="anonymous"></script>
     @endif
 
@@ -221,6 +227,8 @@
         </div>
     </header>
 
+    @unless (request()->boolean('mini')) @include('partials.promocao') @endunless
+
     <main class="pv-main">
         @yield('conteudo')
 
@@ -248,9 +256,14 @@
             @if (Route::has('reclamacoes.index'))
                 <a href="{{ route('reclamacoes.index') }}" class="pv-footer__reclame">Achou um problema? Reclame aqui</a>
             @endif
+            @if (Route::has('privacidade'))
+                <a href="{{ route('privacidade') }}" class="pv-footer__reclame">Privacidade e cookies</a>
+            @endif
             <p>&copy; {{ date('Y') }} João Victor Barreto Pimentel. Todos os direitos reservados.</p>
         </div>
     </footer>
+
+    @unless (request()->boolean('mini')) @include('partials.cookies') @endunless
 
 </body>
 </html>

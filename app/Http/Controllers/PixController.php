@@ -6,6 +6,7 @@ use App\Models\PixPedido;
 use App\Support\CompraLivro;
 use App\Support\Pix;
 use App\Support\Plano;
+use App\Support\Promocao;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -34,6 +35,14 @@ class PixController extends Controller
             return PixPedido::where('user_id', $user->id)->whereIn('status', PixPedido::ABERTOS)->latest('id')->first()
                 ?? PixPedido::create(['user_id' => $user->id, 'codigo' => Pix::novoCodigo(), 'valor' => CompraLivro::preco(), 'status' => 'aguardando']);
         });
+        // Pix ainda não pago segue o preço de agora (promoção relâmpago); quem o gerou durante a promoção ainda paga o
+        // preço dela por um tempo depois do fim. updated_at marca quando o valor foi definido.
+        if ($pedido->status === 'aguardando') {
+            $valor = Promocao::precoDoPedido(CompraLivro::precoCheio(), (int) optional($pedido->updated_at ?? $pedido->created_at)->getTimestamp());
+            if (round((float) $pedido->valor, 2) !== round($valor, 2)) {
+                $pedido->forceFill(['valor' => $valor])->save();
+            }
+        }
         $recusado = PixPedido::where('user_id', $user->id)->where('status', 'recusado')->where('id', '<', $pedido->id)->exists()
             && $pedido->status === 'aguardando';
 

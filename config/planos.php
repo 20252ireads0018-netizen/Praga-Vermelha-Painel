@@ -22,8 +22,9 @@ return [
     // Preço do info-produto do livro do sistema (cobrança única no Asaas, ver config/asaas.php)
     'preco_livro' => (float) env('LIVRO_PRECO', 6.99),
 
-    // Google AdSense do plano grátis (vazio: nenhum anúncio é carregado). Ex.: ca-pub-1234567890123456
-    'adsense_cliente' => env('ADSENSE_CLIENTE', ''),
+    // Google AdSense do plano grátis: o ID de publicador da conta (é público, vai no HTML; o .env pode trocar).
+    // Sem o bloco (ADSENSE_SLOT), os anúncios automáticos ligados no AdSense escolhem onde aparecer.
+    'adsense_cliente' => env('ADSENSE_CLIENTE') ?: 'ca-pub-4781960143966285',
     'adsense_slot'    => env('ADSENSE_SLOT', ''),
 
     // Livros físicos: links de redirecionamento para a loja (url vazia: aparece como "em breve")
