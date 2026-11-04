@@ -73,7 +73,7 @@ class Personagem extends Model
         'nivel_hexomante', 'ameaca',
 
         // atributos vitais
-        'vida_atual', 'vida_maxima', 'sanidade_atual', 'sanidade_maxima', 'aura_atual', 'aura_maxima',
+        'vida_atual', 'vida_maxima', 'sanidade_atual', 'sanidade_maxima', 'aura_atual', 'aura_maxima', 'inspiracao',
         'vitais_extras', 'armaduras', 'artes_marciais', 'estudos_ama', 'habilidades_extras',
 
         'anotacoes',
@@ -108,6 +108,7 @@ class Personagem extends Model
         'pontos_habilidade_ajuste'  => 'integer',
         'nivel_hexomante'           => 'integer',
         'ameaca'                    => 'integer',
+        'inspiracao'                => 'integer',
     ];
 
     public function usuario()

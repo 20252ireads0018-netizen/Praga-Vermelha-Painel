@@ -200,6 +200,7 @@ class FichaArquivoController extends Controller
             'sanidade_maxima' => 'nullable|integer',
             'aura_atual' => 'nullable|integer',
             'aura_maxima' => 'nullable|integer',
+            'inspiracao' => 'nullable|integer|min:0|max:999',
 
             'habilidades' => 'nullable|array',
 
@@ -238,10 +239,14 @@ class FichaArquivoController extends Controller
         $dados['habilidades'] = $habilidades;
 
         // Colunas que podem não existir na tabela são descartadas.
-        foreach (['itens', 'anotacoes', 'vitais_extras', 'niveis_profissao'] as $coluna) {
+        foreach (['itens', 'anotacoes', 'vitais_extras', 'niveis_profissao', 'inspiracao'] as $coluna) {
             if (array_key_exists($coluna, $dados) && !Esquema::coluna($tabela, $coluna)) {
                 unset($dados[$coluna]);
             }
+        }
+        // Inspiração é NOT NULL (padrão 0)
+        if (array_key_exists('inspiracao', $dados)) {
+            $dados['inspiracao'] = (int) $dados['inspiracao'];
         }
 
         // Sem cast no model, listas precisam ir como texto JSON.

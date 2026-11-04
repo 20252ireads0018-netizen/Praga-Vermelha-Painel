@@ -198,6 +198,8 @@ class PersonagemController extends Controller
             'sanidade_maxima' => 'nullable|integer',
             'aura_atual' => 'nullable|integer',
             'aura_maxima' => 'nullable|integer',
+            // Inspiração: contador gastável (− / + nos vitais)
+            'inspiracao' => 'nullable|integer|min:0|max:999',
 
             // Configuração do card de Maldições
             'nivel_hexomante' => 'nullable|integer|min:0|max:65535',
@@ -407,6 +409,13 @@ class PersonagemController extends Controller
                 }
             }
             $dados['habilidades_extras'] = $limpos;
+        }
+
+        // Inspiração: só grava se a coluna existir (SQL da migração 2026_11_04_000030) e se veio no formulário
+        if (!Esquema::coluna('fichas', 'inspiracao') || !$request->has('inspiracao')) {
+            unset($dados['inspiracao']);
+        } else {
+            $dados['inspiracao'] = max(0, (int) ($dados['inspiracao'] ?? 0));
         }
 
         // Estudos na AMA: só grava se a coluna existir (rode o SQL da migração 2026_11_02_000020) e se veio no formulário

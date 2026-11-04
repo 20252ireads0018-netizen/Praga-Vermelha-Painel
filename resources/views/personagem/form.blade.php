@@ -923,6 +923,19 @@
 /* ===== Descanso curto / longo ===== */
 .descanso-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 12px; width: 100%; }
 .descanso-barra .button { flex: 1 1 180px; margin: 0 !important; }
+.inspiracao-caixa {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+    margin: 4px 0 12px; padding: 8px 12px; border-radius: 10px;
+    border: 1px solid rgba(234, 179, 8, .45); background: rgba(234, 179, 8, .08);
+}
+.inspiracao-controle { display: flex; align-items: center; gap: 10px; }
+.inspiracao-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(234, 179, 8, .6);
+    background: rgba(0, 0, 0, .25); color: #facc15; font-size: 1.2rem; line-height: 1; cursor: pointer;
+}
+.inspiracao-btn:hover:not(:disabled) { background: rgba(234, 179, 8, .2); }
+.inspiracao-btn:disabled { opacity: .4; cursor: default; }
+.inspiracao-valor { min-width: 2ch; text-align: center; font-size: 1.3rem; font-weight: 700; color: #facc15; }
 
 /* ===== Pontos de habilidade disponíveis (modo "ficha já existente") ===== */
 .pontos-livre {
@@ -1221,6 +1234,38 @@
                 </div>
                 <input type="hidden" id="aura_atual" name="aura_atual" value="{{ $personagem->aura_atual ?? '' }}">
                 <input type="hidden" id="aura_maxima" name="aura_maxima" value="{{ $personagem->aura_maxima ?? '' }}">
+
+                {{-- Inspiração: contador gastável; − gasta uma, + ganha uma (nunca abaixo de zero) --}}
+                <div class="inspiracao-caixa">
+                    <span class="barra-nome">Inspiração</span>
+                    <div class="inspiracao-controle">
+                        <button type="button" class="inspiracao-btn" data-insp="-1" aria-label="Gastar uma inspiração" title="Gastar uma">−</button>
+                        <span class="inspiracao-valor" id="inspiracao-valor" aria-live="polite">{{ (int) ($personagem->inspiracao ?? 0) }}</span>
+                        <button type="button" class="inspiracao-btn" data-insp="1" aria-label="Ganhar uma inspiração" title="Ganhar uma">+</button>
+                    </div>
+                </div>
+                <input type="hidden" id="inspiracao" name="inspiracao" value="{{ (int) ($personagem->inspiracao ?? 0) }}">
+                <script>
+                (function(){
+                    // − / + da Inspiração: grava no campo oculto e dispara "input" para o salvamento automático
+                    const campo = document.getElementById("inspiracao");
+                    const valor = document.getElementById("inspiracao-valor");
+                    const botoes = document.querySelectorAll(".inspiracao-btn");
+                    const leitura = {{ $somenteLeitura ? 'true' : 'false' }};
+                    function mostrar(n){
+                        valor.textContent = n;
+                        botoes.forEach(b => { b.disabled = leitura || (b.dataset.insp === "-1" && n <= 0) || (b.dataset.insp === "1" && n >= 999); });
+                    }
+                    botoes.forEach(b => b.addEventListener("click", function(){
+                        if(leitura) return;
+                        const n = Math.max(0, Math.min(999, (parseInt(campo.value, 10) || 0) + parseInt(b.dataset.insp, 10)));
+                        campo.value = n;
+                        mostrar(n);
+                        campo.dispatchEvent(new Event("input", { bubbles: true }));
+                    }));
+                    mostrar(parseInt(campo.value, 10) || 0);
+                })();
+                </script>
 
                 {{-- Descanso: recupera Vida, Sanidade e Aura conforme as regras rápidas de descanso --}}
                 <div class="descanso-barra">

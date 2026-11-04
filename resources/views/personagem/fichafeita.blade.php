@@ -325,6 +325,12 @@
                     </div>
                 </div>
             @endforeach
+            <div class="vital">
+                <div class="vital-topo">
+                    <span>Inspiração</span>
+                    <span class="vital-valor" style="color:#facc15">{{ (int) ($personagem->inspiracao ?? 0) }}</span>
+                </div>
+            </div>
         </div>
 
         @if($maldicoesComFicha->isNotEmpty())
