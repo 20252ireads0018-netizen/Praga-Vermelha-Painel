@@ -73,40 +73,82 @@
     }
     function atualizarTudo(){ preencherFiltros(); desenharLista(); }
 
-    /* ---------- ficha calculada ---------- */
+    /* ---------- ficha calculada (com os botões de rolar) ---------- */
+    let fichaAtual = null; // { nome, f } da ficha na janela: os botões de rolar leem daqui
+    let historico = [];    // rolagens desta janela, a mais nova primeiro (só quem rolou vê)
+    const dadoTexto = dn => dn.dados + "d" + dn.lados + (dn.extra ? " + " + dn.extra : "") + (dn.mult > 1 ? " ×" + dn.mult : "") +
+        " (" + dn.tipo + ")" + (dn.amaldicoado ? " + " + dn.amaldicoado + " amaldiçoado" : "");
+    const valorTeste = (f, k) => f.atributos[k] + (f.testes[k] || []).reduce((s, t) => s + (+t.v || 0), 0);
+
     function fichaHtml(nome, d, f){
-        const tabela = (obj, rot, extra) => '<table>' + Object.keys(obj).map(k => '<tr><td>' + esc(rot(k)) + '</td><td>' + obj[k] + (extra ? extra(k) : '') + '</td></tr>').join("") + '</table>';
-        const testes = k => (f.testes[k] || []).length ? ' <span class="kr-testes">testes:' + selos(f.testes[k]) + '</span>' : '';
+        fichaAtual = { nome: nome || "Kuro", f };
+        const testes = k => (f.testes[k] || []).length ? '<small class="kr-testes">testes' + selos(f.testes[k]) + '</small>' : '';
+        const chip = (tipo, k, rot, valor, extra) => '<button type="button" class="kr-rolar" data-rolar="' + tipo + ':' + k + '" title="Rolar d100 − ' + esc(valor) + '">' +
+            '<span>' + esc(rot) + '</span><b>' + esc(valor) + '</b>' + (extra || '') + '</button>';
+        const lista = (titulo, itens) => itens.length ? '<div class="kr-linha-ficha"><span>' + titulo + '</span><b>' + esc(itens.map(cap).join(", ")) + '</b></div>' : '';
         const escolhas = '<div class="kr-escolhas"><span class="' + (f.aprim.usados > f.aprim.total ? "estourou" : "") + '">Aprimoramentos ' + f.aprim.usados + '/' + f.aprim.total + '</span>' +
             '<span class="' + (f.habil.usados > f.habil.total ? "estourou" : "") + '">Habilidades ' + f.habil.usados + '/' + f.habil.total + '</span></div>';
+        const texto = (rot, t) => t ? '<details class="kr-texto"><summary>' + rot + '</summary><p>' + esc(t) + '</p></details>' : '';
         return '<div class="kr-ficha"><h3>' + esc(nome || "Kuro sem nome") + '</h3>' +
             '<div class="kr-meta">Tipo ' + f.tipo + (f.circulos ? ' · ' + f.circulos + ' círculo(s)' : '') + (d.daemon ? ' · ' + esc(d.daemon) : '') + ' · ' + esc(f.tamanho) + '</div>' +
             escolhas +
             (f.avisos.length ? '<ul class="kr-avisos">' + f.avisos.map(a => '<li>' + esc(a) + '</li>').join("") + '</ul>' : '') +
-            '<table><tr><td>Pontos de vida</td><td>' + f.pv + '</td></tr><tr><td>Armadura natural</td><td>' + f.armadura + '</td></tr>' +
-            '<tr><td>Deslocamento</td><td>' + f.deslocamento + (f.voo ? ' · voo ' + f.voo : '') + '</td></tr>' +
-            '<tr><td>Sentidos</td><td>' + esc(f.sentidos.join(", ")) + '</td></tr>' +
-            '<tr><td>Resistências</td><td>' + esc(f.resistencias.map(cap).join(", ") || "Nenhuma") + '</td></tr>' +
-            '<tr><td>Fraquezas</td><td>' + esc(f.fraquezas.map(cap).join(", ") || "Nenhuma") + '</td></tr>' +
-            '<tr><td>Ataque comum</td><td>' + esc(f.ataque) + '</td></tr>' +
-            (f.critico ? '<tr><td>Crítico</td><td>margem +' + f.critico.margem + ' · multiplicador +' + f.critico.mult + ' <span class="kr-selo">Lacerador</span></td></tr>' : '') +
-            (f.imunidades.length ? '<tr><td>Imunidades</td><td>' + esc(f.imunidades.map(cap).join(", ")) + '</td></tr>' : '') + '</table>' +
-            '<div class="kr-sub">Atributos</div>' + tabela(f.atributos, k => CFG.atributos[k] || k, k => selos(f.bonus.atributos[k]) + testes(k)) +
-            '<div class="kr-sub">Rolagens</div>' + tabela(Object.fromEntries(Object.entries(f.rolagens).map(([k, v]) => [k, fmt(v)])), k => CFG.rolagens[k] || k, k => selos(f.bonus.rolagens[k])) +
-            (f.efeitos.length ? '<div class="kr-sub">Efeitos das habilidades</div><table>' + f.efeitos.map(e => '<tr><td>' + esc(e.rot) + '</td><td>' + esc(e.valor) + ' <span class="kr-selo">' + esc(e.de) + '</span></td></tr>').join("") + '</table>' : '') +
+            '<div class="kr-numeros"><div><span>PV</span><b>' + f.pv + '</b></div><div><span>Armadura</span><b>' + f.armadura + '</b></div>' +
+            '<div><span>Deslocamento</span><b>' + f.deslocamento + (f.voo ? ' · voo ' + f.voo : '') + '</b></div></div>' +
+            '<div class="kr-linha-ficha"><span>Sentidos</span><b>' + esc(f.sentidos.join(", ")) + '</b></div>' +
+            lista("Resistências", f.resistencias) + lista("Fraquezas", f.fraquezas) + lista("Imunidades", f.imunidades) +
+
+            '<div class="kr-sub">Dano <small>clique para rolar</small></div>' +
+            '<div class="kr-danos">' + f.danos.map((dn, i) => '<button type="button" class="kr-rolar kr-rolar-dano" data-rolar="dano:' + i + '"><span>' + esc(dn.nome) + '</span><b>' + esc(dadoTexto(dn)) + '</b></button>').join("") + '</div>' +
+            (f.critico ? '<div class="kr-linha-ficha"><span>Crítico</span><b>margem +' + f.critico.margem + ' · multiplicador +' + f.critico.mult + ' <span class="kr-selo">Lacerador</span></b></div>' : '') +
+
+            '<div class="kr-sub">Testes <small>d100 − valor · clique para rolar</small></div>' +
+            '<div class="kr-chips-rolar">' + Object.keys(f.atributos).map(k => chip("atr", k, CFG.atributos[k] || k, valorTeste(f, k), selos(f.bonus.atributos[k]) + testes(k))).join("") + '</div>' +
+            '<div class="kr-chips-rolar">' + Object.keys(f.rolagens).map(k => chip("rol", k, CFG.rolagens[k] || k, fmt(f.rolagens[k]), selos(f.bonus.rolagens[k]))).join("") + '</div>' +
+            '<div class="kr-rolou" aria-live="polite">' + historicoHtml() + '</div>' +
+
+            (f.efeitos.length ? '<div class="kr-sub">Efeitos das habilidades</div>' + f.efeitos.map(e => '<div class="kr-linha-ficha"><span>' + esc(e.rot) + '</span><b>' + esc(e.valor) + ' <span class="kr-selo">' + esc(e.de) + '</span></b></div>').join("") : '') +
             '<div class="kr-sub">Habilidades sobrenaturais</div>' +
-            (f.habilidades.map(h => '<div class="kr-habil-item"><strong>' + esc(h.nome) + (h.escolhas > 1 ? ' ×' + h.escolhas : '') + '</strong><p>' + textoCalc(h.partes, h.escolhas) + '</p></div>').join("") || '<p class="kr-meta">Nenhuma.</p>') +
-            (d.descricao ? '<div class="kr-sub">Descrição</div><p>' + esc(d.descricao) + '</p>' : '') +
-            (d.comportamento ? '<div class="kr-sub">Comportamento</div><p>' + esc(d.comportamento) + '</p>' : '') +
-            (d.surgimento ? '<div class="kr-sub">Surgimento</div><p>' + esc(d.surgimento) + '</p>' : '') +
-            (D.mestre && d.notas_mestre ? '<div class="kr-sub">Notas do mestre</div><p>' + esc(d.notas_mestre) + '</p>' : '') +
+            (f.habilidades.map(h => '<details class="kr-habil-item" open><summary>' + esc(h.nome) + (h.escolhas > 1 ? ' ×' + h.escolhas : '') + '</summary><p>' + textoCalc(h.partes, h.escolhas) + '</p></details>').join("") || '<p class="kr-meta">Nenhuma.</p>') +
+            texto("Descrição", d.descricao) + texto("Comportamento", d.comportamento) + texto("Surgimento", d.surgimento) +
+            (D.mestre ? texto("Notas do mestre", d.notas_mestre) : '') +
             '</div>';
+    }
+
+    /* ---------- rolagens do Kuro: no navegador, só quem rola vê ---------- */
+    const aleatorio = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % n); };
+    function historicoHtml(){
+        if(!historico.length) return '<p class="kr-meta">As rolagens aparecem aqui e só você vê.</p>';
+        return historico.map((r, i) => '<div class="kr-rolagem' + (i ? '' : ' nova') + '"><span>' + esc(r.rot) + '</span><span class="kr-conta">' + esc(r.conta) + '</span><b>' + esc(r.total) + '</b></div>').join("");
+    }
+    function rolar(alvo){
+        if(!fichaAtual) return;
+        const f = fichaAtual.f;
+        const [tipo, k] = alvo.split(":");
+        let r;
+        if(tipo === "dano"){
+            const dn = f.danos[+k];
+            if(!dn) return;
+            const x = KurosCalc.rolarDano(dn, aleatorio);
+            r = { rot: dn.nome, conta: "[" + x.dados.join(", ") + "]" + (dn.extra ? " + " + dn.extra : "") + (dn.mult > 1 ? " ×" + dn.mult : ""),
+                total: x.total + " " + dn.tipo + (x.amaldicoado ? " + " + x.amaldicoado + " amaldiçoado" : "") };
+        } else {
+            const valor = tipo === "atr" ? valorTeste(f, k) : f.rolagens[k];
+            const x = KurosCalc.rolarTeste(valor, aleatorio);
+            const falha = tipo === "atr" && (f.testes[k] || []).some(t => t.texto);
+            r = { rot: (tipo === "atr" ? CFG.atributos[k] : CFG.rolagens[k]) || k, conta: "d100 " + x.d100 + " − (" + fmt(valor) + ")", total: falha ? "falha automática" : String(x.total) };
+        }
+        historico.unshift(r);
+        historico = historico.slice(0, 8);
+        corpo.querySelectorAll(".kr-rolou").forEach(el => { el.innerHTML = historicoHtml(); });
     }
 
     /* ---------- janela ---------- */
     const janela = $("#kr-janela"), corpo = $("#kr-janela-corpo");
-    function abrir(titulo, html){ $("#kr-janela-titulo").textContent = titulo; corpo.innerHTML = html; janela.hidden = false; }
-    function fechar(){ janela.hidden = true; corpo.innerHTML = ""; }
+    function abrir(titulo, html){ historico = []; $("#kr-janela-titulo").textContent = titulo; corpo.innerHTML = html; janela.hidden = false; }
+    function fechar(){ janela.hidden = true; corpo.innerHTML = ""; historico = []; fichaAtual = null; }
+    // botões de rolar da ficha (na ficha e na prévia do editor), antes dos cliques de cada tela
+    corpo.addEventListener("click", e => { const b = e.target.closest("[data-rolar]"); if(b){ e.stopPropagation(); rolar(b.dataset.rolar); } }, true);
     $("#kr-fechar").addEventListener("click", fechar);
     janela.addEventListener("click", e => { if(e.target === janela) fechar(); });
     document.addEventListener("keydown", e => { if(e.key === "Escape" && !janela.hidden) fechar(); });
@@ -115,11 +157,11 @@
     function ver(k){
         const f = KurosCalc.calcular(k.dados, CFG);
         const pv = k.pv_atual == null ? f.pv : k.pv_atual;
-        abrir(k.nome, '<div class="kr-vida"><label>Vida atual <input type="number" id="kr-pv" value="' + pv + '"></label> / ' + f.pv +
+        abrir(k.nome, '<div class="kr-estado"><div class="kr-vida"><label>Vida atual <input type="number" id="kr-pv" value="' + pv + '"></label> / ' + f.pv +
             '<button type="button" class="camp-btn camp-btn-pequeno" data-pv="-1">−1</button><button type="button" class="camp-btn camp-btn-pequeno" data-pv="1">+1</button>' +
-            '<button type="button" class="camp-btn camp-btn-pequeno" data-pv="cheia">Vida cheia</button></div>' +
-            '<label class="kr-meta" style="display:flex;flex-direction:column;gap:4px">Anotações<textarea id="kr-notas" rows="3" maxlength="5000">' + esc(k.notas) + '</textarea></label>' +
-            '<button type="button" class="camp-btn camp-btn-primario" id="kr-salvar-estado">Salvar vida e anotações</button><br><br>' + fichaHtml(k.nome, k.dados, f));
+            '<button type="button" class="camp-btn camp-btn-pequeno" data-pv="cheia">Vida cheia</button>' +
+            '<button type="button" class="camp-btn camp-btn-pequeno camp-btn-primario" id="kr-salvar-estado">Salvar vida e anotações</button></div>' +
+            '<label class="kr-meta">Anotações<textarea id="kr-notas" rows="2" maxlength="5000">' + esc(k.notas) + '</textarea></label></div>' + fichaHtml(k.nome, k.dados, f));
         corpo.querySelectorAll("[data-pv]").forEach(b => b.addEventListener("click", () => {
             const i = $("#kr-pv");
             i.value = b.dataset.pv === "cheia" ? f.pv : (+i.value || 0) + (+b.dataset.pv);
@@ -142,47 +184,66 @@
         d.tipo = d.tipo || 1; d.circulos = d.circulos || 0; d.tamanho = d.tamanho || 0;
         let nome = k.nome || "";
         let buscaHab = "";
+        let aba = "aprim"; // aprim | habilidades | defesas | textos
         const passo = (grupo, chave, valor, min) => '<span class="kr-passo"><button type="button" data-menos="' + grupo + ':' + chave + '" aria-label="Diminuir">−</button><b>' + valor + '</b><button type="button" data-mais="' + grupo + ':' + chave + '" aria-label="Aumentar">+</button></span>';
+        const cont = (rot, controle, dica) => '<div class="kr-cont"' + (dica ? ' title="' + esc(dica) + '"' : '') + '><span>' + esc(rot) + '</span>' + controle + '</div>';
+        const chips = (lst, rot) => '<h4>' + rot + '</h4><div class="kr-chips">' + CFG.tipos_dano.map(t => '<button type="button" class="kr-chip' + (d[lst].includes(t) ? " ativo" : "") + '" data-lista="' + lst + ':' + t + '">' + esc(cap(t)) + '</button>').join("") + '</div>';
 
-        function form(){
-            const f = KurosCalc.calcular(d, CFG);
+        function abaAprim(f){
+            const vezesAtrib = Object.values(d.atributos).reduce((s, v) => s + (+v || 0), 0);
+            const vezesRol = Object.values(d.rolagens).reduce((s, v) => s + (+v || 0), 0);
+            return '<div class="kr-grade">' + Object.keys(CFG.aprimoramentos).map(c => cont(CFG.aprimoramentos[c].nome, passo("aprim", c, d.aprim[c] || 0), CFG.aprimoramentos[c].texto)).join("") + '</div>' +
+                (d.aprim.pvs || d.aprim.armadura || d.aprim.tamanho ? '<div class="kr-grade">' +
+                    (d.aprim.pvs ? '<label>Cada PVs Extra<select data-campo="modo_pvs"><option value="con"' + (d.modo_pvs !== "tipo" ? " selected" : "") + '>+ Constituição</option><option value="tipo"' + (d.modo_pvs === "tipo" ? " selected" : "") + '>+ tipo × 10</option></select></label>' : '') +
+                    (d.aprim.armadura ? '<label>Cada Armadura extra<select data-campo="modo_armadura"><option value="con"' + (d.modo_armadura !== "tipo" ? " selected" : "") + '>+ 1/4 da Constituição</option><option value="tipo"' + (d.modo_armadura === "tipo" ? " selected" : "") + '>+ tipo × 5</option></select></label>' : '') +
+                    (d.aprim.tamanho ? cont("Categoria de tamanho", passo("tam", "x", fmt(d.tamanho))) : '') + '</div>' : '') +
+                (d.aprim.atributo ? '<h4>Aumento de atributo: +40 cada <span>' + vezesAtrib + '/' + (d.aprim.atributo || 0) + '</span></h4><div class="kr-grade kr-grade-3">' +
+                    Object.keys(CFG.atributos).map(a => cont(CFG.atributos[a], passo("atributos", a, d.atributos[a] || 0))).join("") + '</div>' : '') +
+                (d.aprim.rolagem ? '<h4>Rolagem poderosa: +tipo × 10 cada <span>' + vezesRol + '/' + 2 * (d.aprim.rolagem || 0) + '</span></h4><div class="kr-grade kr-grade-3">' +
+                    Object.keys(CFG.rolagens).map(r => cont(CFG.rolagens[r], passo("rolagens", r, d.rolagens[r] || 0))).join("") + '</div>' : '');
+        }
+        function abaHabilidades(f){
             const habs = Object.keys(CFG.habilidades).filter(h => !buscaHab || (CFG.habilidades[h].nome + " " + CFG.habilidades[h].texto).toLowerCase().includes(buscaHab));
             habs.sort((a, b) => (d.habilidades[b] ? 1 : 0) - (d.habilidades[a] ? 1 : 0));
             const falta = h => (f.habilidades.find(x => x.chave === h) || {}).faltas || [];
-            return '<div class="kr-editor"><div>' +
-                '<label>Nome<input type="text" data-campo="nome" maxlength="80" value="' + esc(nome) + '"></label>' +
-                '<div class="kr-linha"><label>Tipo<input type="number" min="1" max="9" data-campo="tipo" value="' + d.tipo + '"></label>' +
-                '<label>Círculos<input type="number" min="0" max="999" data-campo="circulos" value="' + d.circulos + '"></label>' +
-                '<label>Daemon<input type="text" list="kr-daemons" data-campo="daemon" maxlength="40" value="' + esc(d.daemon || "") + '"></label>' +
-                '<label>Pasta<input type="text" data-campo="pasta" maxlength="60" value="' + esc(d.pasta || "") + '" placeholder="Ex.: Sessão 3"></label></div>' +
-                '<datalist id="kr-daemons">' + CFG.daemons.map(x => '<option value="' + esc(x) + '">').join("") + '</datalist>' +
-                '<label>Descrição / aparência<textarea data-campo="descricao" maxlength="3000">' + esc(d.descricao || "") + '</textarea></label>' +
-                '<label>Comportamento<textarea data-campo="comportamento" maxlength="2000">' + esc(d.comportamento || "") + '</textarea></label>' +
-                '<label>Surgimento<textarea data-campo="surgimento" maxlength="2000">' + esc(d.surgimento || "") + '</textarea></label>' +
-
-                '<div class="kr-grupo"><h4>Aprimoramentos <span>' + f.aprim.usados + '/' + f.aprim.total + '</span></h4>' +
-                Object.keys(CFG.aprimoramentos).map(c => '<div class="kr-cont" title="' + esc(CFG.aprimoramentos[c].texto) + '"><span>' + esc(CFG.aprimoramentos[c].nome) + '</span>' + passo("aprim", c, d.aprim[c] || 0) +
-                    (c === "pvs" && d.aprim.pvs ? '<span class="kr-dica">Cada um: <select data-campo="modo_pvs"><option value="con"' + (d.modo_pvs !== "tipo" ? " selected" : "") + '>+ Constituição</option><option value="tipo"' + (d.modo_pvs === "tipo" ? " selected" : "") + '>+ tipo × 10</option></select></span>' : '') +
-                    (c === "armadura" && d.aprim.armadura ? '<span class="kr-dica">Cada um: <select data-campo="modo_armadura"><option value="con"' + (d.modo_armadura !== "tipo" ? " selected" : "") + '>+ 1/4 da Constituição</option><option value="tipo"' + (d.modo_armadura === "tipo" ? " selected" : "") + '>+ tipo × 5</option></select></span>' : '') +
-                    (c === "tamanho" && d.aprim.tamanho ? '<span class="kr-dica">Categoria: ' + passo("tam", "x", fmt(d.tamanho)) + '</span>' : '') +
-                    '</div>').join("") + '</div>' +
-
-                (d.aprim.atributo ? '<div class="kr-grupo"><h4>Aumento de atributo (+40 cada)</h4>' + Object.keys(CFG.atributos).map(a => '<div class="kr-cont"><span>' + esc(CFG.atributos[a]) + '</span>' + passo("atributos", a, d.atributos[a] || 0) + '</div>').join("") + '</div>' : '') +
-                (d.aprim.rolagem ? '<div class="kr-grupo"><h4>Rolagem poderosa (+tipo × 10 cada)</h4>' + Object.keys(CFG.rolagens).map(r => '<div class="kr-cont"><span>' + esc(CFG.rolagens[r]) + '</span>' + passo("rolagens", r, d.rolagens[r] || 0) + '</div>').join("") + '</div>' : '') +
-                '<div class="kr-grupo"><h4>Resistências</h4><div class="kr-chips">' + CFG.tipos_dano.map(t => '<button type="button" class="kr-chip' + (d.resistencias.includes(t) ? " ativo" : "") + '" data-lista="resistencias:' + t + '">' + esc(cap(t)) + '</button>').join("") + '</div>' +
-                '<h4 style="margin-top:8px">Fraquezas</h4><div class="kr-chips">' + CFG.tipos_dano.map(t => '<button type="button" class="kr-chip' + (d.fraquezas.includes(t) ? " ativo" : "") + '" data-lista="fraquezas:' + t + '">' + esc(cap(t)) + '</button>').join("") + '</div></div>' +
-                '<div class="kr-grupo"><div class="kr-linha"><label>Sentidos extras<input type="text" data-campo="sentidos" value="' + esc(d.sentidos.join(", ")) + '" placeholder="Eco-localização, Visão no escuro"></label>' +
-                '<label>Tipo do ataque comum<select data-campo="tipo_dano">' + CFG.tipos_dano.map(t => '<option' + ((d.tipo_dano || "cortante") === t ? " selected" : "") + '>' + t + '</option>').join("") + '</select></label></div></div>' +
-
-                '<div class="kr-grupo"><h4>Habilidades sobrenaturais <span>' + f.habil.usados + '/' + f.habil.total + '</span></h4>' +
-                '<input type="search" data-campo="busca-hab" placeholder="Pesquisar habilidade…" value="' + esc(buscaHab) + '" style="width:100%;margin-bottom:6px">' +
+            return '<input type="search" data-campo="busca-hab" placeholder="Pesquisar habilidade…" value="' + esc(buscaHab) + '" class="kr-busca-hab">' +
                 '<div class="kr-habs">' + habs.map(h => {
                     const def = CFG.habilidades[h], n = d.habilidades[h] || 0;
                     return '<div class="kr-hab' + (n ? " tem" : "") + '"><div class="kr-hab-cab"><strong>' + esc(def.nome) + '</strong>' + passo("habilidades", h, n) + '</div>' +
                         (n && falta(h).length ? '<span class="kr-req">Falta: ' + esc(falta(h).join(", ")) + '</span>' : '') + '<p>' + textoCalc(KurosCalc.interpretar(def.texto, n || 1, f.tipo, CFG), n || 1) + '</p></div>';
-                }).join("") + '</div></div>' +
-                '<label style="margin-top:10px">Notas do mestre<textarea data-campo="notas_mestre" maxlength="3000">' + esc(d.notas_mestre || "") + '</textarea></label>' +
-                '<button type="button" class="camp-btn camp-btn-primario" id="kr-salvar">Salvar Kuro</button>' +
+                }).join("") + '</div>';
+        }
+        function abaDefesas(){
+            return chips("resistencias", "Resistências") + chips("fraquezas", "Fraquezas") +
+                '<div class="kr-linha"><label>Sentidos extras<input type="text" data-campo="sentidos" value="' + esc(d.sentidos.join(", ")) + '" placeholder="Eco-localização, Visão no escuro"></label>' +
+                '<label>Tipo do ataque comum<select data-campo="tipo_dano">' + CFG.tipos_dano.map(t => '<option' + ((d.tipo_dano || "cortante") === t ? " selected" : "") + '>' + t + '</option>').join("") + '</select></label></div>';
+        }
+        function abaTextos(){
+            return '<label>Descrição / aparência<textarea data-campo="descricao" maxlength="3000">' + esc(d.descricao || "") + '</textarea></label>' +
+                '<label>Comportamento<textarea data-campo="comportamento" maxlength="2000">' + esc(d.comportamento || "") + '</textarea></label>' +
+                '<label>Surgimento<textarea data-campo="surgimento" maxlength="2000">' + esc(d.surgimento || "") + '</textarea></label>' +
+                '<label>Notas do mestre<textarea data-campo="notas_mestre" maxlength="3000">' + esc(d.notas_mestre || "") + '</textarea></label>';
+        }
+
+        function form(){
+            const f = KurosCalc.calcular(d, CFG);
+            const contagem = (u, t) => ' <span class="' + (u > t ? "estourou" : (u === t ? "cheio" : "")) + '">' + u + '/' + t + '</span>';
+            const abas = [["aprim", "Aprimoramentos" + contagem(f.aprim.usados, f.aprim.total)], ["habilidades", "Habilidades" + contagem(f.habil.usados, f.habil.total)],
+                ["defesas", "Defesas e ataque"], ["textos", "Textos e notas"]];
+            const conteudo = { aprim: abaAprim, habilidades: abaHabilidades, defesas: abaDefesas, textos: abaTextos }[aba](f);
+            return '<div class="kr-editor"><div class="kr-form">' +
+                // sempre à vista: identidade do Kuro e o Salvar
+                '<div class="kr-topo-form">' +
+                    '<label class="kr-nome">Nome<input type="text" data-campo="nome" maxlength="80" value="' + esc(nome) + '"></label>' +
+                    '<label>Tipo<input type="number" min="1" max="9" data-campo="tipo" value="' + d.tipo + '"></label>' +
+                    '<label>Círculos<input type="number" min="0" max="999" data-campo="circulos" value="' + d.circulos + '"></label>' +
+                    '<label>Daemon<input type="text" list="kr-daemons" data-campo="daemon" maxlength="40" value="' + esc(d.daemon || "") + '"></label>' +
+                    '<label>Pasta<input type="text" data-campo="pasta" maxlength="60" value="' + esc(d.pasta || "") + '" placeholder="Ex.: Sessão 3"></label>' +
+                    '<button type="button" class="camp-btn camp-btn-primario" id="kr-salvar">Salvar Kuro</button>' +
+                '</div>' +
+                '<datalist id="kr-daemons">' + CFG.daemons.map(x => '<option value="' + esc(x) + '">').join("") + '</datalist>' +
+                '<div class="kr-abas" role="tablist">' + abas.map(([id, rot]) => '<button type="button" role="tab" data-aba="' + id + '" aria-selected="' + (aba === id) + '"' + (aba === id ? ' class="ativa"' : '') + '>' + rot + '</button>').join("") + '</div>' +
+                '<div class="kr-aba" role="tabpanel">' + conteudo + '</div>' +
                 '</div><div id="kr-previa">' + fichaHtml(nome, d, f) + '</div></div>';
         }
         function redesenhar(foco){
@@ -216,7 +277,8 @@
                 else { d[g][chave] = Math.max(0, (d[g][chave] || 0) + delta); if(!d[g][chave]) delete d[g][chave]; }
                 redesenhar();
             };
-            if(b.dataset.mais) muda(b.dataset.mais, 1);
+            if(b.dataset.aba){ aba = b.dataset.aba; redesenhar(); }
+            else if(b.dataset.mais) muda(b.dataset.mais, 1);
             else if(b.dataset.menos) muda(b.dataset.menos, -1);
             else if(b.dataset.lista){
                 const [lst, t] = b.dataset.lista.split(":");

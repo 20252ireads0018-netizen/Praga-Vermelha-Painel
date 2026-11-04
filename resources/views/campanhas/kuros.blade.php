@@ -60,6 +60,68 @@
     .kr-calc { display: inline-block; padding: 0 5px; border-radius: 5px; background: rgba(239, 68, 68, .18); color: #fecaca; font-weight: 700; white-space: nowrap; }
     .kr-selo { display: inline-block; margin-left: 2px; padding: 0 5px; border-radius: 9px; background: rgba(255, 255, 255, .08); font-size: .72rem; opacity: .85; white-space: nowrap; }
     .kr-testes { font-size: .72rem; opacity: .85; }
+
+    /* editor compacto: identidade + Salvar sempre à vista, o resto em abas; a prévia acompanha a rolagem */
+    .kr-editor { align-items: start; }
+    .kr-form { min-width: 0; }
+    .kr-topo-form { position: sticky; top: -16px; z-index: 2; display: grid; grid-template-columns: minmax(0, 2fr) 70px 80px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: end;
+        background: #160f17; padding: 4px 0 8px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+    .kr-topo-form label { margin: 0; font-size: .75rem; }
+    .kr-topo-form input { min-height: 34px; padding: 4px 8px; }
+    .kr-editor input, .kr-editor select, .kr-editor textarea { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+    .kr-topo-form .camp-btn { min-height: 34px; white-space: nowrap; }
+    @media (max-width: 640px) {
+        .kr-topo-form { position: static; grid-template-columns: 1fr 1fr; }
+        .kr-topo-form .kr-nome, .kr-topo-form .camp-btn { grid-column: 1 / -1; }
+        .kr-caixa { padding: 12px; }
+        .kr-janela { padding: 12px 6px; }
+    }
+    .kr-abas { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 8px; }
+    .kr-abas button { flex: 1 1 auto; min-height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(0, 0, 0, .25); color: inherit; cursor: pointer; font-size: .82rem; }
+    .kr-abas button.ativa { background: var(--camp-acento); border-color: var(--camp-acento); color: #fff; font-weight: 700; }
+    .kr-abas span { font-size: .72rem; opacity: .85; }
+    .kr-abas .estourou { color: #fecaca; font-weight: 700; }
+    .kr-aba h4 { margin: 10px 0 4px; font-size: .85rem; display: flex; justify-content: space-between; gap: 8px; }
+    .kr-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 14px; }
+    .kr-grade-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 640px) { .kr-grade, .kr-grade-3 { grid-template-columns: minmax(0, 1fr); } }
+    .kr-grade label { margin: 4px 0; font-size: .78rem; }
+    .kr-cont { padding: 2px 0; border-bottom: 1px solid rgba(255, 255, 255, .05); }
+    .kr-passo button { width: 24px; height: 24px; }
+    .kr-busca-hab { width: 100%; margin-bottom: 6px; }
+    .kr-aba .kr-habs { max-height: min(60vh, 520px); }
+    #kr-previa { position: sticky; top: 0; max-height: calc(100vh - 90px); overflow: auto; }
+    @media (max-width: 860px) { #kr-previa { position: static; max-height: none; } }
+
+    /* ficha compacta */
+    .kr-numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 8px 0; }
+    .kr-numeros div { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, .05); display: flex; flex-direction: column; }
+    .kr-numeros span { font-size: .72rem; opacity: .7; }
+    .kr-numeros b { font-size: 1.05rem; }
+    .kr-linha-ficha { display: flex; justify-content: space-between; gap: 10px; padding: 3px 2px; border-bottom: 1px solid rgba(255, 255, 255, .06); font-size: .84rem; }
+    .kr-linha-ficha span { opacity: .8; }
+    .kr-linha-ficha b { text-align: right; }
+    .kr-ficha .kr-sub small { font-weight: 400; font-size: .72rem; opacity: .6; margin-left: 4px; }
+    .kr-danos, .kr-chips-rolar { display: grid; gap: 4px; margin: 4px 0; }
+    .kr-chips-rolar { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+    .kr-rolar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 6px; padding: 5px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .12);
+        background: rgba(255, 255, 255, .04); color: inherit; cursor: pointer; font: inherit; font-size: .8rem; text-align: left; }
+    .kr-rolar:hover { border-color: var(--camp-acento); background: rgba(155, 34, 38, .22); }
+    .kr-rolar b { font-size: .9rem; }
+    .kr-rolar .kr-selo, .kr-rolar .kr-testes { flex-basis: 100%; margin: 0; padding: 0; background: none; font-size: .66rem; }
+    .kr-rolar-dano { font-size: .85rem; }
+    .kr-rolou { margin: 6px 0; display: flex; flex-direction: column; gap: 3px; }
+    .kr-rolagem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 8px; border-radius: 6px; background: rgba(0, 0, 0, .3); font-size: .8rem; opacity: .7; }
+    .kr-rolagem.nova { opacity: 1; border: 1px solid rgba(248, 113, 113, .5); animation: kr-rolou .35s ease; }
+    .kr-rolagem .kr-conta { font-family: ui-monospace, Consolas, monospace; font-size: .74rem; opacity: .8; overflow-wrap: anywhere; }
+    .kr-rolagem b { font-size: 1rem; }
+    @keyframes kr-rolou { from { transform: scale(.96); background: rgba(155, 34, 38, .5); } to { transform: none; } }
+    .kr-ficha details > summary { cursor: pointer; font-weight: 700; font-size: .86rem; }
+    .kr-texto { margin-top: 6px; }
+    .kr-texto p { margin: 3px 0 0; font-size: .82rem; opacity: .85; }
+    .kr-estado { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .kr-estado label { display: flex; flex-direction: column; gap: 3px; }
+    .kr-vida { margin: 0; }
 </style>
 
 <div class="camp-wrap camp-wrap-larga" id="kr-pagina">
@@ -87,7 +149,7 @@
     <div class="kr-lista" id="kr-lista"></div>
 </div>
 
-<div class="kr-janela" id="kr-janela" hidden>
+<div class="kr-janela camp-vars" id="kr-janela" hidden>
     <div class="kr-caixa" role="dialog" aria-modal="true" aria-labelledby="kr-janela-titulo">
         <div class="kr-caixa-cab"><h2 id="kr-janela-titulo">Kuro</h2><button type="button" class="camp-btn camp-btn-pequeno" id="kr-fechar">Fechar</button></div>
         <div id="kr-janela-corpo"></div>

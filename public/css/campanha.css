@@ -4,7 +4,8 @@
    para funcionar sobre o fundo escuro atual do site.
    ========================================================== */
 
-.camp-wrap {
+/* as cores da campanha valem também fora do .camp-wrap, nas janelas abertas por cima da página (.camp-vars) */
+.camp-wrap, .camp-vars {
     --camp-borda: rgba(255, 255, 255, .10);
     --camp-borda-forte: rgba(255, 255, 255, .22);
     --camp-fundo-card: rgba(0, 0, 0, .28);
@@ -16,7 +17,8 @@
     --camp-acento-hover: #b22a2f;
     --camp-ok: #5fa777;
     --camp-raio: 8px;
-
+}
+.camp-wrap {
     max-width: 860px;
     margin: 0 auto;
     padding: 1.5rem 1rem 3rem;

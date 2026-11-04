@@ -16,9 +16,11 @@
         const hab = d.habilidades || {};
         const q = k => Math.max(0, +a[k] || 0);
         const h = k => Math.max(0, +hab[k] || 0);
+        const e = k => Math.max(0, h(k) - 1); // escolhas além da primeira (livro: "para cada vez além da primeira")
         const avisos = [];
 
-        // "B (+I por escolha)" vale B + I × escolhas (o +I conta desde a 1ª escolha); "Dobre ao tipo 3" dobra do tipo 3 em diante
+        // "B (+I por escolha)" vale B + I × (escolhas − 1): o +I vale a cada escolha além da primeira (p. 515 do livro);
+        // "+V por escolha" sem base vale V × escolhas; "Dobre ao tipo 3" dobra os bônus numéricos do tipo 3 em diante
         const dobra = T >= 3 ? 2 : 1;
         const nome = k => (cfg.habilidades[k] || {}).nome || k;
         const bonus = { atributos: {}, rolagens: {} }; // de onde veio cada valor somado: { chave: [{ de, v }] }
@@ -35,14 +37,14 @@
             somarAtrib("destreza", v, "multiplos_membros");
             efeitos.push({ rot: "Membros extras", valor: "+" + h("multiplos_membros") * dobra, de: nome("multiplos_membros") });
         }
-        if(h("conhecedor")) somarAtrib("carisma", 15 + 15 * h("conhecedor"), "conhecedor");
+        if(h("conhecedor")) somarAtrib("carisma", 15 + 15 * e("conhecedor"), "conhecedor");
         const teste = (k, item, hab) => (testes[k] = testes[k] || []).push(Object.assign({ de: nome(hab) }, item));
         if(h("gosmento")){
             teste("forca", { v: -10 * h("gosmento") }, "gosmento");
             teste("constituicao", { v: 15 * h("gosmento") }, "gosmento");
         }
         if(h("liquido")){
-            teste("destreza", { v: 20 + 15 * h("liquido") }, "liquido");
+            teste("destreza", { v: 20 + 15 * e("liquido") }, "liquido");
             teste("forca", { texto: "falha automática" }, "liquido");
         }
         const con = atributos.constituicao;
@@ -50,7 +52,7 @@
         const pv = base.pv + q("pvs") * (d.modo_pvs === "tipo" ? T * 10 : con);
         const armadura = base.armadura + q("armadura") * (d.modo_armadura === "tipo" ? T * 5 : Math.floor(con / 4));
         const deslocamento = base.deslocamento + q("deslocamento") * T * 2;
-        const voo = h("asas") ? (5 + 5 * h("asas")) * dobra : 0;
+        const voo = h("asas") ? (5 + 5 * e("asas")) * dobra : 0;
 
         // rolagens: -10 de base; cada vez que uma habilidade recebe Rolagem poderosa, +tipo × 10
         const rolagens = {};
@@ -64,8 +66,8 @@
         const somarRol = (k, v, hab) => { rolagens[k] = (rolagens[k] != null ? rolagens[k] : -10) + v; (bonus.rolagens[k] = bonus.rolagens[k] || []).push({ de: nome(hab), v }); };
         if(h("sombroso")) somarRol("furtividade", 25 * h("sombroso"), "sombroso");
         if(h("conhecedor")){
-            somarRol("labia", 15 + 15 * h("conhecedor"), "conhecedor");
-            efeitos.push({ rot: "Tecnologia, manipulação, intimidar, fotografia", valor: "+" + (15 + 15 * h("conhecedor")), de: nome("conhecedor") });
+            somarRol("labia", 15 + 15 * e("conhecedor"), "conhecedor");
+            efeitos.push({ rot: "Tecnologia, manipulação, intimidar, fotografia", valor: "+" + (15 + 15 * e("conhecedor")), de: nome("conhecedor") });
         }
 
         // ataque comum: 1d6 + 1 amaldiçoado; cada Dano adicional: +1 passo, +2 dados e +2×tipo de dano extra
@@ -121,23 +123,27 @@
 
         // o que as habilidades dão além da tabela: crítico, alcance, cura, ataques extras, imunidades
         const passo = (lados, mais) => passos[Math.min(passos.length - 1, Math.max(0, passos.indexOf(lados)) + mais)];
-        const critico = h("lacerador") ? { margem: 10 + 8 * h("lacerador"), mult: 1 + h("lacerador") } : null;
+        const critico = h("lacerador") ? { margem: 10 + 8 * e("lacerador"), mult: 1 + e("lacerador") } : null;
         const ef = (k, rot, valor) => { if(h(k)) efeitos.push({ rot, valor, de: nome(k) }); };
-        ef("alongado", "Alcance de adjacência", "+" + (3 + 2 * h("alongado")) + " m");
+        ef("alongado", "Alcance de adjacência", "+" + (3 + 2 * e("alongado")) + " m");
         ef("regeneracao", "Regeneração", 3 * h("regeneracao") * dobra + " PVs no início de cada turno");
-        ef("carniceiro", "Devorar cadáver (ação completa)", "recupera " + (10 + 5 * h("carniceiro")) + " PVs");
-        ef("lodeiro", "Comer poça de lodo (ação bônus)", "recupera " + (5 + 3 * h("lodeiro")) * dobra * (h("comedor_lodo") ? 2 : 1) + " PVs");
-        ef("cusparada", "Cusparada (ação principal, testa Maldição)", (3 + 2 * h("cusparada")) + "d" + passo(6, h("cusparada")) + " no dano à escolha");
-        ef("auto_destruicao", "Explosão ao morrer", (1 + h("auto_destruicao")) + "d" + passo(6, h("auto_destruicao")) + " explosivo" + (T >= 3 ? " ×2" : "") + " em " + h("auto_destruicao") + " m");
-        ef("extrator", "Extrator", "tira aura igual a 1/2 do dano + " + 7 * h("extrator"));
-        ef("espinhos", "Espinhos amaldiçoados", "devolve 1/" + Math.max(1, 10 - 2 * h("espinhos")) + " do dano corpo a corpo");
-        ef("hexomante", "Técnicas de maldição", (1 + h("hexomante")) + " (" + h("hexomante") + " conjurações por cena, " + h("hexomante") + " aprimoramentos grátis)");
-        ef("criados", "Criados por turno (em combate)", String(h("criados")));
-        ef("proliferacao", "Proliferação (ação completa)", (1 + Math.floor(h("proliferacao") / 2)) + " cópia(s), até " + T + " vez(es) por cena");
-        ef("aterrorizar", "Aterrorizar (ação bônus)", "amedronta " + (1 + h("aterrorizar")) + " vez(es) e causa " + 3 * h("aterrorizar") + " de dano de sanidade");
+        ef("carniceiro", "Devorar cadáver (ação completa)", "recupera " + (10 + 5 * e("carniceiro")) + " PVs");
+        ef("lodeiro", "Comer poça de lodo (ação bônus)", "recupera " + (5 + 3 * e("lodeiro")) * dobra * (h("comedor_lodo") ? 2 : 1) + " PVs");
+        ef("cusparada", "Cusparada (ação principal, testa Maldição)", (3 + 2 * e("cusparada")) + "d" + passo(6, e("cusparada")) + " no dano à escolha");
+        ef("auto_destruicao", "Explosão ao morrer", (1 + e("auto_destruicao")) + "d" + passo(6, e("auto_destruicao")) + " explosivo" + (T >= 3 ? " ×2" : "") + " em " + h("auto_destruicao") + " m");
+        ef("extrator", "Extrator", "tira aura igual a 1/2 do dano" + (e("extrator") ? " + " + 7 * e("extrator") : ""));
+        ef("espinhos", "Espinhos amaldiçoados", "devolve 1/" + Math.max(1, 10 - 2 * e("espinhos")) + " do dano corpo a corpo");
+        ef("hexomante", "Técnicas de maldição", (1 + e("hexomante")) + " (" + h("hexomante") + " conjurações por cena, " + h("hexomante") + " aprimoramentos grátis)");
+        ef("criados", "Criados por turno (em combate)", String(e("criados")));
+        ef("proliferacao", "Proliferação (ação completa)", (1 + Math.floor(e("proliferacao") / 2)) + " cópia(s), até " + T + " vez(es) por cena");
+        ef("aterrorizar", "Aterrorizar (ação bônus)", "amedronta " + (1 + e("aterrorizar")) + " vez(es) e causa " + 3 * h("aterrorizar") + " de dano de sanidade");
         ef("teleportar", "Teleporte", 5 * h("teleportar") + " m");
         ef("oni_presente", "Deslocamento", "planetário ilimitado");
         ef("sem_orgaos", "Morte", "só ao chegar a −" + pv + " PVs");
+        // danos que dá para rolar: o ataque comum e as ações das habilidades com dados ({ nome, dados, lados, extra, mult, tipo, amaldicoado })
+        const danos = [{ nome: "Ataque comum", dados, lados, extra, mult: 1, tipo: d.tipo_dano || "cortante", amaldicoado: base.ataque.extra }];
+        if(h("cusparada")) danos.push({ nome: "Cusparada", dados: 3 + 2 * e("cusparada"), lados: passo(6, e("cusparada")), extra: 0, mult: 1, tipo: "à escolha", amaldicoado: 0 });
+        if(h("auto_destruicao")) danos.push({ nome: "Explosão ao morrer", dados: 1 + e("auto_destruicao"), lados: passo(6, e("auto_destruicao")), extra: 0, mult: T >= 3 ? 2 : 1, tipo: "explosivo", amaldicoado: 0 });
         const imunidades = [];
         const imune = (k, lista) => { if(h(k)) lista.forEach(x => { if(imunidades.indexOf(x) < 0) imunidades.push(x); }); };
         imune("fantasmagorico", ["dano físico não amaldiçoado"]);
@@ -148,7 +154,7 @@
 
         return {
             tipo: T, circulos: circ, atributos, pv, armadura, deslocamento, voo, rolagens, ataque, critico, resistencias, fraquezas,
-            tamanho: tamanhos[iTam], sentidos, habilidades: lista, bonus, testes, efeitos, imunidades,
+            tamanho: tamanhos[iTam], sentidos, habilidades: lista, bonus, testes, efeitos, imunidades, danos,
             aprim: { total: aprimTotal, usados: aprimUsados }, habil: { total: habTotal, usados: habUsados }, avisos
         };
     }
@@ -161,6 +167,7 @@
         texto = String(texto || "");
         n = Math.max(0, +n || 0);
         T = Math.max(1, +T || 1);
+        const e = Math.max(0, n - 1); // o que vem entre parênteses "(+I por escolha)" vale a cada escolha além da primeira
         const passos = (cfg && cfg.passos_dado) || [4, 6, 8, 10, 12, 20];
         const x2 = /dobre ao tipo 3/i.test(texto) && T >= 3 ? 2 : 1;
         const num = s => /^um/i.test(s) ? 1 : parseFloat(String(s).replace(",", "."));
@@ -169,17 +176,17 @@
             // 3d6 (+2 dados e +1 passo por escolha)
             [/(\d+)d(\d+)\s*\(\+(\d+) dados? e \+(\d+) passos? por escolha\)/gi, m => {
                 const i = Math.max(0, passos.indexOf(+m[2]));
-                return (+m[1] + m[3] * n) + "d" + passos[Math.min(passos.length - 1, i + m[4] * n)] + (/dobre o dano em tipo 3/i.test(texto) && T >= 3 ? " ×2" : "");
+                return (+m[1] + m[3] * e) + "d" + passos[Math.min(passos.length - 1, i + m[4] * e)] + (/dobre o dano em tipo 3/i.test(texto) && T >= 3 ? " ×2" : "");
             }],
             // (D50 -20 por escolha): dificuldade
-            [/\(D(\d+)\s*-(\d+) por escolha\)/gi, m => "D" + Math.max(0, m[1] - m[2] * n)],
+            [/\(D(\d+)\s*-(\d+) por escolha\)/gi, m => "D" + Math.max(0, m[1] - m[2] * e)],
             // 1/10 (-2 denominador por escolha)
-            [/(\d+)\/(\d+)\s*\(-(\d+) denominador por escolha\)/gi, m => m[1] + "/" + Math.max(1, m[2] - m[3] * n)],
+            [/(\d+)\/(\d+)\s*\(-(\d+) denominador por escolha\)/gi, m => m[1] + "/" + Math.max(1, m[2] - m[3] * e)],
             // 1/2 (+7 fixo por escolha)
-            [/(\d+)\/(\d+)\s*\(\+(\d+) fixo por escolha\)/gi, m => m[1] + "/" + m[2] + " + " + m[3] * n],
+            [/(\d+)\/(\d+)\s*\(\+(\d+) fixo por escolha\)/gi, m => m[1] + "/" + m[2] + (e ? " + " + m[3] * e : "")],
             // B (+I por escolha) · uma técnica (+1 por escolha) · 8 (-1 a cada escolha, mínimo 1 mês) · uma (+1 a cada 2 escolhas)
             [/([+-]?\d+(?:,\d+)?|\buma?\b)((?:\s+[a-zà-ú]+)?)\s*\(([+-]\d+(?:,\d+)?)\s*(?:fixo\s*)?(?:por|a cada)\s*(\d+\s*)?escolhas?([^)]*)\)/gi, m => {
-                const vezes = m[4] ? Math.floor(n / +m[4]) : n;
+                const vezes = m[4] ? Math.floor(e / +m[4]) : e;
                 let v = num(m[1]) + num(m[3]) * vezes;
                 const min = /m[ií]nimo(?: de)? (\d+)/i.exec(m[5] || "");
                 if(min) v = Math.max(+min[1], v);
@@ -236,7 +243,22 @@
         };
     }
 
-    const api = { calcular, doPronto, interpretar };
+    /**
+     * Rolagens do Kuro. Teste: d100 − valor (o valor da rolagem, ou do atributo com os modificadores de teste).
+     * Dano: os dados, + extra, vezes o multiplicador, + o amaldiçoado. aleatorio(n) devolve 1..n.
+     */
+    function rolarTeste(valor, aleatorio){
+        const d100 = aleatorio(100);
+        return { d100, valor, total: d100 - valor };
+    }
+    function rolarDano(dn, aleatorio){
+        const dados = [];
+        for(let i = 0; i < dn.dados; i++) dados.push(aleatorio(dn.lados));
+        const soma = dados.reduce((s, x) => s + x, 0);
+        return { dados, soma, total: (soma + (dn.extra || 0)) * (dn.mult || 1), amaldicoado: dn.amaldicoado || 0 };
+    }
+
+    const api = { calcular, doPronto, interpretar, rolarTeste, rolarDano };
     if(typeof module !== "undefined" && module.exports) module.exports = api;
     else raiz.KurosCalc = api;
 })(typeof window !== "undefined" ? window : this);
