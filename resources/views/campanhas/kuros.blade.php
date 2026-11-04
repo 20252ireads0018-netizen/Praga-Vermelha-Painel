@@ -64,15 +64,22 @@
     /* editor compacto: identidade + Salvar sempre à vista, o resto em abas; a prévia acompanha a rolagem */
     .kr-editor { align-items: start; }
     .kr-form { min-width: 0; }
-    .kr-topo-form { position: sticky; top: -16px; z-index: 2; display: grid; grid-template-columns: minmax(0, 2fr) 70px 80px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: end;
-        background: #160f17; padding: 4px 0 8px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
-    .kr-topo-form label { margin: 0; font-size: .75rem; }
-    .kr-topo-form input { min-height: 34px; padding: 4px 8px; }
+    /* topo: Nome e Salvar na 1ª linha; Tipo, Círculos, Daemon e Pasta na 2ª */
+    .kr-topo-form { position: sticky; top: -16px; z-index: 2; display: grid; grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; align-items: end;
+        background: #160f17; padding: 4px 0 10px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+    .kr-topo-form .kr-nome { grid-column: 1 / 4; grid-row: 1; }
+    .kr-topo-form > .camp-btn { grid-column: 4; grid-row: 1; min-height: 34px; white-space: nowrap; }
+    .kr-topo-form label, .kr-campo { margin: 0; font-size: .75rem; display: flex; flex-direction: column; gap: 3px; }
+    .kr-campo span { opacity: .9; }
+    .kr-campo .kr-passo { min-height: 34px; }
     .kr-editor input, .kr-editor select, .kr-editor textarea { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
-    .kr-topo-form .camp-btn { min-height: 34px; white-space: nowrap; }
+    .kr-editor input { min-height: 34px; padding: 4px 10px; font-size: .9rem; }
+    .kr-editor select { min-height: 30px; padding: 4px 30px 4px 10px; font-size: .82rem; background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%; }
+    .kr-escolha { flex-direction: row !important; align-items: center; justify-content: space-between; gap: 8px; }
+    .kr-escolha select { width: auto; flex: 0 1 190px; }
     @media (max-width: 640px) {
-        .kr-topo-form { position: static; grid-template-columns: 1fr 1fr; }
-        .kr-topo-form .kr-nome, .kr-topo-form .camp-btn { grid-column: 1 / -1; }
+        .kr-topo-form { position: static; grid-template-columns: auto auto; }
+        .kr-topo-form .kr-nome, .kr-topo-form > .camp-btn { grid-column: 1 / -1; grid-row: auto; }
         .kr-caixa { padding: 12px; }
         .kr-janela { padding: 12px 6px; }
     }
@@ -110,11 +117,24 @@
     .kr-rolar b { font-size: .9rem; }
     .kr-rolar .kr-selo, .kr-rolar .kr-testes { flex-basis: 100%; margin: 0; padding: 0; background: none; font-size: .66rem; }
     .kr-rolar-dano { font-size: .85rem; }
-    .kr-rolou { margin: 6px 0; display: flex; flex-direction: column; gap: 3px; }
-    .kr-rolagem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 4px 8px; border-radius: 6px; background: rgba(0, 0, 0, .3); font-size: .8rem; opacity: .7; }
-    .kr-rolagem.nova { opacity: 1; border: 1px solid rgba(248, 113, 113, .5); animation: kr-rolou .35s ease; }
-    .kr-rolagem .kr-conta { font-family: ui-monospace, Consolas, monospace; font-size: .74rem; opacity: .8; overflow-wrap: anywhere; }
-    .kr-rolagem b { font-size: 1rem; }
+    /* rolagens: a última em destaque, as anteriores numa caixa curta com rolagem; × apaga uma, "Limpar rolagens" apaga todas */
+    .kr-rolou { margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+    .kr-rolou-cab { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; opacity: .85; }
+    .kr-rolou-cab .camp-btn { min-height: 26px; padding: 0 10px; font-size: .74rem; }
+    .kr-rolou-antigas { display: flex; flex-direction: column; gap: 2px; max-height: 128px; overflow: auto; padding-right: 2px; }
+    .kr-rolagem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 22px; gap: 8px; align-items: center; padding: 3px 4px 3px 8px; border-radius: 6px; background: rgba(0, 0, 0, .3); font-size: .78rem; opacity: .75; }
+    .kr-rolagem.nova { opacity: 1; padding: 7px 4px 7px 10px; border: 1px solid rgba(248, 113, 113, .55); background: rgba(155, 34, 38, .16); font-size: .86rem; animation: kr-rolou .35s ease;
+        grid-template-columns: minmax(0, 1fr) auto 22px; grid-template-areas: "rot total x" "conta total x"; row-gap: 1px; }
+    .kr-rolagem.nova > span:first-child { grid-area: rot; font-weight: 700; }
+    .kr-rolagem.nova .kr-conta { grid-area: conta; }
+    .kr-rolagem.nova b { grid-area: total; }
+    .kr-rolagem.nova .kr-tirar { grid-area: x; }
+    .kr-escolha { white-space: nowrap; }
+    .kr-rolagem .kr-conta { font-family: ui-monospace, Consolas, monospace; font-size: .72rem; opacity: .75; overflow-wrap: anywhere; }
+    .kr-rolagem b { font-size: .92rem; text-align: right; }
+    .kr-rolagem.nova b { font-size: 1.25rem; }
+    .kr-tirar { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: inherit; opacity: .5; cursor: pointer; font-size: 1rem; line-height: 1; }
+    .kr-tirar:hover { opacity: 1; background: rgba(255, 255, 255, .1); }
     @keyframes kr-rolou { from { transform: scale(.96); background: rgba(155, 34, 38, .5); } to { transform: none; } }
     .kr-ficha details > summary { cursor: pointer; font-weight: 700; font-size: .86rem; }
     .kr-texto { margin-top: 6px; }

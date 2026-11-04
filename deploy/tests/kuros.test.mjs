@@ -100,6 +100,12 @@ t("rolagens: teste é d100 − valor; dano soma os dados, o extra, o multiplicad
     const g = calcular({ tipo: 3, habilidades: { auto_destruicao: 2 } }, cfg);
     assert.strictEqual(rolarDano(g.danos[1], fixo(2)).total, 8, "2d8 dobrado no tipo 3");
 });
+t("Infestador confere com o livro (p. 532): PV 100, Constituição 90, Luta +50, Desviar e Resiliência +10, Infecção 4", () => {
+    const f = calcular(pronto("Infestador"), cfg);
+    assert.deepStrictEqual([f.pv, f.atributos.constituicao, f.rolagens.luta, f.rolagens.desviar, f.rolagens.resiliencia], [100, 90, 50, 10, 10]);
+    assert.deepStrictEqual(f.habilidades.map(h => h.chave + " " + h.escolhas), ["infeccao 4", "proliferacao 1", "ataque_proliferador 1"]);
+    assert.deepStrictEqual(valores("infeccao", 4, 2), ["20", "18", "D0"], "ameaça (= tipo) × 10; 24 − 2 × 3 horas; D30 − 25 × 3");
+});
 t("todos os prontos calculam sem habilidade desconhecida", () => {
     cfg.prontos.forEach(p => {
         Object.keys(p.habilidades).forEach(k => assert.ok(cfg.habilidades[k], p.nome + ": " + k));

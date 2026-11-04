@@ -119,7 +119,15 @@
     const aleatorio = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % n); };
     function historicoHtml(){
         if(!historico.length) return '<p class="kr-meta">As rolagens aparecem aqui e só você vê.</p>';
-        return historico.map((r, i) => '<div class="kr-rolagem' + (i ? '' : ' nova') + '"><span>' + esc(r.rot) + '</span><span class="kr-conta">' + esc(r.conta) + '</span><b>' + esc(r.total) + '</b></div>').join("");
+        const linha = (r, i) => '<div class="kr-rolagem' + (i ? '' : ' nova') + '"><span>' + esc(r.rot) + '</span><span class="kr-conta">' + esc(r.conta) + '</span><b>' + esc(r.total) + '</b>' +
+            '<button type="button" class="kr-tirar" data-limpar="' + i + '" title="Apagar esta rolagem" aria-label="Apagar esta rolagem">×</button></div>';
+        return '<div class="kr-rolou-cab"><span>Rolagens (' + historico.length + ')</span><button type="button" class="camp-btn camp-btn-pequeno" data-limpar="todas">Limpar rolagens</button></div>' +
+            linha(historico[0], 0) + (historico.length > 1 ? '<div class="kr-rolou-antigas">' + historico.slice(1).map((r, i) => linha(r, i + 1)).join("") + '</div>' : '');
+    }
+    function limparRolagens(qual){
+        if(qual === "todas") historico = [];
+        else historico.splice(+qual, 1);
+        corpo.querySelectorAll(".kr-rolou").forEach(el => { el.innerHTML = historicoHtml(); });
     }
     function rolar(alvo){
         if(!fichaAtual) return;
@@ -139,7 +147,7 @@
             r = { rot: (tipo === "atr" ? CFG.atributos[k] : CFG.rolagens[k]) || k, conta: "d100 " + x.d100 + " − (" + fmt(valor) + ")", total: falha ? "falha automática" : String(x.total) };
         }
         historico.unshift(r);
-        historico = historico.slice(0, 8);
+        historico = historico.slice(0, 20);
         corpo.querySelectorAll(".kr-rolou").forEach(el => { el.innerHTML = historicoHtml(); });
     }
 
@@ -148,7 +156,12 @@
     function abrir(titulo, html){ historico = []; $("#kr-janela-titulo").textContent = titulo; corpo.innerHTML = html; janela.hidden = false; }
     function fechar(){ janela.hidden = true; corpo.innerHTML = ""; historico = []; fichaAtual = null; }
     // botões de rolar da ficha (na ficha e na prévia do editor), antes dos cliques de cada tela
-    corpo.addEventListener("click", e => { const b = e.target.closest("[data-rolar]"); if(b){ e.stopPropagation(); rolar(b.dataset.rolar); } }, true);
+    corpo.addEventListener("click", e => {
+        const b = e.target.closest("[data-rolar], [data-limpar]");
+        if(!b) return;
+        e.stopPropagation();
+        if(b.dataset.rolar) rolar(b.dataset.rolar); else limparRolagens(b.dataset.limpar);
+    }, true);
     $("#kr-fechar").addEventListener("click", fechar);
     janela.addEventListener("click", e => { if(e.target === janela) fechar(); });
     document.addEventListener("keydown", e => { if(e.key === "Escape" && !janela.hidden) fechar(); });
@@ -194,8 +207,8 @@
             const vezesRol = Object.values(d.rolagens).reduce((s, v) => s + (+v || 0), 0);
             return '<div class="kr-grade">' + Object.keys(CFG.aprimoramentos).map(c => cont(CFG.aprimoramentos[c].nome, passo("aprim", c, d.aprim[c] || 0), CFG.aprimoramentos[c].texto)).join("") + '</div>' +
                 (d.aprim.pvs || d.aprim.armadura || d.aprim.tamanho ? '<div class="kr-grade">' +
-                    (d.aprim.pvs ? '<label>Cada PVs Extra<select data-campo="modo_pvs"><option value="con"' + (d.modo_pvs !== "tipo" ? " selected" : "") + '>+ Constituição</option><option value="tipo"' + (d.modo_pvs === "tipo" ? " selected" : "") + '>+ tipo × 10</option></select></label>' : '') +
-                    (d.aprim.armadura ? '<label>Cada Armadura extra<select data-campo="modo_armadura"><option value="con"' + (d.modo_armadura !== "tipo" ? " selected" : "") + '>+ 1/4 da Constituição</option><option value="tipo"' + (d.modo_armadura === "tipo" ? " selected" : "") + '>+ tipo × 5</option></select></label>' : '') +
+                    (d.aprim.pvs ? '<label class="kr-escolha">Cada PVs Extra<select data-campo="modo_pvs"><option value="con"' + (d.modo_pvs !== "tipo" ? " selected" : "") + '>+ Constituição</option><option value="tipo"' + (d.modo_pvs === "tipo" ? " selected" : "") + '>+ tipo × 10</option></select></label>' : '') +
+                    (d.aprim.armadura ? '<label class="kr-escolha">Cada Armadura extra<select data-campo="modo_armadura"><option value="con"' + (d.modo_armadura !== "tipo" ? " selected" : "") + '>+ 1/4 da Constituição</option><option value="tipo"' + (d.modo_armadura === "tipo" ? " selected" : "") + '>+ tipo × 5</option></select></label>' : '') +
                     (d.aprim.tamanho ? cont("Categoria de tamanho", passo("tam", "x", fmt(d.tamanho))) : '') + '</div>' : '') +
                 (d.aprim.atributo ? '<h4>Aumento de atributo: +40 cada <span>' + vezesAtrib + '/' + (d.aprim.atributo || 0) + '</span></h4><div class="kr-grade kr-grade-3">' +
                     Object.keys(CFG.atributos).map(a => cont(CFG.atributos[a], passo("atributos", a, d.atributos[a] || 0))).join("") + '</div>' : '') +
@@ -235,8 +248,8 @@
                 // sempre à vista: identidade do Kuro e o Salvar
                 '<div class="kr-topo-form">' +
                     '<label class="kr-nome">Nome<input type="text" data-campo="nome" maxlength="80" value="' + esc(nome) + '"></label>' +
-                    '<label>Tipo<input type="number" min="1" max="9" data-campo="tipo" value="' + d.tipo + '"></label>' +
-                    '<label>Círculos<input type="number" min="0" max="999" data-campo="circulos" value="' + d.circulos + '"></label>' +
+                    '<div class="kr-campo"><span>Tipo</span>' + passo("base", "tipo", d.tipo) + '</div>' +
+                    '<div class="kr-campo"><span>Círculos</span>' + passo("base", "circulos", d.circulos) + '</div>' +
                     '<label>Daemon<input type="text" list="kr-daemons" data-campo="daemon" maxlength="40" value="' + esc(d.daemon || "") + '"></label>' +
                     '<label>Pasta<input type="text" data-campo="pasta" maxlength="60" value="' + esc(d.pasta || "") + '" placeholder="Ex.: Sessão 3"></label>' +
                     '<button type="button" class="camp-btn camp-btn-primario" id="kr-salvar">Salvar Kuro</button>' +
@@ -274,6 +287,7 @@
             const muda = (alvo, delta) => {
                 const [g, chave] = alvo.split(":");
                 if(g === "tam"){ d.tamanho = Math.max(-3, Math.min(3, d.tamanho + delta)); }
+                else if(g === "base"){ d[chave] = chave === "tipo" ? Math.max(1, Math.min(9, d.tipo + delta)) : Math.max(0, Math.min(999, d.circulos + delta)); }
                 else { d[g][chave] = Math.max(0, (d[g][chave] || 0) + delta); if(!d[g][chave]) delete d[g][chave]; }
                 redesenhar();
             };

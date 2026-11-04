@@ -197,6 +197,8 @@
             [/(?:igual|iguais) (?:a|à)s? (?:suas )?escolhas\b(?! vezes| triplicadas)/gi, () => fmt(n)],
             [/(?:seu |o )?tipo vezes (\d+)/gi, m => fmt(T * m[1])],
             [/iguais ao seu tipo/gi, () => fmt(T)],
+            // o nível de ameaça de um Kuro é o tipo dele (ficha base, p. 514)
+            [/(?:sua )?ameaça vezes (\d+)/gi, m => fmt(T * m[1])],
             [/em escolha (\d+)/gi, m => n >= +m[1] ? "valendo" : "a partir de " + m[1] + " escolhas"],
         ];
         const achados = [];
