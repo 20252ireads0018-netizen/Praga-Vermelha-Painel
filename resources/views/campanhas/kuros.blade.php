@@ -56,6 +56,10 @@
     .kr-vida input { width: 90px; }
     .kr-ficha .kr-habil-item { margin: 6px 0; }
     .kr-ficha .kr-habil-item p { margin: 2px 0 0; font-size: .8rem; opacity: .8; }
+    /* valores calculados pelo interpretador e selos de onde veio cada bônus */
+    .kr-calc { display: inline-block; padding: 0 5px; border-radius: 5px; background: rgba(239, 68, 68, .18); color: #fecaca; font-weight: 700; white-space: nowrap; }
+    .kr-selo { display: inline-block; margin-left: 2px; padding: 0 5px; border-radius: 9px; background: rgba(255, 255, 255, .08); font-size: .72rem; opacity: .85; white-space: nowrap; }
+    .kr-testes { font-size: .72rem; opacity: .85; }
 </style>
 
 <div class="camp-wrap camp-wrap-larga" id="kr-pagina">

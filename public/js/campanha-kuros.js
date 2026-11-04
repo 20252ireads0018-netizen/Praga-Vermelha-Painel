@@ -11,6 +11,11 @@
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const cap = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
     const fmt = n => (n > 0 ? "+" : "") + n;
+    // texto da habilidade com os valores já calculados pelo interpretador (KurosCalc.interpretar)
+    const textoCalc = (partes, n) => partes.map(p => p.v == null ? esc(p.s)
+        : esc(p.s) + ' <b class="kr-calc" title="Calculado para ' + n + ' escolha' + (n === 1 ? '' : 's') + '">= ' + esc(p.v) + '</b>').join("");
+    // valor com o selo de cada bônus que veio de habilidade (ex.: Carisma 45 · +30 Conhecedor)
+    const selos = lista => (lista || []).map(b => ' <span class="kr-selo">' + esc((b.texto || fmt(b.v)) + ' ' + b.de) + '</span>').join("");
     let kuros = D.kuros.slice();
 
     function msg(texto, erro){
@@ -70,7 +75,8 @@
 
     /* ---------- ficha calculada ---------- */
     function fichaHtml(nome, d, f){
-        const tabela = (obj, rot) => '<table>' + Object.keys(obj).map(k => '<tr><td>' + esc(rot(k)) + '</td><td>' + obj[k] + '</td></tr>').join("") + '</table>';
+        const tabela = (obj, rot, extra) => '<table>' + Object.keys(obj).map(k => '<tr><td>' + esc(rot(k)) + '</td><td>' + obj[k] + (extra ? extra(k) : '') + '</td></tr>').join("") + '</table>';
+        const testes = k => (f.testes[k] || []).length ? ' <span class="kr-testes">testes:' + selos(f.testes[k]) + '</span>' : '';
         const escolhas = '<div class="kr-escolhas"><span class="' + (f.aprim.usados > f.aprim.total ? "estourou" : "") + '">Aprimoramentos ' + f.aprim.usados + '/' + f.aprim.total + '</span>' +
             '<span class="' + (f.habil.usados > f.habil.total ? "estourou" : "") + '">Habilidades ' + f.habil.usados + '/' + f.habil.total + '</span></div>';
         return '<div class="kr-ficha"><h3>' + esc(nome || "Kuro sem nome") + '</h3>' +
@@ -82,11 +88,14 @@
             '<tr><td>Sentidos</td><td>' + esc(f.sentidos.join(", ")) + '</td></tr>' +
             '<tr><td>Resistências</td><td>' + esc(f.resistencias.map(cap).join(", ") || "Nenhuma") + '</td></tr>' +
             '<tr><td>Fraquezas</td><td>' + esc(f.fraquezas.map(cap).join(", ") || "Nenhuma") + '</td></tr>' +
-            '<tr><td>Ataque comum</td><td>' + esc(f.ataque) + '</td></tr></table>' +
-            '<div class="kr-sub">Atributos</div>' + tabela(f.atributos, k => CFG.atributos[k] || k) +
-            '<div class="kr-sub">Rolagens</div>' + tabela(Object.fromEntries(Object.entries(f.rolagens).map(([k, v]) => [k, fmt(v)])), k => CFG.rolagens[k] || k) +
+            '<tr><td>Ataque comum</td><td>' + esc(f.ataque) + '</td></tr>' +
+            (f.critico ? '<tr><td>Crítico</td><td>margem +' + f.critico.margem + ' · multiplicador +' + f.critico.mult + ' <span class="kr-selo">Lacerador</span></td></tr>' : '') +
+            (f.imunidades.length ? '<tr><td>Imunidades</td><td>' + esc(f.imunidades.map(cap).join(", ")) + '</td></tr>' : '') + '</table>' +
+            '<div class="kr-sub">Atributos</div>' + tabela(f.atributos, k => CFG.atributos[k] || k, k => selos(f.bonus.atributos[k]) + testes(k)) +
+            '<div class="kr-sub">Rolagens</div>' + tabela(Object.fromEntries(Object.entries(f.rolagens).map(([k, v]) => [k, fmt(v)])), k => CFG.rolagens[k] || k, k => selos(f.bonus.rolagens[k])) +
+            (f.efeitos.length ? '<div class="kr-sub">Efeitos das habilidades</div><table>' + f.efeitos.map(e => '<tr><td>' + esc(e.rot) + '</td><td>' + esc(e.valor) + ' <span class="kr-selo">' + esc(e.de) + '</span></td></tr>').join("") + '</table>' : '') +
             '<div class="kr-sub">Habilidades sobrenaturais</div>' +
-            (f.habilidades.map(h => '<div class="kr-habil-item"><strong>' + esc(h.nome) + (h.escolhas > 1 ? ' ×' + h.escolhas : '') + '</strong><p>' + esc(h.texto) + '</p></div>').join("") || '<p class="kr-meta">Nenhuma.</p>') +
+            (f.habilidades.map(h => '<div class="kr-habil-item"><strong>' + esc(h.nome) + (h.escolhas > 1 ? ' ×' + h.escolhas : '') + '</strong><p>' + textoCalc(h.partes, h.escolhas) + '</p></div>').join("") || '<p class="kr-meta">Nenhuma.</p>') +
             (d.descricao ? '<div class="kr-sub">Descrição</div><p>' + esc(d.descricao) + '</p>' : '') +
             (d.comportamento ? '<div class="kr-sub">Comportamento</div><p>' + esc(d.comportamento) + '</p>' : '') +
             (d.surgimento ? '<div class="kr-sub">Surgimento</div><p>' + esc(d.surgimento) + '</p>' : '') +
@@ -170,7 +179,7 @@
                 '<div class="kr-habs">' + habs.map(h => {
                     const def = CFG.habilidades[h], n = d.habilidades[h] || 0;
                     return '<div class="kr-hab' + (n ? " tem" : "") + '"><div class="kr-hab-cab"><strong>' + esc(def.nome) + '</strong>' + passo("habilidades", h, n) + '</div>' +
-                        (n && falta(h).length ? '<span class="kr-req">Falta: ' + esc(falta(h).join(", ")) + '</span>' : '') + '<p>' + esc(def.texto) + '</p></div>';
+                        (n && falta(h).length ? '<span class="kr-req">Falta: ' + esc(falta(h).join(", ")) + '</span>' : '') + '<p>' + textoCalc(KurosCalc.interpretar(def.texto, n || 1, f.tipo, CFG), n || 1) + '</p></div>';
                 }).join("") + '</div></div>' +
                 '<label style="margin-top:10px">Notas do mestre<textarea data-campo="notas_mestre" maxlength="3000">' + esc(d.notas_mestre || "") + '</textarea></label>' +
                 '<button type="button" class="camp-btn camp-btn-primario" id="kr-salvar">Salvar Kuro</button>' +

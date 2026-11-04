@@ -12,7 +12,7 @@ const cfg = JSON.parse(execFileSync(php, ["-r", "echo json_encode(require 'confi
 // o arquivo é um script de navegador: roda com um "module" de mentira para pegar a API
 const mod = { exports: {} };
 new Function("module", fs.readFileSync(path.join(raiz, "public", "js", "kuros-calc.js"), "utf8"))(mod);
-const { calcular, doPronto } = mod.exports;
+const { calcular, doPronto, interpretar } = mod.exports;
 
 let ok = 0;
 function t(nome, fn){ fn(); ok++; console.log("ok - " + nome); }
@@ -47,6 +47,48 @@ t("Múltiplos membros e Gosmento aplicam os números; 3 círculos dão +1 escolh
     assert.deepStrictEqual([f.atributos.forca, f.atributos.destreza], [90, 90]);
     assert.deepStrictEqual([f.resistencias, f.fraquezas], [["impacto", "queda"], ["cortante", "tóxico"]]);
     assert.deepStrictEqual([f.aprim.total, f.habil.total], [13, 10]);
+});
+// interpretador: "B (+I por escolha)" vale B + I × escolhas (o +I conta desde a 1ª)
+const valores = (k, n, T) => interpretar(cfg.habilidades[k].texto, n, T, cfg).filter(p => p.v != null).map(p => p.v);
+t("interpretador: base mais o que vem por escolha", () => {
+    assert.deepStrictEqual(valores("carniceiro", 1, 1), ["15"]);
+    assert.deepStrictEqual(valores("carniceiro", 3, 1), ["25"]);
+    assert.deepStrictEqual(valores("criados", 1, 3), ["1"]);
+    assert.deepStrictEqual(valores("lacerador", 2, 1), ["+26", "+3"]);
+    assert.deepStrictEqual(valores("ampulheta", 4, 1), ["2"], "mínimo de 2 turnos");
+    assert.deepStrictEqual(valores("crescimento", 1, 2), ["7", "20"], "8 − 1 por escolha; tipo vezes 10");
+    assert.deepStrictEqual(valores("proliferacao", 3, 2), ["2", "2"], "iguais ao tipo; uma +1 a cada 2 escolhas");
+});
+t("interpretador: vezes, triplicadas, dados, dificuldade e fração", () => {
+    assert.deepStrictEqual(valores("maldicao", 2, 3), ["6", "6", "6"]);
+    assert.deepStrictEqual(valores("regeneracao", 2, 1), ["6"]);
+    assert.deepStrictEqual(valores("regeneracao", 2, 3), ["12"], "dobra ao tipo 3");
+    assert.deepStrictEqual(valores("lodeiro", 1, 3), ["16"], "(5 + 3) dobrado");
+    assert.deepStrictEqual(valores("cusparada", 1, 1), ["5d8"]);
+    assert.deepStrictEqual(valores("metamorfo", 1, 1), ["D30"]);
+    assert.deepStrictEqual(valores("espinhos", 2, 1), ["1/6"]);
+    assert.deepStrictEqual(valores("extrator", 1, 1), ["1/2 + 7"]);
+    assert.deepStrictEqual(valores("nulificador", 3, 1), ["valendo"]);
+});
+t("interpretador: frase inteira por escolha (Múltiplos membros, Gosmento, Nomeador)", () => {
+    assert.deepStrictEqual(valores("multiplos_membros", 2, 1), ["+2", "+40"]);
+    assert.deepStrictEqual(valores("multiplos_membros", 2, 3), ["+4", "+80"]);
+    assert.deepStrictEqual(valores("gosmento", 2, 1), ["20", "30"]);
+    assert.deepStrictEqual(valores("nomeador", 1, 1), ["+2", "+15", "+2", "+5"]);
+    const partes = interpretar(cfg.habilidades.carniceiro.texto, 1, 1, cfg);
+    assert.strictEqual(partes.map(p => p.s).join(""), cfg.habilidades.carniceiro.texto, "o texto original fica inteiro");
+});
+t("habilidades somam na ficha: Sombroso, Conhecedor, Asas, Lacerador, Gosmento, imunidades", () => {
+    const f = calcular({ tipo: 2, habilidades: { sombroso: 2, conhecedor: 1, asas: 1, lacerador: 1, gosmento: 1, oni_visao: 1, regeneracao: 1 } }, cfg);
+    assert.strictEqual(f.rolagens.furtividade, -10 + 50);
+    assert.deepStrictEqual([f.atributos.carisma, f.rolagens.labia], [30, 20]);
+    assert.deepStrictEqual(f.bonus.atributos.carisma, [{ de: "Conhecedor", v: 30 }]);
+    assert.strictEqual(f.voo, 10);
+    assert.deepStrictEqual(f.critico, { margem: 18, mult: 2 });
+    assert.deepStrictEqual(f.testes.forca.map(x => x.v), [-10]);
+    assert.deepStrictEqual(f.imunidades, ["desprevenido", "cego", "ofuscado"]);
+    assert.ok(f.efeitos.some(e => e.rot === "Regeneração" && e.valor.startsWith("3 PVs")));
+    assert.strictEqual(calcular(pronto("Arpão"), cfg).voo, 15, "Arpão indagador: Asas ×2 no tipo 2");
 });
 t("todos os prontos calculam sem habilidade desconhecida", () => {
     cfg.prontos.forEach(p => {
