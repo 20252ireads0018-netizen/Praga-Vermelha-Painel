@@ -227,6 +227,18 @@ class PersonagemController extends Controller
             'itens.*.valor_fixo' => 'nullable|integer',
             'itens.*.descricao' => 'nullable|string|max:5000',
             'itens.*.modificacoes' => 'nullable|string|max:5000',
+            // características (texto livre: "19–20, ×2", "2 kg"...) e efeitos do item
+            'itens.*.critico' => 'nullable|string|max:100',
+            'itens.*.tipo_dano' => 'nullable|string|max:100',
+            'itens.*.condicao_especial' => 'nullable|string|max:255',
+            'itens.*.tamanho' => 'nullable|string|max:100',
+            'itens.*.acao_uso' => 'nullable|string|max:100',
+            'itens.*.alcance_armadura' => 'nullable|string|max:100',
+            'itens.*.incremento_defesa' => 'nullable|string|max:100',
+            'itens.*.penalidade_destreza' => 'nullable|string|max:100',
+            'itens.*.peso' => 'nullable|string|max:100',
+            'itens.*.efeitos_mundanos' => 'nullable|string|max:5000',
+            'itens.*.efeitos_amaldicoados' => 'nullable|string|max:5000',
 
             // Talentos (mundanos, de Hexomancia e de Fisiomancia: mesma estrutura, campo "tipo" separa as abas)
             'talentos' => 'nullable|array|max:300',

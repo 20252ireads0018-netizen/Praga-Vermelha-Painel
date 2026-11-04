@@ -656,11 +656,17 @@
     gap: 16px;
     margin-bottom: 18px;
 }
-.item-form-nome        { grid-column: span 3; }
-.item-form-categoria   { grid-column: span 3; }
+.item-form-largo       { grid-column: 1 / -1; }
+.item-form-meio        { grid-column: span 3; }
 .item-form-qtd,
 .item-form-dado,
 .item-form-valor-fixo  { grid-column: span 2; }
+.item-form-grupo {
+    margin: 0 0 18px; padding: 14px 16px 0; min-width: 0;
+    border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; background: rgba(0, 0, 0, .15);
+}
+.item-form-grupo legend { padding: 0 8px; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
+.item-form-grupo .item-form-linha { margin-bottom: 16px !important; }
 
 .item-form-campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .item-form-campo label { font-size: .72rem; letter-spacing: .6px; }
@@ -719,13 +725,34 @@
     overflow-wrap: anywhere;
 }
 #lista-itens .item-tag { flex: none; }
-#lista-itens .botao-remover-item {
+#lista-itens .item-card-botoes { display: flex; gap: 6px; margin-left: auto; flex: none; }
+#lista-itens .botao-remover-item,
+#lista-itens .botao-editar-item {
     flex: none;
     width: auto;
-    margin: 0 0 0 auto;
+    margin: 0;
     padding: 4px 10px;
     font-size: .75rem;
 }
+#lista-itens .botao-editar-item {
+    background: transparent; border: 1px solid rgba(255, 255, 255, .25); border-radius: 6px; color: var(--tinta);
+    font-family: var(--fonte-titulo); letter-spacing: .5px; text-transform: uppercase; font-weight: 600; cursor: pointer;
+}
+#lista-itens .botao-editar-item:hover { background: rgba(255, 255, 255, .08); }
+#itens-conteudo .campo-descricao { flex-direction: column; align-items: stretch; }
+#itens-conteudo .campo-descricao label { width: auto; white-space: nowrap; }
+#lista-itens .item-card.editando { border-color: rgba(220, 70, 70, .8); box-shadow: 0 0 0 1px rgba(220, 70, 70, .4); }
+
+/* características do item (Dano, Crítico, Tipo de dano...) em grade de rótulo/valor */
+#lista-itens .item-card-dados {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 16px;
+    margin: 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .08);
+}
+#lista-itens .item-card-dados dt { font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; opacity: .6; }
+#lista-itens .item-card-dados dd { margin: 2px 0 0; font-size: .95rem; font-weight: 600; overflow-wrap: anywhere; }
+#lista-itens .item-card-efeito { padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .08); }
+#lista-itens .item-card-efeito p { margin: 4px 0 0; font-size: .92rem; line-height: 1.55; white-space: pre-line; overflow-wrap: anywhere; }
+#lista-itens .item-card-descricao { white-space: pre-line; overflow-wrap: anywhere; }
 
 #lista-itens .item-card-dano { font-size: .95rem; }
 #lista-itens .item-rotulo,
@@ -821,7 +848,7 @@
 
 @media (max-width: 560px) {
     #itens-conteudo .item-form-linha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .item-form-nome, .item-form-categoria { grid-column: 1 / -1; }
+    .item-form-meio                       { grid-column: 1 / -1; }
     .item-form-qtd, .item-form-dado       { grid-column: span 1; }
     .item-form-valor-fixo                 { grid-column: 1 / -1; }
     .itens-botoes { grid-template-columns: 1fr; }
@@ -960,10 +987,32 @@
     min-width: 280px; min-height: 240px;
     max-width: 96vw; max-height: calc(100vh - 136px) !important;
 }
-#form-ficha .card-talentos.redimensionavel { right: auto; width: 340px; }
+#form-ficha .card-talentos.redimensionavel { right: auto; width: clamp(340px, 32vw, 520px); }
 @media (max-width: 600px) {
     #form-ficha .card-rolagem.redimensionavel { max-height: calc(100vh - 86px) !important; }
 }
+
+/* ===== Leitura dentro dos painéis (Talentos, Técnicas, Rolagem...) ===== */
+/* texto maior e mais espaçado; caixas de texto crescem com o conteúdo (ver "autoAltura" no script da pilha) */
+#form-ficha #card-rolagem { width: clamp(300px, 22vw, 380px); }
+#paineis-pilha > .card-rolagem, #form-ficha #card-rolagem { font-size: 15px; line-height: 1.55; padding: 22px 22px 24px; }
+#paineis-pilha textarea {
+    font-size: .95rem; line-height: 1.6; min-height: 96px; padding: 10px 12px;
+    resize: vertical; overflow-y: auto;
+}
+#paineis-pilha input[type="text"], #paineis-pilha input[type="number"], #paineis-pilha select { min-height: 40px; font-size: .92rem; }
+#paineis-pilha label { font-size: .8rem; letter-spacing: .3px; }
+#paineis-pilha h4 { font-size: 1.05rem; line-height: 1.35; overflow-wrap: anywhere; }
+#paineis-pilha dl dt { font-size: .74rem; letter-spacing: .6px; text-transform: uppercase; opacity: .7; margin-top: 10px; }
+#paineis-pilha dl dd { margin: 2px 0 0; font-size: .95rem; line-height: 1.6; white-space: pre-line; overflow-wrap: anywhere; }
+#paineis-pilha button { min-height: 36px; }
+#paineis-pilha .botao-fechar { min-height: 0; }
+
+/* ===== Ficha empurrada para o lado quando há painel aberto (telas largas) ===== */
+/* o script da pilha mede os painéis e grava --empurra-esq / --empurra-dir no .container da ficha */
+.container.ficha-empurrada { transition: padding .2s ease; box-sizing: border-box;
+    padding-left: var(--empurra-esq, 0px); padding-right: var(--empurra-dir, 0px); }
+.container.ficha-empurrada .ficha-card { min-width: 0; }
 
 /* ===== Artes marciais ===== */
 .am-abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
@@ -1857,16 +1906,26 @@
             </div>
 
             <div id="itens-conteudo">
+                {{-- Estrutura do item: nome, descrição, categoria, dano e as características de arma/armadura, depois os efeitos --}}
                 <div class="item-form-linha">
-                    <div class="item-form-campo item-form-nome">
-                        <label for="item-nome">Nome</label>
-                        <input id="item-nome" name="item_nome" type="text" placeholder="Nome do item ou ação">
+                    <div class="item-form-campo item-form-largo">
+                        <label for="item-nome">Nome do item</label>
+                        <input id="item-nome" type="text" maxlength="255" placeholder="Nome do item ou ação">
                     </div>
-                    <div class="item-form-campo item-form-categoria">
+                </div>
+
+                <div class="campo campo-descricao">
+                    <label for="item-descricao">Descrição</label>
+                    <textarea id="item-descricao" placeholder="Descreva o item ou ação"></textarea>
+                </div>
+
+                <div class="item-form-linha">
+                    <div class="item-form-campo item-form-largo">
                         <label for="item-categoria">Categoria</label>
-                        <select id="item-categoria" name="item_categoria">
+                        <select id="item-categoria">
                             <option>Selecione</option>
                             <option value="Arma">Arma</option>
+                            <option value="Armadura">Armadura</option>
                             <option value="Ataque">Ataque</option>
                             <option value="Consumível">Consumível</option>
                             <option value="Equipamento">Equipamento</option>
@@ -1874,37 +1933,90 @@
                             <option value="Outro">Outro</option>
                         </select>
                     </div>
-                    <div class="item-form-campo item-form-qtd">
-                        <label for="item-qtd-dados">Nº de dados</label>
-                        <input id="item-qtd-dados" name="item_qtd_dados" type="number" min="0" placeholder="1">
+                </div>
+
+                <fieldset class="item-form-grupo">
+                    <legend>Dano</legend>
+                    <div class="item-form-linha">
+                        <div class="item-form-campo item-form-qtd">
+                            <label for="item-qtd-dados">Nº de dados</label>
+                            <input id="item-qtd-dados" type="number" min="0" placeholder="1">
+                        </div>
+                        <div class="item-form-campo item-form-dado">
+                            <label for="item-dado">Dado</label>
+                            <select id="item-dado">
+                                <option value="0">Nenhum</option>
+                                <option value="4">d4</option>
+                                <option value="6">d6</option>
+                                <option value="8">d8</option>
+                                <option value="10">d10</option>
+                                <option value="12">d12</option>
+                                <option value="20">d20</option>
+                                <option value="100">d100</option>
+                            </select>
+                        </div>
+                        <div class="item-form-campo item-form-valor-fixo">
+                            <label for="item-valor-fixo">Valor fixo</label>
+                            <input id="item-valor-fixo" type="number" placeholder="0">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-critico">Crítico</label>
+                            <input id="item-critico" type="text" maxlength="100" placeholder="Ex.: 19–20, ×2">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-tipo-dano">Tipo de dano</label>
+                            <input id="item-tipo-dano" type="text" maxlength="100" list="item-tipos-dano" placeholder="Ex.: cortante">
+                            <datalist id="item-tipos-dano">
+                                @foreach (['cortante', 'perfurante', 'impacto', 'explosivo', 'flamejante', 'congelante', 'eletrizante', 'tóxico', 'amaldiçoado', 'queda'] as $tipoDano)
+                                    <option value="{{ $tipoDano }}"></option>
+                                @endforeach
+                            </datalist>
+                        </div>
+                        <div class="item-form-campo item-form-largo">
+                            <label for="item-condicao">Condição especial</label>
+                            <input id="item-condicao" type="text" maxlength="255" placeholder="Ex.: sangramento, atordoado por 1 rodada">
+                        </div>
                     </div>
-                    <div class="item-form-campo item-form-dado">
-                        <label for="item-dado">Dado</label>
-                        <select id="item-dado" name="item_dado">
-                            <option value="0">Nenhum</option>
-                            <option value="4">d4</option>
-                            <option value="6">d6</option>
-                            <option value="8">d8</option>
-                            <option value="10">d10</option>
-                            <option value="12">d12</option>
-                            <option value="20">d20</option>
-                            <option value="100">d100</option>
-                        </select>
+                </fieldset>
+
+                <fieldset class="item-form-grupo">
+                    <legend>Uso e porte</legend>
+                    <div class="item-form-linha">
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-tamanho">Tamanho</label>
+                            <input id="item-tamanho" type="text" maxlength="100" placeholder="Ex.: médio">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-acao-uso">Ação de uso</label>
+                            <input id="item-acao-uso" type="text" maxlength="100" placeholder="Ex.: ação padrão">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-alcance-armadura">Alcance da Armadura</label>
+                            <input id="item-alcance-armadura" type="text" maxlength="100" placeholder="Ex.: 1–40">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-incremento-defesa">Incremento de defesa</label>
+                            <input id="item-incremento-defesa" type="text" maxlength="100" placeholder="Ex.: +2">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-penalidade-destreza">Penalidade de destreza</label>
+                            <input id="item-penalidade-destreza" type="text" maxlength="100" placeholder="Ex.: −5">
+                        </div>
+                        <div class="item-form-campo item-form-meio">
+                            <label for="item-peso">Peso</label>
+                            <input id="item-peso" type="text" maxlength="100" placeholder="Ex.: 2 kg">
+                        </div>
                     </div>
-                    <div class="item-form-campo item-form-valor-fixo">
-                        <label for="item-valor-fixo">Valor fixo</label>
-                        <input id="item-valor-fixo" name="item_valor_fixo" type="number" placeholder="0">
-                    </div>
+                </fieldset>
+
+                <div class="campo campo-descricao">
+                    <label for="item-efeitos-mundanos">Efeitos mundanos</label>
+                    <textarea id="item-efeitos-mundanos" placeholder="Bônus, penalidades e efeitos comuns do item"></textarea>
                 </div>
 
                 <div class="campo campo-descricao">
-                    <label for="item-descricao">Descrição</label>
-                    <textarea id="item-descricao" name="item_descricao" placeholder="Descreva o item ou ação"></textarea>
-                </div>
-
-                <div class="campo campo-descricao">
-                    <label for="item-modificacoes">Modificações</label>
-                    <textarea id="item-modificacoes" name="item_modificacoes" placeholder="Bônus, penalidades, efeitos extras..."></textarea>
+                    <label for="item-efeitos-amaldicoados">Efeitos amaldiçoados</label>
+                    <textarea id="item-efeitos-amaldicoados" placeholder="Efeitos ligados à maldição, à Aura ou a técnicas"></textarea>
                 </div>
 
                 <div class="itens-botoes">
@@ -2704,6 +2816,46 @@ window.PastasFicha = (function(){
             estava = agora;
         }).observe(card, { attributes: true, attributeFilter: ["class"] });
     });
+
+    // Empurra a ficha para o lado dos painéis abertos (pilha à esquerda, Rolagem à direita), para nada ficar por baixo deles.
+    // Só em telas largas: se a ficha ficaria estreita demais (menos de MIN px), a Rolagem volta a ficar por cima e, depois, a pilha.
+    const container = form.closest(".container");
+    const rolagem = document.getElementById("card-rolagem");
+    const MIN = 520, FOLGA = 24;
+    function empurrar(){
+        if(!container) return;
+        const vw = document.documentElement.clientWidth;
+        const caixa = el => el.getBoundingClientRect();
+        let esq = 0, dir = 0;
+        if(cards.some(c => c.classList.contains("ativo"))) esq = Math.round(caixa(pilha).right) + FOLGA;
+        if(rolagem && rolagem.classList.contains("ativo")) dir = Math.round(vw - caixa(rolagem).left) + FOLGA;
+        if(vw - esq - dir < MIN) dir = 0;
+        if(vw - esq < MIN) esq = 0;
+        container.classList.toggle("ficha-empurrada", esq > 0 || dir > 0);
+        container.style.setProperty("--empurra-esq", esq + "px");
+        container.style.setProperty("--empurra-dir", dir + "px");
+    }
+    let quadro = 0;
+    const agendar = () => { cancelAnimationFrame(quadro); quadro = requestAnimationFrame(empurrar); };
+    [...cards, rolagem].filter(Boolean).forEach(c => new MutationObserver(agendar).observe(c, { attributes: true, attributeFilter: ["class"] }));
+    if(window.ResizeObserver){ const ro = new ResizeObserver(agendar); ro.observe(pilha); if(rolagem) ro.observe(rolagem); }
+    window.addEventListener("resize", agendar);
+    agendar();
+
+    // Caixas de texto dos painéis crescem com o conteúdo (até 60% da tela), em vez de mostrar só três linhas com rolagem
+    function autoAltura(t){
+        if(!t.offsetParent) return; // painel fechado: mede quando abrir
+        t.style.height = "auto";
+        t.style.height = Math.min(t.scrollHeight + 2, Math.round(window.innerHeight * .6)) + "px";
+    }
+    const todas = raiz => raiz.querySelectorAll("textarea").forEach(autoAltura);
+    pilha.addEventListener("input", e => { if(e.target.tagName === "TEXTAREA") autoAltura(e.target); });
+    let quadroTexto = 0;
+    new MutationObserver(function(){
+        cancelAnimationFrame(quadroTexto);
+        quadroTexto = requestAnimationFrame(() => todas(pilha));
+    }).observe(pilha, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    if(rolagem) rolagem.addEventListener("input", e => { if(e.target.tagName === "TEXTAREA") autoAltura(e.target); });
 })();
 </script>
 @endsection
@@ -5679,11 +5831,30 @@ const itemQtdDados = document.getElementById("item-qtd-dados");
 const itemDado = document.getElementById("item-dado");
 const itemValorFixo = document.getElementById("item-valor-fixo");
 const itemDescricao = document.getElementById("item-descricao");
-const itemModificacoes = document.getElementById("item-modificacoes");
 const adicionarItem = document.getElementById("adicionar-item");
 const listaItens = document.getElementById("lista-itens");
 
         const itensAdicionadosTitulo = document.getElementById("itens-adicionados-titulo");
+
+    // Campos de texto do item, na ordem em que aparecem no card: [chave no JSON, rótulo, id do campo no formulário].
+    // "modificacoes" é o campo antigo: continua aparecendo nos itens que já tinham e, ao editar, passa para Efeitos mundanos.
+    const ITEM_CARACTERISTICAS = [
+        ["critico", "Crítico", "item-critico"],
+        ["tipo_dano", "Tipo de dano", "item-tipo-dano"],
+        ["condicao_especial", "Condição especial", "item-condicao"],
+        ["tamanho", "Tamanho", "item-tamanho"],
+        ["acao_uso", "Ação de uso", "item-acao-uso"],
+        ["alcance_armadura", "Alcance da Armadura", "item-alcance-armadura"],
+        ["incremento_defesa", "Incremento de defesa", "item-incremento-defesa"],
+        ["penalidade_destreza", "Penalidade de destreza", "item-penalidade-destreza"],
+        ["peso", "Peso", "item-peso"],
+    ];
+    const ITEM_EFEITOS = [
+        ["efeitos_mundanos", "Efeitos mundanos", "item-efeitos-mundanos"],
+        ["efeitos_amaldicoados", "Efeitos amaldiçoados", "item-efeitos-amaldicoados"],
+    ];
+    const ITEM_TEXTOS = ITEM_CARACTERISTICAS.concat(ITEM_EFEITOS);
+    let itemEditando = null; // card em edição (o botão Adicionar vira Salvar item)
 
     function escaparHtmlItem(texto){
         return String(texto == null ? "" : texto)
@@ -5691,87 +5862,150 @@ const listaItens = document.getElementById("lista-itens");
             .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // Monta o card de um item (usado ao adicionar e ao recarregar a ficha salva).
-    // Todos os campos ficam no dataset do card, de onde sincronizarItens() os lê.
-    function criarCardItem(item){
-        const nome = item.nome || "";
-        const categoria = item.categoria || "";
-        const qtdDados = Number(item.qtd_dados) || 0;
-        const ladosDado = Number(item.lados_dado) || 0;
-        const valorFixo = Number(item.valor_fixo) || 0;
-        const descricao = item.descricao || "";
-        const modificacoes = item.modificacoes || "";
-
-        let textoDano = "";
+    function textoDanoItem(qtdDados, ladosDado, valorFixo){
         if(qtdDados > 0 && ladosDado > 0){
-            textoDano = qtdDados + "d" + ladosDado;
-            if(valorFixo !== 0){
-                textoDano += (valorFixo > 0 ? " + " : " - ") + Math.abs(valorFixo);
-            }
-        } else if(valorFixo !== 0){
-            textoDano = String(valorFixo);
+            return qtdDados + "d" + ladosDado + (valorFixo !== 0 ? (valorFixo > 0 ? " + " : " - ") + Math.abs(valorFixo) : "");
         }
+        return valorFixo !== 0 ? String(valorFixo) : "";
+    }
 
-        const card = document.createElement("div");
-        card.className = "item-card";
-        card.dataset.nome = nome;
-        card.dataset.categoria = categoria;
-        card.dataset.descricao = descricao;
-        card.dataset.modificacoes = modificacoes;
-        card.dataset.qtdDados = qtdDados;
-        card.dataset.ladosDado = ladosDado;
-        card.dataset.valorFixo = valorFixo;
+    // Item limpo (o mesmo formato do JSON salvo); a lista guarda o objeto no card (card._item), lido por sincronizarItens().
+    function normalizarItem(item){
+        const limpo = {
+            nome: String(item.nome || "").trim(),
+            categoria: String(item.categoria || "").trim(),
+            qtd_dados: Math.max(0, Math.trunc(Number(item.qtd_dados) || 0)),
+            lados_dado: Math.max(0, Math.trunc(Number(item.lados_dado) || 0)),
+            valor_fixo: Math.trunc(Number(item.valor_fixo) || 0),
+            descricao: String(item.descricao || "").trim(),
+        };
+        ITEM_TEXTOS.forEach(([chave]) => { limpo[chave] = String(item[chave] == null ? "" : item[chave]).trim(); });
+        if(item.modificacoes) limpo.modificacoes = String(item.modificacoes).trim();
+        return limpo;
+    }
+
+    function preencherCardItem(card, item){
+        card._item = item;
+        // a rolagem lê estes três
+        card.dataset.nome = item.nome;
+        card.dataset.qtdDados = item.qtd_dados;
+        card.dataset.ladosDado = item.lados_dado;
+        card.dataset.valorFixo = item.valor_fixo;
+
+        const dano = textoDanoItem(item.qtd_dados, item.lados_dado, item.valor_fixo);
+        const linhas = [];
+        if(dano) linhas.push(["Dano", dano]);
+        ITEM_CARACTERISTICAS.forEach(([chave, rotulo]) => { if(item[chave]) linhas.push([rotulo, item[chave]]); });
+        const efeitos = ITEM_EFEITOS.filter(([chave]) => item[chave]);
+        if(item.modificacoes) efeitos.push(["modificacoes", "Modificações"]);
 
         card.innerHTML = `
             <div class="item-card-topo">
-                <span class="item-card-nome">${escaparHtmlItem(nome)}</span>
-                ${categoria ? `<span class="item-tag">${escaparHtmlItem(categoria)}</span>` : ""}
-                <button class="botao-remover-item" type="button" title="Remover item">Remover</button>
+                <span class="item-card-nome">${escaparHtmlItem(item.nome)}</span>
+                ${item.categoria ? `<span class="item-tag">${escaparHtmlItem(item.categoria)}</span>` : ""}
+                <span class="item-card-botoes">
+                    <button class="botao-editar-item" type="button" title="Editar item">Editar</button>
+                    <button class="botao-remover-item" type="button" title="Remover item">Remover</button>
+                </span>
             </div>
-            ${textoDano ? `<div class="item-card-dano"><span class="item-rotulo">Dano/Valor</span><span class="item-dano-valor">${textoDano}</span></div>` : ""}
-            ${descricao ? `<div class="item-card-descricao">${escaparHtmlItem(descricao)}</div>` : ""}
-            ${modificacoes ? `<div class="item-card-modificacoes"><strong>Modificações:</strong> ${escaparHtmlItem(modificacoes)}</div>` : ""}
+            ${item.descricao ? `<div class="item-card-descricao">${escaparHtmlItem(item.descricao)}</div>` : ""}
+            ${linhas.length ? `<dl class="item-card-dados">${linhas.map(([r, v]) =>
+                `<div><dt>${escaparHtmlItem(r)}</dt><dd>${escaparHtmlItem(v)}</dd></div>`).join("")}</dl>` : ""}
+            ${efeitos.map(([chave, rotulo]) =>
+                `<div class="item-card-efeito"><span class="item-rotulo">${escaparHtmlItem(rotulo)}</span><p>${escaparHtmlItem(item[chave])}</p></div>`).join("")}
             <div class="item-card-rodape">
-                <button class="botao-rolar-item" type="button" ${(qtdDados > 0 && ladosDado > 0) || valorFixo !== 0 ? "" : "disabled"}>Rolar</button>
+                <button class="botao-rolar-item" type="button" ${dano ? "" : "disabled"}>Rolar</button>
                 <span class="item-card-resultado"></span>
             </div>
         `;
+    }
 
+    // Monta o card de um item (usado ao adicionar e ao recarregar a ficha salva).
+    function criarCardItem(item){
+        const card = document.createElement("div");
+        card.className = "item-card";
+        preencherCardItem(card, normalizarItem(item));
         listaItens.appendChild(card);
         itensAdicionadosTitulo.style.display = "block";
+        return card;
     }
 
     // Recria os itens salvos ao abrir a ficha
     @json($itensSalvos).forEach(criarCardItem);
 
-    adicionarItem.addEventListener("click", function(){
-        if(itemNome.value.trim() === ""){
-            mostrarPopup("Digite um nome para o item antes de adicionar.");
-            return;
-        }
-
-        criarCardItem({
-            nome: itemNome.value.trim(),
-            categoria: itemCategoria.value === "Selecione" ? "" : itemCategoria.value,
-            qtd_dados: Number(itemQtdDados.value) || 0,
-            lados_dado: Number(itemDado.value) || 0,
-            valor_fixo: Number(itemValorFixo.value) || 0,
-            descricao: itemDescricao.value.trim(),
-            modificacoes: itemModificacoes.value.trim()
-        });
-
+    function limparFormularioItem(){
         itemNome.value = "";
         itemCategoria.value = "Selecione";
         itemQtdDados.value = "";
         itemDado.value = "0";
         itemValorFixo.value = "";
         itemDescricao.value = "";
-        itemModificacoes.value = "";
+        ITEM_TEXTOS.forEach(([, , id]) => { document.getElementById(id).value = ""; });
+        itemEditando = null;
+        adicionarItem.textContent = "+ Adicionar Item";
+        listaItens.querySelectorAll(".item-card.editando").forEach(c => c.classList.remove("editando"));
+    }
+
+    function lerFormularioItem(){
+        const item = {
+            nome: itemNome.value,
+            categoria: itemCategoria.value === "Selecione" ? "" : itemCategoria.value,
+            qtd_dados: itemQtdDados.value,
+            lados_dado: itemDado.value,
+            valor_fixo: itemValorFixo.value,
+            descricao: itemDescricao.value,
+        };
+        ITEM_TEXTOS.forEach(([chave, , id]) => { item[chave] = document.getElementById(id).value; });
+        return normalizarItem(item);
+    }
+
+    adicionarItem.addEventListener("click", function(){
+        if(itemNome.value.trim() === ""){
+            mostrarPopup("Digite um nome para o item antes de adicionar.");
+            return;
+        }
+        const item = lerFormularioItem();
+        if(itemEditando && itemEditando.isConnected){
+            preencherCardItem(itemEditando, item);
+            itemEditando.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        } else {
+            criarCardItem(item);
+        }
+        limparFormularioItem();
     });
 
+    // Editar: leva o item de volta ao formulário; ao salvar, o card é trocado no mesmo lugar
+    function editarItem(card){
+        const item = card._item || {};
+        itemNome.value = item.nome || "";
+        itemCategoria.value = item.categoria && [...itemCategoria.options].some(o => o.value === item.categoria) ? item.categoria : "Selecione";
+        itemQtdDados.value = item.qtd_dados || "";
+        itemDado.value = String(item.lados_dado || 0);
+        itemValorFixo.value = item.valor_fixo || "";
+        itemDescricao.value = item.descricao || "";
+        ITEM_TEXTOS.forEach(([chave, , id]) => { document.getElementById(id).value = item[chave] || ""; });
+        // o campo antigo "Modificações" passa a ser Efeitos mundanos
+        if(item.modificacoes){
+            const mundanos = document.getElementById("item-efeitos-mundanos");
+            mundanos.value = mundanos.value ? mundanos.value + "\n" + item.modificacoes : item.modificacoes;
+        }
+        listaItens.querySelectorAll(".item-card.editando").forEach(c => c.classList.remove("editando"));
+        card.classList.add("editando");
+        itemEditando = card;
+        adicionarItem.textContent = "Salvar item";
+        itemNome.scrollIntoView({ block: "center", behavior: "smooth" });
+        itemNome.focus({ preventScroll: true });
+    }
+
         listaItens.addEventListener("click", function(e){
+        if(e.target.classList.contains("botao-editar-item")){
+            editarItem(e.target.closest(".item-card"));
+            return;
+        }
         if(e.target.classList.contains("botao-remover-item")){
-            e.target.closest(".item-card").remove();
+            const card = e.target.closest(".item-card");
+            if(card === itemEditando) limparFormularioItem();
+            card.remove();
             if(listaItens.children.length === 0){
                 itensAdicionadosTitulo.style.display = "none";
             }
@@ -5925,16 +6159,11 @@ function sincronizarTalentos(){
 
 function sincronizarItens(){
     const lista = [];
+    // cada card guarda o item já limpo (normalizarItem); os campos vazios não vão no JSON
     document.querySelectorAll("#lista-itens .item-card").forEach(function(card){
-        lista.push({
-            nome: card.dataset.nome || "",
-            categoria: card.dataset.categoria || "",
-            qtd_dados: Math.max(0, Math.trunc(Number(card.dataset.qtdDados) || 0)),
-            lados_dado: Math.max(0, Math.trunc(Number(card.dataset.ladosDado) || 0)),
-            valor_fixo: Math.trunc(Number(card.dataset.valorFixo) || 0),
-            descricao: card.dataset.descricao || "",
-            modificacoes: card.dataset.modificacoes || ""
-        });
+        const item = Object.assign({}, card._item || {});
+        Object.keys(item).forEach(function(k){ if(item[k] === "" && k !== "nome") delete item[k]; });
+        lista.push(item);
     });
     document.getElementById("itens").value = JSON.stringify(lista);
 }
@@ -6568,7 +6797,10 @@ botaoPreencherTeste.addEventListener("click", function(){
     itemDado.value = "6";
     itemValorFixo.value = 2;
     itemDescricao.value = "Uma faca comum";
-    itemModificacoes.value = "Nenhuma";
+    document.getElementById("item-critico").value = "20, ×2";
+    document.getElementById("item-tipo-dano").value = "cortante";
+    document.getElementById("item-acao-uso").value = "Ação padrão";
+    document.getElementById("item-peso").value = "0,5 kg";
     adicionarItem.click();
 
     // Descrição

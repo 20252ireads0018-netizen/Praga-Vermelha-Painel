@@ -219,6 +219,17 @@ class FichaArquivoController extends Controller
             'itens.*.categoria' => 'nullable|string|max:100',
             'itens.*.descricao' => 'nullable|string|max:20000',
             'itens.*.modificacoes' => 'nullable|string|max:20000',
+            'itens.*.critico' => 'nullable|string|max:100',
+            'itens.*.tipo_dano' => 'nullable|string|max:100',
+            'itens.*.condicao_especial' => 'nullable|string|max:255',
+            'itens.*.tamanho' => 'nullable|string|max:100',
+            'itens.*.acao_uso' => 'nullable|string|max:100',
+            'itens.*.alcance_armadura' => 'nullable|string|max:100',
+            'itens.*.incremento_defesa' => 'nullable|string|max:100',
+            'itens.*.penalidade_destreza' => 'nullable|string|max:100',
+            'itens.*.peso' => 'nullable|string|max:100',
+            'itens.*.efeitos_mundanos' => 'nullable|string|max:20000',
+            'itens.*.efeitos_amaldicoados' => 'nullable|string|max:20000',
         ];
     }
 

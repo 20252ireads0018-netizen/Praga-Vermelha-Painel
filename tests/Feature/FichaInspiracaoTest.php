@@ -71,4 +71,21 @@ class FichaInspiracaoTest extends TestCase
         $this->get("/personagens/{$p->id}")->assertOk()
             ->assertSee('Inspiração')->assertSee('id="inspiracao-valor"', false)->assertSee('name="inspiracao" value="2"', false);
     }
+
+    public function test_item_guarda_as_caracteristicas_e_os_efeitos(): void
+    {
+        $this->actingAs(User::create(['name' => 'Ana', 'email' => 'ana@t.test', 'password' => 'x']));
+        $item = ['nome' => 'Machado', 'descricao' => 'Pesado.', 'categoria' => 'Arma', 'qtd_dados' => 1, 'lados_dado' => 10, 'valor_fixo' => 2,
+            'critico' => '19–20, ×2', 'tipo_dano' => 'cortante', 'condicao_especial' => 'sangramento', 'tamanho' => 'grande', 'acao_uso' => 'ação padrão',
+            'alcance_armadura' => '1–40', 'incremento_defesa' => '+2', 'penalidade_destreza' => '−5', 'peso' => '3 kg',
+            'efeitos_mundanos' => '+5 em Luta', 'efeitos_amaldicoados' => 'Drena 5 de Aura por golpe'];
+        $this->post('/fichafeita', $this->ficha(['itens' => json_encode([$item])]))->assertRedirect();
+        $p = Personagem::firstOrFail();
+        $this->assertEqualsCanonicalizing($item, $p->itens[0]);
+
+        $this->get("/personagens/{$p->id}")->assertOk()
+            ->assertSee('id="item-efeitos-amaldicoados"', false)->assertSee('Alcance da Armadura')->assertSee('Drena 5 de Aura por golpe');
+        // texto longo demais é recusado
+        $this->putJson("/personagens/{$p->id}", $this->ficha(['itens' => json_encode([['nome' => 'X', 'peso' => str_repeat('a', 101)]])]))->assertStatus(422);
+    }
 }

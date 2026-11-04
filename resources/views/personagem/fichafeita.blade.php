@@ -410,6 +410,26 @@
                         @if(!empty($item['descricao']))
                             <p class="item-mostrar-texto">{{ $item['descricao'] }}</p>
                         @endif
+                        @php
+                            $qd = (int) ($item['qtd_dados'] ?? 0); $ld = (int) ($item['lados_dado'] ?? 0); $vf = (int) ($item['valor_fixo'] ?? 0);
+                            $dano = $qd > 0 && $ld > 0 ? "{$qd}d{$ld}" . ($vf ? ($vf > 0 ? " + {$vf}" : ' - ' . abs($vf)) : '') : ($vf ? (string) $vf : '');
+                            $caract = array_filter([
+                                'Dano' => $dano, 'Crítico' => $item['critico'] ?? '', 'Tipo de dano' => $item['tipo_dano'] ?? '',
+                                'Condição especial' => $item['condicao_especial'] ?? '', 'Tamanho' => $item['tamanho'] ?? '',
+                                'Ação de uso' => $item['acao_uso'] ?? '', 'Alcance da Armadura' => $item['alcance_armadura'] ?? '',
+                                'Incremento de defesa' => $item['incremento_defesa'] ?? '', 'Penalidade de destreza' => $item['penalidade_destreza'] ?? '',
+                                'Peso' => $item['peso'] ?? '',
+                            ], fn ($v) => is_scalar($v) && trim((string) $v) !== '');
+                        @endphp
+                        @foreach($caract as $rotulo => $valor)
+                            <p class="item-mostrar-texto"><strong>{{ $rotulo }}:</strong> {{ $valor }}</p>
+                        @endforeach
+                        @if(!empty($item['efeitos_mundanos']))
+                            <p class="item-mostrar-texto"><strong>Efeitos mundanos:</strong> {{ $item['efeitos_mundanos'] }}</p>
+                        @endif
+                        @if(!empty($item['efeitos_amaldicoados']))
+                            <p class="item-mostrar-texto"><strong>Efeitos amaldiçoados:</strong> {{ $item['efeitos_amaldicoados'] }}</p>
+                        @endif
                         @if(!empty($item['modificacoes']))
                             <p class="item-mostrar-texto"><strong>Modificações:</strong> {{ $item['modificacoes'] }}</p>
                         @endif
