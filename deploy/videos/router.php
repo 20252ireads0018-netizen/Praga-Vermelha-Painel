@@ -14,6 +14,13 @@ if (str_starts_with($u, '/vid/')) {
     header('Cache-Control: no-store');
     readfile($f); return true;
 }
+if (str_starts_with($u, '/social/')) { // geradores dos posts do Instagram (deploy/social/*.js), carregados na página do Instagram por <script>
+    $f = dirname(__DIR__) . '/social/' . basename($u);
+    if (!is_file($f) || pathinfo($f, PATHINFO_EXTENSION) !== 'js') { http_response_code(404); return true; }
+    header('Content-Type: text/javascript; charset=utf-8');
+    header('Cache-Control: no-store');
+    readfile($f); return true;
+}
 if ($u === '/salvar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome = preg_replace('/[^a-z0-9.\-]/', '', basename($_GET['nome'] ?? 'x.bin'));
     file_put_contents($V . '/out/' . $nome, file_get_contents('php://input'));

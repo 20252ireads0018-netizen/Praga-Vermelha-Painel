@@ -2,6 +2,9 @@ Add-Type -AssemblyName System.Speech
 $dir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $json = Get-Content -Raw -Encoding UTF8 (Join-Path $dir 'roteiros.json') | ConvertFrom-Json
 $saida = @{}
+# os outros vídeos (ex.: cavaleiro) usam voz neural, de narrar_neural.py: mantém o que já está em linha.json
+$antes = Get-Content -Raw -Encoding UTF8 (Join-Path $dir 'linha.json') | ConvertFrom-Json
+foreach ($p in $antes.PSObject.Properties) { if ($p.Name -notin @('eletrico', 'fisiomancia')) { $saida[$p.Name] = $p.Value } }
 foreach ($video in @('eletrico', 'fisiomancia')) {
     $lista = @()
     $i = 0

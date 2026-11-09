@@ -8,7 +8,7 @@
     const GAP = 0.12, INICIO = 0.25, FIM_EXTRA = 0.8;
     let t = INICIO;
     cenas.forEach(c => { c.t0 = t; t += c.dur + GAP; });
-    const TOTAL = t + FIM_EXTRA;
+    let TOTAL = t + FIM_EXTRA;
 
     const cv = document.getElementById('c'), g = cv.getContext('2d');
     const W = 1080, H = 1920, CX = W / 2, CHAO = 1250;
@@ -355,7 +355,167 @@
                 bate('PRAGA VERMELHA', CX, 1080, 92, fase(k, .4, .8), RED);
             },
         },
+        cavaleiro: {
+            titulo: 'O Cavaleiro Negro',
+            capa: ['lanca', .5],
+            pergunta(k, lt) {
+                infinito(CX, 760, 260, fase(k, 0, .45), lt);
+                bate('NÃO MORRE.', CX, 1040, 96, fase(k, .12, .32), INK);
+                bate('NÃO DESCANSA.', CX, 1170, 96, fase(k, .62, .82), RED);
+            },
+            forte(k, lt) {
+                noite(lt); chao();
+                muralha(lt, 0); // o muro fica atrás: os soldados estão dentro do forte
+                fogo(560, CHAO - 10, .55, lt, clamp(k * 4));
+                [[330, 0], [470, 1.7], [700, .9]].forEach(([x, fs], i) => {
+                    const pula = Math.abs(Math.sin(lt * 5 + fs)) * 24;
+                    boneco(x, CHAO - pula, 1.05, { pose: misturar(POSES.cima, POSES.parado, (Math.sin(lt * 5 + fs) + 1) / 2), olhar: i === 2 ? -1 : 1 });
+                });
+                bate('ACABOU A GUERRA?', CX, 420, 88, fase(k, .62, .82), INK);
+            },
+            muro(k, lt) {
+                noite(lt); chao();
+                const explode = fase(k, .12, .3), entra = fase(k, .35, .75);
+                muralha(lt, explode);
+                if (explode > 0 && explode < 1) { clarao(explode, '255,200,150'); tremor = 16; }
+                if (explode > 0) pedras(330, CHAO - 180, explode, lt);
+                if (entra > 0) krauzher(lerp(170, 420, ease(entra)), CHAO, 1.45, { pose: entra < 1 ? andando(lt) : 'parado', alpha: clamp(entra * 3) });
+                bate('NÃO ACABOU.', 700, 440, 110, fase(k, .05, .25), GOLD, 'Inter', .06);
+                bate('UM HOMEM SÓ.', CX, 600, 92, fase(k, .62, .82), '#eef4ff');
+            },
+            lanca(k, lt) {
+                noite(lt); chao();
+                const k1 = krauzher(380, CHAO, 1.5, { pose: 'parado', olhar: 1 });
+                const estoca = fase(k, .05, .3), amassa = fase(k, .3, .45), quebra = fase(k, .62, .8);
+                const s = boneco(lerp(900, 760, ease(estoca)), CHAO, 1.35, { pose: { ...POSES.tocar, bD: -1.5, cD: 0 }, olhar: -1, arrepiado: amassa > 0, olhos: quebra > .5 ? 'x' : 'ok' });
+                lancaDe(s.maoE, k1.coracao, amassa, quebra, lt);
+                if (amassa > 0 && amassa < 1) { faiscas(k1.coracao[0] + 30, k1.coracao[1], lt); tremor = 10; }
+                bate('NO PEITO.', CX, 380, 90, fase(k, .3, .45), '#dfe8f2', 'Inter', 0);
+                bate('A LANÇA QUEBROU.', CX, 520, 80, fase(k, .62, .78), RED, 'Inter', 0);
+            },
+            flechas(k, lt) {
+                noite(lt); chao();
+                const kz = krauzher(330, CHAO, 1.5, { pose: 'parado' });
+                const foge = fase(k, 0, .9);
+                [720, 880].forEach((x, i) => {
+                    const b = boneco(x + ease(foge) * 260 * (i + 1) * .6, CHAO, 1.05, { pose: andando(lt * 1.4 + i), olhar: -1, arrepiado: true });
+                    if (i === 0) balao(b.cabeca[0] - 60, b.cabeca[1] - 180, 'GENERAL!', fase(k, .02, .2));
+                });
+                for (let i = 0; i < 4; i++) {
+                    const p = ((lt * 1.3 + i / 4) % 1), alvoY = kz.ombro[1] + 40 + i * 50;
+                    if (p < .7) seta(lerp(1040, kz.ombro[0] + 40, p / .7), lerp(alvoY - 90, alvoY, p / .7), 0);
+                    else { const q = (p - .7) / .3; seta(kz.ombro[0] + 40 + q * 160, alvoY - q * 220, -2.4 - q * 2); if (q < .25) faiscas(kz.ombro[0] + 40, alvoY, lt); }
+                }
+                bate('CLANG!', 700, 560, 120, fase(k, .45, .6), '#dfe8f2', 'Inter', .08);
+            },
+            aco(k, lt) {
+                noite(lt, .5); chao();
+                const vira = fase(k, 0, .5);
+                krauzher(CX, CHAO, 1.6, { pose: 'poder', metal: vira, brilho: vira > .2 ? '#dfe8f2' : null });
+                [['PELE', .05], ['PULMÕES', .2], ['MÚSCULOS', .32], ['OSSOS', .44]].forEach(([s, t], i) => chip(s, i % 2 ? 790 : 290, 300 + Math.floor(i / 2) * 140, fase(k, t, t + .1), 'rgba(185,194,204,.8)', 380));
+                bate('KRAUZHER', CX, 590, 104, fase(k, .62, .78), GOLD);
+                bate('O GENERAL DE AÇO', CX, 685, 56, fase(k, .75, .9), INK, 'Inter', 0);
+            },
+            paz(k, lt) {
+                noite(lt, .3); chao();
+                casa(250, CHAO, fase(k, 0, .3));
+                boneco(240, CHAO, .9, { pose: 'parado', alpha: fase(k, .1, .3) });
+                boneco(330, CHAO, .55, { pose: 'cima', alpha: fase(k, .15, .35) });
+                const vai = fase(k, .5, .9);
+                krauzher(lerp(560, 860, ease(vai)), CHAO, 1.45, { pose: vai > 0 && vai < 1 ? andando(lt) : 'parado', olhar: -1, olhos: 'fechados', metal: 1 });
+                bate('UMA FILHA EM CASA.', CX, 380, 70, fase(k, .05, .25), GOLD, 'Inter', 0);
+                bate('SEM PAZ.', CX, 520, 110, fase(k, .62, .8), RED);
+            },
+            fim(k, lt) {
+                noite(lt, .4);
+                bate('PRAGA VERMELHA', CX, 700, 96, fase(k, 0, .35), RED);
+                bate('O CAVALEIRO NEGRO', CX, 860, 78, fase(k, .3, .65), INK);
+                bate('o livro · link na bio', CX, 1000, 48, fase(k, .6, .85), GOLD, 'Inter', 0);
+            },
+        },
     };
+
+    /* ---------- peças da história "O Cavaleiro Negro" ---------- */
+    /** Noite de chuva por cima do fundo vermelho. */
+    function noite(tt, chuvaForca = 1) {
+        g.fillStyle = 'rgba(4,6,14,.55)'; g.fillRect(0, 0, W, H);
+        g.save(); g.strokeStyle = `rgba(170,190,230,${.35 * chuvaForca})`; g.lineWidth = 3;
+        for (let i = 0; i < 70; i++) { const x = (i * 157 + tt * 260) % (W + 200) - 100, y = (i * 263 + tt * 1500) % (H + 200) - 100; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 14, y + 46); g.stroke(); }
+        g.restore();
+    }
+    /** Muro de pedra do forte; `rombo` (0→1) abre um buraco no meio. */
+    function muralha(tt, rombo) {
+        g.save();
+        for (let lin = 0; lin < 6; lin++) for (let col = 0; col < 11; col++) {
+            const x = 40 + col * 92 + (lin % 2) * 46, y = CHAO - 60 - lin * 52, dx = x - 330, dy = y - (CHAO - 180);
+            if (rombo > 0 && Math.hypot(dx, dy) < 210) continue;
+            if (x < 40 || x > W - 120) continue;
+            caixa(x, y, 88, 48, 6, '#3b3534', '#24201f', 3);
+        }
+        g.restore();
+    }
+    function pedras(x, y, k, tt) {
+        g.save(); g.fillStyle = '#5a504c';
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, d = ease(k) * (200 + (i % 5) * 60); g.fillRect(x + Math.cos(a) * d, y + Math.sin(a) * d * .6 + k * k * 300, 26, 22); }
+        g.restore();
+    }
+    /** Krauzher: boneco cor de neve com cabelo cor de noite; `metal` 0→1 deixa a pele cor de aço. */
+    function krauzher(x, y, s, o = {}) {
+        const m = o.metal || 0;
+        const cor = `rgb(${Math.round(lerp(244, 175, m))},${Math.round(lerp(247, 186, m))},${Math.round(lerp(251, 199, m))})`;
+        const p = boneco(x, y, s, { ...o, cor, brilho: o.brilho || '#cfe2ff' });
+        g.save(); g.globalAlpha = o.alpha ?? 1; g.fillStyle = '#0d0f1a';
+        const [hx, hy] = p.cabeca, r = 44 * s;
+        g.beginPath(); g.arc(hx, hy, r + 8 * s, Math.PI * 1.12, Math.PI * 1.88); g.lineTo(hx + r * .55, hy - r * .55); g.quadraticCurveTo(hx, hy - r * .38, hx - r * .55, hy - r * .55); g.closePath(); g.fill();
+        g.restore();
+        return p;
+    }
+    /** Lança da mão do soldado até o peito: a ponta amassa (`amassa`) e o cabo quebra (`quebra`). */
+    function lancaDe(de, alvo, amassa, quebra, tt) {
+        g.save(); g.lineCap = 'round';
+        const meio = [lerp(de[0], alvo[0], .5), lerp(de[1], alvo[1], .5)];
+        if (quebra <= 0) {
+            g.strokeStyle = '#8a6a43'; g.lineWidth = 12; g.beginPath(); g.moveTo(de[0] + 60, de[1]); g.lineTo(alvo[0] + 40, alvo[1]); g.stroke();
+        } else { // dois pedaços caindo
+            const cai = ease(quebra);
+            g.strokeStyle = '#8a6a43'; g.lineWidth = 12;
+            g.save(); g.translate(meio[0], meio[1] + cai * 280); g.rotate(cai * 1.4); g.beginPath(); g.moveTo(-90, 0); g.lineTo(90, 0); g.stroke(); g.restore();
+            g.save(); g.translate(alvo[0] + 90, alvo[1] + cai * 320); g.rotate(-cai * 2); g.beginPath(); g.moveTo(-70, 0); g.lineTo(60, 0); g.stroke(); g.restore();
+        }
+        // ponta de aço: amassa contra o peito
+        const px = quebra > 0 ? alvo[0] + 40 : alvo[0] + 40, py = quebra > 0 ? alvo[1] + ease(quebra) * 340 : alvo[1];
+        g.fillStyle = '#d6dbe2'; g.beginPath();
+        const dobra = amassa * 26;
+        g.moveTo(px, py - 16); g.lineTo(px - 46 + dobra, py - dobra * .6); g.lineTo(px - 30 + dobra * .4, py + 4 + dobra); g.lineTo(px, py + 16); g.closePath(); g.fill();
+        g.restore();
+    }
+    function faiscas(x, y, tt) {
+        g.save(); g.strokeStyle = '#ffe9a8'; g.lineWidth = 5; g.lineCap = 'round';
+        for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + tt * 7, r1 = 18, r2 = 60 + (i % 3) * 18; g.beginPath(); g.moveTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1); g.lineTo(x + Math.cos(a) * r2, y + Math.sin(a) * r2); g.stroke(); }
+        g.restore();
+    }
+    function seta(x, y, ang) {
+        g.save(); g.translate(x, y); g.rotate(ang); g.strokeStyle = '#c9b48a'; g.lineWidth = 6; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(0, 0); g.lineTo(110, 0); g.stroke();
+        g.fillStyle = '#d6dbe2'; g.beginPath(); g.moveTo(-22, 0); g.lineTo(4, -10); g.lineTo(4, 10); g.closePath(); g.fill();
+        g.strokeStyle = '#d63c3c'; g.lineWidth = 4; g.beginPath(); g.moveTo(96, -12); g.lineTo(112, 0); g.lineTo(96, 12); g.stroke();
+        g.restore();
+    }
+    function casa(x, y, k) {
+        if (k <= 0) return;
+        g.save(); g.globalAlpha = clamp(k * 2); g.strokeStyle = GOLD; g.lineWidth = 8; g.lineJoin = 'round'; g.shadowColor = GOLD; g.shadowBlur = 30;
+        g.beginPath(); g.moveTo(x - 190, y); g.lineTo(x - 190, y - 300); g.lineTo(x, y - 450); g.lineTo(x + 190, y - 300); g.lineTo(x + 190, y); g.stroke();
+        g.fillStyle = 'rgba(233,194,122,.35)'; g.fillRect(x + 60, y - 250, 80, 80);
+        g.restore();
+    }
+    /** Símbolo do infinito desenhado aos poucos (k 0→1). */
+    function infinito(x, y, r, k, tt) {
+        if (k <= 0) return;
+        g.save(); g.strokeStyle = GOLD; g.lineWidth = 18; g.lineCap = 'round'; g.shadowColor = GOLD; g.shadowBlur = 40;
+        g.beginPath(); const n = Math.floor(200 * clamp(k));
+        for (let i = 0; i <= n; i++) { const t = i / 200 * Math.PI * 2, d = 1 + Math.sin(t) ** 2; const px = x + r * Math.cos(t) / d, py = y + r * Math.sin(t) * Math.cos(t) / d; g[i ? 'lineTo' : 'moveTo'](px, py); }
+        g.stroke(); g.restore();
+    }
 
     /* ---------- desenho de um instante ---------- */
     const D = CENAS[VIDEO];
@@ -380,6 +540,8 @@
     /* ---------- áudio ---------- */
     const ac = new AudioContext();
     const buffers = await Promise.all(cenas.map(async c => ac.decodeAudioData(await (await fetch('/vid/' + c.audio)).arrayBuffer())));
+    // a duração real do áudio manda (o linha.json da voz neural é estimado pelo tamanho do mp3)
+    t = INICIO; cenas.forEach((c, i) => { c.dur = buffers[i].duration; c.t0 = t; t += c.dur + GAP; }); TOTAL = t + FIM_EXTRA;
     function tocar(destino) {
         const t0 = ac.currentTime + .15;
         cenas.forEach((c, i) => { const s = ac.createBufferSource(); s.buffer = buffers[i]; s.connect(destino); s.start(t0 + c.t0); });
@@ -425,7 +587,8 @@
         muxer.finalize();
         const buf = muxer.target.buffer;
         await fetch('/salvar?nome=' + VIDEO + '.mp4', { method: 'POST', body: buf });
-        quadro(cenas[0].t0 + cenas[0].dur * .8); // capa: o gancho no auge
+        const cc = (D.capa && cenas.find(c => c.cena === D.capa[0])) || cenas[0];
+        quadro(cc.t0 + cc.dur * (D.capa ? D.capa[1] : .8)); // capa: o gancho no auge (ou a cena escolhida em D.capa)
         await fetch('/salvar?nome=' + VIDEO + '.jpg', { method: 'POST', body: await new Promise(r => cv.toBlob(r, 'image/jpeg', .86)) });
         st.textContent = 'pronto: ' + (buf.byteLength / 1e6).toFixed(1) + ' MB';
         return buf.byteLength;

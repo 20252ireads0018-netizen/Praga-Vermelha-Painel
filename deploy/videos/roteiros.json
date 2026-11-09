@@ -70,5 +70,39 @@
       "cena": "fim",
       "fala": "Oito de aura. Nível três. Praga Vermelha."
     }
+  ],
+  "cavaleiro": [
+    {
+      "cena": "pergunta",
+      "fala": "Dizem que ele não pode morrer. O problema é que ele também não consegue descansar."
+    },
+    {
+      "cena": "forte",
+      "fala": "Cem homens num forte de pedra, bebendo como se a guerra tivesse acabado."
+    },
+    {
+      "cena": "muro",
+      "fala": "Não tinha acabado. Entrou um homem só."
+    },
+    {
+      "cena": "lanca",
+      "fala": "Uma lança no peito. Quem quebrou foi a lança."
+    },
+    {
+      "cena": "flechas",
+      "fala": "Flecha não entra. Espada não corta. E eles conhecem esse som."
+    },
+    {
+      "cena": "aco",
+      "fala": "Krauzher. O General de Aço. A maldição que todo senhor quer no próprio exército."
+    },
+    {
+      "cena": "paz",
+      "fala": "E em casa, uma filha que ele quase não vê crescer. Amaldiçoados não têm paz."
+    },
+    {
+      "cena": "fim",
+      "fala": "O Cavaleiro Negro. Um livro do universo Praga Vermelha."
+    }
   ]
 }
