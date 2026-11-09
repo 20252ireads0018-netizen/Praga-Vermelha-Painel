@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel com prints do sistema</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@500;600&display=block" rel="stylesheet">
+<style>
+    /* Uma tela por âncora (#s1 … #s4), 1080x1350, com prints reais de praga-vermelha.websight.com.br */
+    :root { --red: #b62525; --creme: #f3ece0; }
+    * { margin: 0; box-sizing: border-box; }
+    html, body { width: 1080px; height: 1350px; overflow: hidden; background: var(--red); }
+    /* texto em cima; a janela ocupa o que sobra até o rodapé */
+    .s { display: none; position: relative; width: 1080px; height: 1350px; padding: 96px 0 170px 96px; color: var(--creme); font-family: Inter, sans-serif; flex-direction: column; }
+    .s.on { display: flex; }
+    .topo { display: flex; justify-content: space-between; font: 600 30px Inter; letter-spacing: 4px; opacity: .75; margin-right: 96px; }
+    .barra { width: 80px; height: 6px; background: var(--creme); margin: 24px 0 40px; }
+    h1 { font: 700 80px/1.05 Cinzel, serif; margin: 0 96px 20px 0; }
+    p { font: 500 36px/1.4 Inter; margin-right: 96px; }
+    /* janela de navegador estilizada em volta do print */
+    .janela { flex: 1; min-height: 0; margin: 56px -60px 0 0; border-radius: 22px 0 0 22px; overflow: hidden; display: flex; flex-direction: column;
+              background: #0d0a0a; box-shadow: 0 30px 80px rgba(0,0,0,.45); transform: rotate(-2deg); transform-origin: left top; }
+    .janela .bar { flex: none; height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 20px; background: #1c1212; }
+    .janela .bar i { width: 14px; height: 14px; border-radius: 50%; background: #5a3232; }
+    .janela .bar span { margin-left: 14px; font: 500 20px Inter; color: #a89494; }
+    .janela img { display: block; width: 100%; flex: 1; min-height: 0; object-fit: cover; object-position: top left; }
+    .rodape { position: absolute; left: 96px; right: 96px; bottom: 70px; display: flex; justify-content: space-between; font: 600 28px Inter; opacity: .7; }
+    .capa h1 { font-size: 104px; }
+</style>
+</head>
+<body>
+
+<section class="s capa" id="s1">
+    <div class="topo"><span>PRAGA VERMELHA RPG</span><span>1/4</span></div>
+    <div class="barra"></div>
+    <h1>O SISTEMA, DE VERDADE</h1>
+    <p>Prints reais do site. Crie sua ficha, consulte as regras e jogue no navegador. Arraste →</p>
+    <div class="janela"><div class="bar"><i></i><i></i><i></i><span>praga-vermelha.websight.com.br</span></div><img src="prints/home.png" alt=""></div>
+    <div class="rodape"><span>@editoravermelha_01</span><span>PRAGA VERMELHA RPG</span></div>
+</section>
+
+<section class="s" id="s2">
+    <div class="topo"><span>CATÁLOGO</span><span>2/4</span></div>
+    <div class="barra"></div>
+    <h1>40 MALDIÇÕES</h1>
+    <p>Busque por nome e filtre por raridade: comum, incomum, rara, exótica, impossível.</p>
+    <div class="janela"><div class="bar"><i></i><i></i><i></i><span>praga-vermelha.websight.com.br/maldicoes</span></div><img src="prints/maldicoes.png" alt=""></div>
+    <div class="rodape"><span>@editoravermelha_01</span><span>PRAGA VERMELHA RPG</span></div>
+</section>
+
+<section class="s" id="s3">
+    <div class="topo"><span>VÍDEOS</span><span>3/4</span></div>
+    <div class="barra"></div>
+    <h1>REGRAS EM 1 MINUTO</h1>
+    <p>Técnicas e maldições explicadas em vídeos curtos, direto no site.</p>
+    <div class="janela"><div class="bar"><i></i><i></i><i></i><span>praga-vermelha.websight.com.br/videos-explicativos</span></div><img src="prints/videos.png" alt=""></div>
+    <div class="rodape"><span>@editoravermelha_01</span><span>PRAGA VERMELHA RPG</span></div>
+</section>
+
+<section class="s" id="s4">
+    <div class="topo"><span>PLANOS</span><span>4/4</span></div>
+    <div class="barra"></div>
+    <h1>COMECE DE GRAÇA</h1>
+    <p>Plano grátis, 45 dias de teste completo ou o livro do sistema por R$ 6,99, para sempre.</p>
+    <div class="janela"><div class="bar"><i></i><i></i><i></i><span>praga-vermelha.websight.com.br/planos</span></div><img src="prints/planos.png" alt=""></div>
+    <div class="rodape"><span>@editoravermelha_01</span><span>PRAGA VERMELHA RPG</span></div>
+</section>
+
+<script>
+    (document.getElementById((location.hash || '#s1').slice(1)) || document.getElementById('s1')).classList.add('on');
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Editora Vermelha · criativos</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@500;600&display=block" rel="stylesheet">
+<style>
+    /* Gera cada peça do Instagram pela âncora: #perfil, #d-livro, #d-videos, #d-gladio, #d-campanhas, #d-planos, #post */
+    :root { --red: #b62525; --creme: #f3ece0; --escuro: #1a1212; }
+    * { margin: 0; box-sizing: border-box; }
+    html, body { width: 1080px; height: 1080px; overflow: hidden; background: var(--red); }
+    .peca { display: none; width: 1080px; height: 1080px; background: var(--red); }
+    .peca.on { display: block; }
+    svg { display: block; }
+    /* ícones dos destaques: traço creme, sem preenchimento */
+    .ic { fill: none; stroke: var(--creme); stroke-width: 28; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+
+<!-- Foto de perfil: só o monograma -->
+<section class="peca" id="perfil">
+    <svg viewBox="0 0 1080 1080">
+        <text x="540" y="655" text-anchor="middle" font-family="Cinzel" font-weight="700" font-size="400" fill="#f3ece0" letter-spacing="-12">EV</text>
+    </svg>
+</section>
+
+<section class="peca" id="d-livro">
+    <svg viewBox="0 0 1080 1080"><g class="ic">
+        <path d="M540 400 C460 350 340 350 270 380 L270 700 C340 670 460 670 540 720 C620 670 740 670 810 700 L810 380 C740 350 620 350 540 400 Z"/>
+        <path d="M540 400 L540 720"/>
+    </g></svg>
+</section>
+
+<section class="peca" id="d-videos">
+    <svg viewBox="0 0 1080 1080"><g class="ic">
+        <rect x="280" y="370" width="520" height="340" rx="48"/>
+        <path d="M490 470 L620 540 L490 610 Z"/>
+    </g></svg>
+</section>
+
+<section class="peca" id="d-gladio">
+    <svg viewBox="0 0 1080 1080"><g class="ic">
+        <path d="M330 330 L640 640 M590 690 L690 590 M640 640 L740 740"/>
+        <path d="M750 330 L440 640 M490 690 L390 590 M440 640 L340 740"/>
+    </g></svg>
+</section>
+
+<section class="peca" id="d-campanhas">
+    <svg viewBox="0 0 1080 1080"><g class="ic">
+        <path d="M540 290 L760 415 L760 665 L540 790 L320 665 L320 415 Z"/>
+        <path d="M540 290 L420 600 L660 600 Z M420 600 L540 790 L660 600"/>
+    </g></svg>
+</section>
+
+<section class="peca" id="d-planos">
+    <svg viewBox="0 0 1080 1080"><g class="ic">
+        <path d="M320 700 L320 410 L440 530 L540 380 L640 530 L760 410 L760 700 Z"/>
+    </g></svg>
+</section>
+
+<!-- Post de abertura -->
+<section class="peca" id="post">
+    <svg viewBox="0 0 1080 1080">
+        <text x="100" y="230" font-family="Inter" font-weight="600" font-size="34" fill="#f3ece0" opacity=".75" letter-spacing="4">EDITORA VERMELHA</text>
+        <text x="96" y="470" font-family="Cinzel" font-weight="700" font-size="128" fill="#f3ece0">PRAGA</text>
+        <text x="96" y="610" font-family="Cinzel" font-weight="700" font-size="128" fill="#f3ece0">VERMELHA</text>
+        <text x="100" y="730" font-family="Inter" font-weight="500" font-size="40" fill="#f3ece0">Um RPG para jogar no navegador.</text>
+        <text x="100" y="785" font-family="Inter" font-weight="500" font-size="40" fill="#f3ece0">Fichas, campanhas e minijogos. De graça.</text>
+        <text x="100" y="950" font-family="Inter" font-weight="600" font-size="32" fill="#f3ece0" opacity=".75">praga-vermelha.websight.com.br</text>
+    </svg>
+</section>
+
+<script>
+    const id = (location.hash || '#perfil').slice(1);
+    (document.getElementById(id) || document.getElementById('perfil')).classList.add('on');
+</script>
+</body>
+</html>

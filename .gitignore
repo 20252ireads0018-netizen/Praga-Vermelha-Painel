@@ -35,3 +35,4 @@ Thumbs.db
 
 # backups do banco e dos arquivos de produção (deploy/backup-arquivos.sh e storage/app/backups): dados de usuários, nunca no git
 /backups/
+/deploy/social/postar/
