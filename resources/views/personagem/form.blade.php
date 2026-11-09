@@ -1011,6 +1011,33 @@
 #paineis-pilha button { min-height: 36px; }
 #paineis-pilha .botao-fechar { min-height: 0; }
 
+/* ===== Aprimoramentos: linhas claras e aba de guardados no painel Técnicas ===== */
+#tecnicas-card[data-aba-atual="aprimoramentos"] > #pastas-tecnicas,
+#tecnicas-card[data-aba-atual="aprimoramentos"] > #tecnica-novo,
+#tecnicas-card[data-aba-atual="aprimoramentos"] > #lista-tecnicas,
+#tecnicas-card[data-aba-atual="aprimoramentos"] > #tecnicas-vazio { display: none !important; }
+.aprim-ajuda { font-size: .82rem; line-height: 1.5; opacity: .75; margin: 2px 0 8px; }
+.aprim-linha { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; padding: 8px 6px; border-radius: 8px; }
+.aprim-linha.aprim-em-uso { background: rgba(220, 70, 70, .10); }
+.aprim-linha .aprim-nome { display: flex; align-items: flex-start; gap: 8px; flex: 1 1 200px; min-width: 0; }
+.aprim-linha .aprim-nome > span { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.aprim-linha .aprim-unit { font-size: .74rem; opacity: .65; }
+.aprim-linha .aprim-controles { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+.aprim-linha .aprim-passo { display: inline-flex; align-items: center; gap: 4px; }
+.aprim-linha .aprim-passo-rotulo { font-size: .7rem; letter-spacing: .05em; text-transform: uppercase; opacity: .7; }
+.aprim-linha .aprim-subtotal { min-width: 3.2em; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.aprim-gerais-titulo { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.aprim-guardados #aprim-guardados-lista { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.aprim-guardado { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, .10); border-radius: 10px; background: rgba(0, 0, 0, .2); }
+.aprim-guardado input[type="text"] { width: 100%; box-sizing: border-box; }
+.aprim-guardado .aprim-guardado-linha { grid-column: 1 / -1; }
+.aprim-guardado-linha { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.aprim-guardado-linha select, .aprim-guardado-linha input { width: 100%; box-sizing: border-box; }
+.aprim-guardado-novo { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px dashed rgba(255, 255, 255, .2); border-radius: 10px; }
+.aprim-guardado-novo h4 { margin: 0; }
+.aprim-guardado-novo .aprim-guardado-linha { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.tecnica-card.editando { border-color: rgba(220, 70, 70, .8) !important; }
+
 /* ===== Ficha empurrada para o lado quando há painel aberto (telas largas) ===== */
 /* o script da pilha mede os painéis e grava --empurra-esq / --empurra-dir no .container da ficha */
 .container.ficha-empurrada { transition: padding .2s ease; box-sizing: border-box;
@@ -1089,7 +1116,10 @@
 #form-ficha.somente-leitura .modo-livre,
 #form-ficha.somente-leitura .ficha-acoes,
 #form-ficha.somente-leitura .descanso-barra,
-#form-ficha.somente-leitura .pontos-livre { display: none !important; }
+#form-ficha.somente-leitura .pontos-livre,
+#form-ficha.somente-leitura .botao-editar-tecnica,
+#form-ficha.somente-leitura .botao-editar-item,
+#form-ficha.somente-leitura .aprim-guardado-apagar { display: none !important; }
 #form-ficha.somente-leitura input:disabled,
 #form-ficha.somente-leitura select:disabled,
 #form-ficha.somente-leitura textarea:disabled,
@@ -1505,8 +1535,8 @@
                 <button type="button" class="button" style="margin-top:8px;" id="dinheiro-abrir" title="Dinheiro do personagem">
                     <x-icone n="moeda"/> Dinheiro
                 </button>
-                <button type="button" class="button" style="margin-top:8px;" id="ama-abrir" title="Estudos na AMA: matérias, aulas, Currículo e Talentos de Grade">
-                    <x-icone n="capelo"/> Estudos AMA
+                <button type="button" class="button" style="margin-top:8px;" id="ama-abrir" title="AMA: estudos (matérias, aulas, Currículo e Talentos de Grade), patente, salário e exércitos">
+                    <x-icone n="capelo"/> AMA: estudos, patente e exércitos
                 </button>
             </div>
 
@@ -2229,6 +2259,43 @@
             <div class="abas-painel" role="tablist">
                 <button type="button" class="aba-painel ativo" data-aba="hexomancia">Técnicas de Hexomancia <span class="contador-painel" id="cont-tecnicas-hexomancia"></span></button>
                 <button type="button" class="aba-painel" data-aba="fisiomancia">Técnicas de Fisiomancia <span class="contador-painel" id="cont-tecnicas-fisiomancia"></span></button>
+                <button type="button" class="aba-painel" data-aba="aprimoramentos">Aprimoramentos <span class="contador-painel" id="cont-aprim-guardados"></span></button>
+            </div>
+
+            {{-- Aprimoramentos guardados: os secretos que o mestre manda, usáveis em qualquer técnica (e nas técnicas de arte) --}}
+            <input type="hidden" id="aprimoramentos-guardados" name="aprimoramentos" value="">
+            <div class="aba-conteudo aprim-guardados" data-aba="aprimoramentos">
+                <p class="aprim-ajuda">
+                    Os <b>gerais (coringa)</b> já aparecem em todas as técnicas. Aqui você guarda os seus, como os
+                    <b>secretos</b> que o mestre mandar: eles também passam a aparecer em qualquer técnica, para aplicar com − e +.
+                    Aprimoramento que só serve para uma técnica se cria nela mesma (Nova técnica ou Editar).
+                </p>
+                <div id="aprim-guardados-lista"></div>
+                <p class="vazio-lista" id="aprim-guardados-vazio">Nenhum aprimoramento guardado ainda.</p>
+                @unless ($somenteLeitura)
+                <div class="aprim-guardado-novo">
+                    <h4>Guardar aprimoramento</h4>
+                    <div class="campo">
+                        <label for="aprim-novo-nome">Nome</label>
+                        <input id="aprim-novo-nome" type="text" maxlength="200" placeholder="Ex.: Lâmina oculta (+1 dado de corte)">
+                    </div>
+                    <div class="aprim-guardado-linha">
+                        <div class="campo">
+                            <label for="aprim-novo-tipo">Custo</label>
+                            <select id="aprim-novo-tipo">
+                                <option value="fixo">Valor fixo</option>
+                                <option value="original">Custo original da técnica</option>
+                            </select>
+                        </div>
+                        <div class="campo">
+                            <label for="aprim-novo-custo">Aura por uso</label>
+                            <input id="aprim-novo-custo" type="number" min="0" placeholder="0">
+                        </div>
+                    </div>
+                    <label class="aprim-acum"><input type="checkbox" id="aprim-novo-acum" checked> Acumulativo (pode ser aplicado várias vezes)</label>
+                    <button type="button" class="botao-adicionar-talento" id="aprim-novo-guardar">+ Guardar aprimoramento</button>
+                </div>
+                @endunless
             </div>
 
             <div class="pastas-barra" id="pastas-tecnicas"></div>
@@ -2282,6 +2349,7 @@
                 </div>
 
                 <button type="button" class="botao-adicionar-talento" id="adicionar-tecnica">+ Adicionar Técnica</button>
+                <button type="button" class="button button-secundario" id="cancelar-edicao-tecnica" hidden>Cancelar edição</button>
             </div>
             </details>
 
@@ -2757,6 +2825,7 @@ window.PastasFicha = (function(){
             if(!b) return;
             abas.querySelectorAll(".aba-painel").forEach(x => x.classList.toggle("ativo", x === b));
             painel.querySelectorAll(":scope > .aba-conteudo").forEach(c => c.classList.toggle("ativo", c.dataset.aba === nome));
+            painel.dataset.abaAtual = nome; // o CSS usa para esconder o que não é da aba (ex.: Técnicas > Aprimoramentos)
             if(lembrar){ try { localStorage.setItem("ficha-aba:" + painel.id, nome); } catch(e) {} }
             painel.dispatchEvent(new CustomEvent("aba-mudou", { detail: nome }));
         }
@@ -2886,6 +2955,23 @@ window.PastasFicha = (function(){
             { chave: "alvos", nome: "+1 alvo", tipo: "original" },
             { chave: "alcance", nome: "Alcance +3 m", tipo: "fixo", custo: 9 }
         ],
+        // Aprimoramentos guardados pelo jogador (aba "Aprimoramentos" do painel Técnicas): valem em qualquer técnica,
+        // como os gerais. Cada um vira { chave: "s_<id>", nome, tipo, custo, acumulativo, guardado: true }.
+        guardados: [],
+        definirGuardados: function(lista){
+            const self = this;
+            this.guardados = (Array.isArray(lista) ? lista : []).filter(a => a && a.id && a.nome).map(function(a){
+                return { chave: "s_" + a.id, nome: String(a.nome), tipo: a.tipo === "original" ? "original" : "fixo",
+                         custo: self.nat(a.custo), acumulativo: a.acumulativo !== false, guardado: true };
+            });
+        },
+        // Os 4 gerais do sistema e depois os guardados
+        todos: function(){
+            return this.GERAIS.concat(this.guardados);
+        },
+        def: function(chave){
+            return this.todos().find(d => d.chave === chave) || null;
+        },
         nat: function(v, max){
             let n = parseInt(v, 10);
             if(isNaN(n) || n < 0) n = 0;
@@ -2914,9 +3000,9 @@ window.PastasFicha = (function(){
         normalizarGerais: function(g){
             const res = {};
             const self = this;
-            this.GERAIS.forEach(function(def){
+            this.todos().forEach(function(def){
                 const o = (g && typeof g === "object" && g[def.chave] && typeof g[def.chave] === "object") ? g[def.chave] : {};
-                const qtd = self.nat(o.qtd, 99);
+                const qtd = self.nat(o.qtd, def.acumulativo === false ? 1 : 99);
                 res[def.chave] = { qtd: qtd, gratis: self.nat(o.gratis, qtd) };
             });
             return res;
@@ -2925,7 +3011,7 @@ window.PastasFicha = (function(){
         serializarGerais: function(g){
             const res = {};
             const n = this.normalizarGerais(g);
-            this.GERAIS.forEach(function(def){
+            this.todos().forEach(function(def){
                 if(n[def.chave].qtd > 0) res[def.chave] = { qtd: n[def.chave].qtd, gratis: n[def.chave].gratis };
             });
             return res;
@@ -2933,7 +3019,7 @@ window.PastasFicha = (function(){
         // Referências (na ordem de exibição) a tudo que pode receber grátis
         entradas: function(item){
             const lista = item.aprimoramentos.slice();
-            this.GERAIS.forEach(def => lista.push(item.gerais[def.chave]));
+            this.todos().forEach(def => lista.push(item.gerais[def.chave]));
             return lista;
         },
         usadosGratis: function(item){
@@ -2971,7 +3057,7 @@ window.PastasFicha = (function(){
                 total += a.custo * Math.max(0, a.qtd - a.gratis);
             });
             const g = this.normalizarGerais(item.gerais);
-            this.GERAIS.forEach(function(def){
+            this.todos().forEach(function(def){
                 const unit = def.tipo === "fixo" ? def.custo : original;
                 total += unit * Math.max(0, g[def.chave].qtd - g[def.chave].gratis);
             });
@@ -3008,43 +3094,55 @@ window.PastasFicha = (function(){
         passo: function(acao, ap, k, valor, podeMenos, podeMais, rotulo){
             const ro = this.somenteLeitura ? " disabled" : "";
             const dados = ' data-ap="' + ap + '" data-k="' + this.esc(k) + '"';
-            return '<span class="aprim-passo' + (rotulo ? " aprim-gratis" : "") + '"' + (rotulo ? ' title="Usos grátis (não cobram Aura)"' : "") + ">" +
-                (rotulo ? rotulo + " " : "") +
+            return '<span class="aprim-passo' + (rotulo === "grátis" ? " aprim-gratis" : "") + '"' + (rotulo === "grátis" ? ' title="Usos grátis (não cobram Aura)"' : "") + ">" +
+                (rotulo ? '<small class="aprim-passo-rotulo">' + rotulo + "</small> " : "") +
                 '<button type="button" class="aprim-btn" data-acao="' + acao + 'menos"' + dados + (podeMenos && !ro ? "" : " disabled") + ' aria-label="Diminuir">−</button>' +
                 "<b>" + valor + "</b>" +
                 '<button type="button" class="aprim-btn" data-acao="' + acao + 'mais"' + dados + (podeMais && !ro ? "" : " disabled") + ' aria-label="Aumentar">+</button>' +
                 "</span>";
         },
-        linha: function(item, ref, ap, k, nome, custoTxt, acum){
+        // Uma linha: nome e quanto custa cada uso; à direita "Usos − n +" (ou a caixa, se não acumula), "Grátis − n +"
+        // (só quando a técnica tem aprimoramentos grátis) e o subtotal em Aura. Linha em uso fica destacada.
+        linha: function(item, ref, ap, k, nome, unit, acum){
             const disp = item.gratis_disponiveis;
             const ro = this.somenteLeitura ? " disabled" : "";
             const dados = ' data-ap="' + ap + '" data-k="' + this.esc(k) + '"';
-            let h = '<div class="tecnica-aprim-item aprim-linha">';
-            if(acum){
-                h += '<span class="aprim-nome"><span>' + this.esc(nome) + "</span></span>";
-                h += '<span class="tec-aprim-custo">' + this.esc(custoTxt) + "</span>";
-                h += this.passo("", ap, k, ref.qtd, ref.qtd > 0, ref.qtd < 99);
-            } else {
-                h += '<label class="aprim-nome"><input type="checkbox" class="tec-aprim-check" data-acao="alternar"' + dados + (ref.qtd > 0 ? " checked" : "") + ro + "><span>" + this.esc(nome) + "</span></label>";
-                h += '<span class="tec-aprim-custo">' + this.esc(custoTxt) + "</span>";
-            }
+            const pagos = Math.max(0, ref.qtd - ref.gratis);
+            let h = '<div class="tecnica-aprim-item aprim-linha' + (ref.qtd > 0 ? " aprim-em-uso" : "") + '">';
+            h += '<span class="aprim-nome">';
+            if(!acum) h += '<input type="checkbox" class="tec-aprim-check" data-acao="alternar"' + dados + (ref.qtd > 0 ? " checked" : "") + ro + ' aria-label="Usar">';
+            h += "<span>" + this.esc(nome) + '<small class="aprim-unit">' + unit + " Aura" + (acum ? " por uso" : "") + "</small></span></span>";
+            h += '<span class="aprim-controles">';
+            if(acum) h += this.passo("", ap, k, ref.qtd, ref.qtd > 0, ref.qtd < 99, "Usos");
             if(disp > 0 && ref.qtd > 0){
                 h += this.passo("g", ap, k, ref.gratis, ref.gratis > 0, ref.gratis < ref.qtd && this.usadosGratis(item) < disp, "grátis");
             }
-            return h + "</div>";
+            h += '<span class="aprim-subtotal" title="Aura deste aprimoramento nesta técnica">' + (ref.qtd > 0 ? "= " + (unit * pagos) : "") + "</span>";
+            return h + "</span></div>";
         },
         html: function(item){
             const self = this;
             const original = this.nat(item.custo);
+            const unitDe = def => def.tipo === "fixo" ? self.nat(def.custo) : original;
             let h = '<h5 class="maldicao-subtitulo">Aprimoramentos</h5>';
-            item.aprimoramentos.forEach(function(a, i){
-                h += self.linha(item, a, "p", i, a.texto, "+" + a.custo + (a.acumulativo ? " por uso" : ""), a.acumulativo);
-            });
-            h += '<div class="aprim-gerais-titulo">Gerais (acumulativos)</div>';
+            h += '<p class="aprim-ajuda">Use <b>−</b> e <b>+</b> para aplicar cada aprimoramento quantas vezes quiser; o custo total aparece embaixo.' +
+                 (item.gratis_disponiveis > 0 ? " Marque em <b>grátis</b> quantos usos não cobram Aura." : "") + "</p>";
+            if(item.aprimoramentos.length){
+                h += '<div class="aprim-gerais-titulo">Só desta técnica</div>';
+                item.aprimoramentos.forEach(function(a, i){
+                    h += self.linha(item, a, "p", i, a.texto, self.nat(a.custo), a.acumulativo);
+                });
+            }
+            h += '<div class="aprim-gerais-titulo">Gerais (coringa) · valem em qualquer técnica</div>';
             this.GERAIS.forEach(function(def){
-                h += self.linha(item, item.gerais[def.chave], "g", def.chave, def.nome,
-                    def.tipo === "fixo" ? "+" + def.custo : "+" + original + " (custo original)", true);
+                h += self.linha(item, item.gerais[def.chave], "g", def.chave, def.nome + (def.tipo === "original" ? " (custo original)" : ""), unitDe(def), true);
             });
+            if(this.guardados.length){
+                h += '<div class="aprim-gerais-titulo">Guardados (secretos) · valem em qualquer técnica</div>';
+                this.guardados.forEach(function(def){
+                    h += self.linha(item, item.gerais[def.chave], "g", def.chave, def.nome + (def.tipo === "original" ? " (custo original)" : ""), unitDe(def), def.acumulativo !== false);
+                });
+            }
             return h;
         },
         // Campo "Aprimoramentos grátis" do rodapé (ao lado da Eficiência)
@@ -3077,7 +3175,7 @@ window.PastasFicha = (function(){
             if(el.tagName === "BUTTON" ? e.type !== "click" : e.type !== "change") return false;
             const ref = el.dataset.ap === "g" ? item.gerais[el.dataset.k] : item.aprimoramentos[Number(el.dataset.k)];
             if(!ref) return false;
-            const acum = el.dataset.ap === "g" || ref.acumulativo;
+            const acum = el.dataset.ap === "g" ? (this.def(el.dataset.k) || {}).acumulativo !== false : ref.acumulativo;
             const acao = el.dataset.acao;
             if(acao === "alternar") ref.qtd = el.checked ? 1 : 0;
             else if(acao === "mais" && acum && ref.qtd < 99) ref.qtd++;
@@ -3101,6 +3199,8 @@ window.PastasFicha = (function(){
     };
     /*APRIM-FIM*/
     Aprimoramentos.somenteLeitura = @json(!empty($somenteLeitura));
+    // antes de qualquer técnica ser lida: sem isso, os usos dos guardados (chaves s_...) seriam descartados ao normalizar
+    Aprimoramentos.definirGuardados(@json(is_array($personagem->aprimoramentos ?? null) ? $personagem->aprimoramentos : []));
 
     const botaoX = document.getElementById("x");
 
@@ -4271,259 +4371,14 @@ window.PastasFicha = (function(){
         atualizarHabilidadesMod();
     });
 
-
-    let primeiraMudanca=0;
+    // Porte físico e idade não mexem em mais nada da ficha (nível, XP, habilidades, atributos, BE e vitais ficam como estão):
+    // o jogador ajusta à mão o que o porte mudar. Escolher um porte só libera a rolagem de Vida e a Experiência Mundana.
+    let primeiraMudanca = porteFisico.value && porteFisico.value !== "Selecione" ? 1 : 0;
     porteFisico.addEventListener("change", function(){
-        aumentoBe=0;
-        primeiraMudancaProfissao = 0;
-        nivelMundano.value=1;
-        nivelAnterior = 1;
-        historicoGanhosVida = {};
-        historicoGanhosAura = {};
-        historicoGanhosSanidade = {};
-        historicoXpGanho = {};
-        xpMaximo = 20;
-        xpAtual = 0;
-        experienciaMundana.value = "";
-        atualizarExperienciaTexto();
-
-        habilidades.forEach(input => {
-            input.value = "";
-            input.dataset.anterior = "0";
-        });
-
-        pontosHabilidadeGastos = 0;
-        if(constituicao.value.trim() === ""){
-
-            mostrarPopup("Defina seus atributos para escolher seu porte físico");
-
-            cardAtributos.forEach(card => {
-                card.classList.remove("erro-atributo");
-                void card.offsetWidth;
-                card.classList.add("erro-atributo");
-            });
-
-            return;
-        }
-
-        cardAtributos.forEach(card => {
-            card.classList.remove("erro-atributo");
-        });
-
-        if(primeiraMudanca === 1){
-            mostrarPopup("Para não acumular bônus e desvantagens, vamos redefinir sua distribuicao de atributos.");
-            constituicao.value=30;
-            modConstituicao.value=3;
-            destreza.value=30;
-            modDestreza.value=3;
-            forca.value=30;
-            modForca.value=3;
-            conhecimento.value=30;
-            modConhecimento.value=3;
-            be.value=3;
-            carisma.value=30;
-            modCarisma.value=3;
-            alma.value=30;
-            modAlma.value=3;
-            percepcao.value=30;
-            modPercepcao.value=3;
-
-            valorConstituicaoTexto = "30";
-            valorDestrezaTexto = "30";
-            valorForcaTexto = "30";
-            valorConhecimentoTexto = "30";
-            valorCarismaTexto = "30";
-            valorAlmaTexto = "30";
-            valorPercepcaoTexto = "30";
-
-            recalcularPontosAtributos();
-        }
-
-
-        if(porteFisico.value === "Magro"){
-
-            constituicao.value=constituicao.value-10;
-            destreza.value = Number(destreza.value)+20;
-            forca.value=forca.value-10;
-            modForca.value = modDeAtributo(forca.value);
-            modDestreza.value = modDeAtributo(destreza.value);
-            modConstituicao.value = modDeAtributo(constituicao.value);
-            if(forca.value<10){
-                forca.value=10;
-            }
-            if(constituicao.value<10){
-                constituicao.value=10;
-            }
-            if(destreza.value>75){
-                destreza.value=75;
-            }
-
-            valorForcaTexto = forca.value;
-            valorDestrezaTexto = destreza.value;
-            valorConstituicaoTexto = constituicao.value;
-            primeiraMudanca=1;
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            resultado.textContent = "?";
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            be.value=modConhecimento.value;
-            experienciaMundana.removeAttribute("readonly", false);
-        }
-
-        if(porteFisico.value === "Musculoso"){
-            destreza.value=destreza.value-10;
-            forca.value = Number(forca.value)+10;
-            constituicao.value = Number(constituicao.value)+10;
-            modForca.value = modDeAtributo(forca.value);
-            modDestreza.value = modDeAtributo(destreza.value);
-            modConstituicao.value = modDeAtributo(constituicao.value);
-            if(forca.value>75){
-                forca.value=75;
-            }
-            if(constituicao.value>75){
-                constituicao.value=75;
-            }
-            if(destreza.value<10){
-                destreza.value=10;
-            }
-
-            valorForcaTexto = forca.value;
-            valorDestrezaTexto = destreza.value;
-            valorConstituicaoTexto = constituicao.value;
-
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            resultado.textContent = "?";
-            be.value=modConhecimento.value;
-            experienciaMundana.removeAttribute("readonly", false);
-            primeiraMudanca=1;
-        }
-
-        if(porteFisico.value === "Gordo"){
-            forca.value = Number(forca.value) + 10;
-            constituicao.value = Number(constituicao.value) + 10;
-            destreza.value = Number(destreza.value) - 20;
-
-            if(forca.value > 75) forca.value = 75;
-            if(constituicao.value > 75) constituicao.value = 75;
-            if(destreza.value < 10) destreza.value = 10;
-
-            modForca.value = modDeAtributo(forca.value);
-            modConstituicao.value = modDeAtributo(constituicao.value);
-            modDestreza.value = modDeAtributo(destreza.value);
-
-            valorForcaTexto = forca.value;
-            valorConstituicaoTexto = constituicao.value;
-            valorDestrezaTexto = destreza.value;
-
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            resultado.textContent = "?";
-            be.value=modConhecimento.value;
-            experienciaMundana.removeAttribute("readonly", false);
+        if(porteFisico.value && porteFisico.value !== "Selecione"){
             primeiraMudanca = 1;
+            experienciaMundana.removeAttribute("readonly");
         }
-
-        if(porteFisico.value === "Infantil"){
-            destreza.value = Number(destreza.value) + 20;
-            forca.value = Number(forca.value) - 10;
-            constituicao.value = Number(constituicao.value) - 10;
-            be.value=be.value*2;
-
-            if(destreza.value > 75) destreza.value = 75;
-            if(forca.value < 10) forca.value = 10;
-            if(constituicao.value < 10) constituicao.value = 10;
-
-            modDestreza.value = modDeAtributo(destreza.value);
-            modForca.value = modDeAtributo(forca.value);
-            modConstituicao.value = modDeAtributo(constituicao.value);
-
-            valorDestrezaTexto = destreza.value;
-            valorForcaTexto = forca.value;
-            valorConstituicaoTexto = constituicao.value;
-
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            resultado.textContent = "?";
-            experienciaMundana.removeAttribute("readonly", false);
-            primeiraMudanca = 1;
-        }
-
-        if(porteFisico.value === "Idoso"){
-            forca.value = Number(forca.value) - 10;
-            destreza.value = Number(destreza.value) - 10;
-            constituicao.value = Number(constituicao.value) - 10;
-            conhecimento.value = Number(conhecimento.value) + 30;
-
-            if(forca.value < 10) forca.value = 10;
-            if(destreza.value < 10) destreza.value = 10;
-            if(constituicao.value < 10) constituicao.value = 10;
-            if(conhecimento.value > 75) conhecimento.value = 75;
-
-            modForca.value = modDeAtributo(forca.value);
-            modDestreza.value = modDeAtributo(destreza.value);
-            modConstituicao.value = modDeAtributo(constituicao.value);
-            modConhecimento.value = modDeAtributo(conhecimento.value);
-            be.value = modConhecimento.value;
-
-            valorForcaTexto = forca.value;
-            valorDestrezaTexto = destreza.value;
-            valorConstituicaoTexto = constituicao.value;
-            valorConhecimentoTexto = conhecimento.value;
-
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            resultado.textContent = "?";
-            be.value=modConhecimento.value;
-            experienciaMundana.removeAttribute("readonly", false);
-            primeiraMudanca = 1;
-        }
-
-        if(porteFisico.value === "Comum"){
-            primeiraMudanca=1;
-            rolagemVida.classList.remove("usado");
-            rolagemSanidade.classList.remove("usado");
-            rolagemAura.classList.remove("usado");
-            resultado.textContent = "?";
-            vida.textContent = "? / ?";
-            aura.textContent = "? / ?";
-            sanidade.textContent = "? / ?";
-            be.value=modConhecimento.value;
-            experienciaMundana.removeAttribute("readonly", false);
-        }
-
-        // Todo ajuste de atributo feito acima altera os campos diretamente sem
-        // passar pelos listeners de "input"; recalculamos aqui, uma única vez.
-        recalcularPontosAtributos();
-
-        profissao.value = "Selecione";
-
-        // Troca de porte reinicia o nível para 1: reinicia a distribuição de níveis
-        niveisProfissao = [];
-        sincronizarNiveisProfissao();
-
-        pontosHabilidadeRestantes = (1 * Number(be.value || 0)) + 15 + extraHabilidades + ajusteHabilidades;
-        pontosHabilidadeRestantesTexto.textContent = "Pontos a distribuir: " + pontosHabilidadeRestantes;
-        atualizarHabilidadesMod();
     });
 
     let pontosHabilidadeGastos = 0;
@@ -5162,6 +5017,15 @@ window.PastasFicha = (function(){
         gravarItemCard(card, item);
         Aprimoramentos.redesenhar(card, item);
     }
+    // aba "Aprimoramentos" do painel Técnicas criou, mudou ou apagou um guardado: redesenha as técnicas de arte confirmadas
+    if(ehArte){
+        document.addEventListener("aprimoramentos-guardados", function(){
+            cardsTalentos().filter(c => c.dataset.confirmado === "1").forEach(function(card){
+                renderizarAprimsTalento(card);
+                atualizarVisualTalento(card);
+            });
+        });
+    }
 
     function textoCustoTalento(card, ativo){
         const s = ehArte ? Aprimoramentos.textoCusto(itemDoCard(card)) : "Custo: " + custoBrutoTalento(card) + " Aura";
@@ -5462,29 +5326,7 @@ window.PastasFicha = (function(){
 
     const idade = document.getElementById("idade");
 
-    let aumentoBe=0;
-    idade.addEventListener("input", ()=>{
-        if(Number(idade.value)<16){
-            if(conhecimento.value==""){
-                mostrarPopup("Você precisa decidir seu Conhecimento antes de aplicar sua idade.");
-                idade.value=0;
-                return;
-            }
-            porteFisico.value="Infantil";
-            if(aumentoBe == 0){
-                be.value*=2;
-                aumentoBe=1;
-            }
-        }
-        if(Number(idade.value)>=16){
-            porteFisico.value="Selecione";
-            be.value=modConhecimento.value;
-        }
-        if(Number(idade.value)<16){
-            porteFisico.value="Infantil";
-            be.value=Number(modConhecimento.value)*2;
-        }
-    });
+    // A idade não muda mais o porte físico nem o BE: é só o campo (o jogador ajusta à mão).
 
         //Maldições
 
@@ -6394,17 +6236,19 @@ document.getElementById("adicionar-tecnica").addEventListener("click", function(
         return;
     }
 
+    // aprimoramentos só desta técnica; na edição, cada linha guarda os usos que já tinha (data-qtd / data-gratis)
     const aprimoramentos = [];
     tecAprimForm.querySelectorAll(".tecnica-aprim-linha").forEach(function(l){
         const texto = l.querySelector(".tec-aprim-texto").value.trim();
         const custo = Math.max(0, parseInt(l.querySelector(".tec-aprim-custo-input").value, 10) || 0);
         if(texto !== "" || custo > 0){
-            aprimoramentos.push({ texto: texto, custo: custo, acumulativo: l.querySelector(".tec-aprim-acum").checked, qtd: 0, gratis: 0, ativo: false });
+            const qtd = parseInt(l.dataset.qtd, 10) || 0;
+            aprimoramentos.push({ texto: texto, custo: custo, acumulativo: l.querySelector(".tec-aprim-acum").checked,
+                                  qtd: qtd, gratis: parseInt(l.dataset.gratis, 10) || 0, ativo: qtd > 0 });
         }
     });
 
-    tecnicas.push(Aprimoramentos.normalizarItem({
-        id: proximoIdTecnica++,
+    const campos = {
         nome: nome,
         descricao: document.getElementById("tec-descricao").value.trim(),
         logica: document.getElementById("tec-logica").value.trim(),
@@ -6414,18 +6258,70 @@ document.getElementById("adicionar-tecnica").addEventListener("click", function(
         processo: document.getElementById("tec-processo").value.trim(),
         efeito: document.getElementById("tec-efeito").value.trim(),
         pasta: document.getElementById("tec-pasta").value,
-        tipo: abaTecnicas(),
-        aprimoramentos: aprimoramentos,
-        gerais: {},
-        gratis_disponiveis: 0
-    }));
+        aprimoramentos: aprimoramentos
+    };
 
+    if(tecnicaEditando && tecnicas.includes(tecnicaEditando)){
+        // edição: troca os dados no lugar, mantendo o tipo, os usos dos gerais/guardados e os grátis
+        Object.assign(tecnicaEditando, campos);
+        Aprimoramentos.normalizarItem(tecnicaEditando);
+    } else {
+        tecnicas.push(Aprimoramentos.normalizarItem(Object.assign({
+            id: proximoIdTecnica++, tipo: abaTecnicas(), gerais: {}, gratis_disponiveis: 0
+        }, campos)));
+    }
+
+    limparFormularioTecnica();
+    renderizarTecnicas();
+    document.getElementById("tecnica-novo").open = false;
+});
+
+// ---- editar técnica: leva tudo de volta ao formulário (inclusive os aprimoramentos só desta técnica) ----
+let tecnicaEditando = null;
+function limparFormularioTecnica(){
     ["tec-nome","tec-descricao","tec-logica","tec-nivel","tec-custo","tec-eficiencia","tec-processo","tec-efeito"]
         .forEach(id => document.getElementById(id).value = "");
     tecAprimForm.innerHTML = "";
-
-    renderizarTecnicas();
-    document.getElementById("tecnica-novo").open = false;
+    tecnicaEditando = null;
+    document.getElementById("adicionar-tecnica").textContent = "+ Adicionar Técnica";
+    document.getElementById("cancelar-edicao-tecnica").hidden = true;
+    document.querySelector("#tecnica-novo > summary").textContent = "Nova técnica";
+    listaTecnicas.querySelectorAll(".tecnica-card.editando").forEach(c => c.classList.remove("editando"));
+}
+function editarTecnica(t){
+    limparFormularioTecnica();
+    tecnicaEditando = t;
+    document.getElementById("tec-nome").value = t.nome || "";
+    document.getElementById("tec-descricao").value = t.descricao || "";
+    document.getElementById("tec-logica").value = t.logica || "";
+    document.getElementById("tec-nivel").value = t.nivel || "";
+    document.getElementById("tec-custo").value = t.custo || "";
+    document.getElementById("tec-eficiencia").value = t.eficiencia || "";
+    document.getElementById("tec-processo").value = t.processo || "";
+    document.getElementById("tec-efeito").value = t.efeito || "";
+    document.getElementById("tec-pasta").innerHTML = PastasFicha.opcoes("tecnicas", t.pasta || "");
+    (t.aprimoramentos || []).forEach(function(a){
+        adicionarLinhaAprimoramento();
+        const l = tecAprimForm.lastElementChild;
+        l.querySelector(".tec-aprim-texto").value = a.texto || "";
+        l.querySelector(".tec-aprim-custo-input").value = a.custo || "";
+        l.querySelector(".tec-aprim-acum").checked = !!a.acumulativo;
+        l.dataset.qtd = String(a.qtd || 0);
+        l.dataset.gratis = String(a.gratis || 0);
+    });
+    document.getElementById("adicionar-tecnica").textContent = "Salvar técnica";
+    document.getElementById("cancelar-edicao-tecnica").hidden = false;
+    const det = document.getElementById("tecnica-novo");
+    det.querySelector("summary").textContent = "Editando: " + (t.nome || "técnica");
+    det.open = true;
+    const card = listaTecnicas.querySelector('.tecnica-card[data-id="' + t.id + '"]');
+    if(card) card.classList.add("editando");
+    det.scrollIntoView({ block: "start", behavior: "smooth" });
+    document.getElementById("tec-nome").focus({ preventScroll: true });
+}
+document.getElementById("cancelar-edicao-tecnica").addEventListener("click", function(){
+    limparFormularioTecnica();
+    atualizarSelectNovaTecnica();
 });
 
 // ---- renderização da lista ----
@@ -6473,6 +6369,7 @@ function renderizarTecnicas(){
                     '<input type="number" min="0" class="tec-eficiencia-card" value="' + (Number(t.eficiencia) || 0) + '"></label>' +
                 Aprimoramentos.rodapeHtml(t) +
                 '<button type="button" class="button botao-conjurar-tecnica">Conjurar</button>' +
+                '<button type="button" class="button button-secundario botao-editar-tecnica">Editar</button>' +
                 '<button type="button" class="botao-remover-item botao-remover-tecnica">Remover</button>' +
             "</div>" +
         "</div>";
@@ -6515,6 +6412,87 @@ function aplicarAprimoramentoTecnica(e){
 }
 ["click", "change", "input"].forEach(ev => listaTecnicas.addEventListener(ev, aplicarAprimoramentoTecnica));
 
+// ==================== Aprimoramentos guardados (aba "Aprimoramentos" do painel Técnicas) ====================
+// Lista do jogador (coluna "aprimoramentos"): aparecem em todas as técnicas e técnicas de arte, como os gerais.
+// Criar, mudar ou apagar redesenha as técnicas; os usos de um guardado apagado somem das técnicas.
+let aprimGuardados = Aprimoramentos.guardados.map(d => ({ id: d.chave.slice(2), nome: d.nome, tipo: d.tipo, custo: d.custo, acumulativo: d.acumulativo !== false }));
+const listaGuardados = document.getElementById("aprim-guardados-lista");
+const campoGuardados = document.getElementById("aprimoramentos-guardados");
+
+function renderizarGuardados(){
+    const ro = Aprimoramentos.somenteLeitura ? " disabled" : "";
+    listaGuardados.innerHTML = aprimGuardados.map(function(a){
+        return '<div class="aprim-guardado" data-id="' + esc(a.id) + '">' +
+            '<input type="text" class="aprim-g-nome" maxlength="200" value="' + esc(a.nome) + '" aria-label="Nome"' + ro + ">" +
+            '<button type="button" class="botao-remover-item aprim-guardado-apagar" title="Apagar este aprimoramento de todas as técnicas">Apagar</button>' +
+            '<div class="aprim-guardado-linha">' +
+                '<select class="aprim-g-tipo" aria-label="Tipo de custo"' + ro + ">" +
+                    '<option value="fixo"' + (a.tipo === "fixo" ? " selected" : "") + ">Valor fixo</option>" +
+                    '<option value="original"' + (a.tipo === "original" ? " selected" : "") + ">Custo original da técnica</option>" +
+                "</select>" +
+                '<input type="number" min="0" class="aprim-g-custo" value="' + (a.custo || 0) + '" aria-label="Aura por uso"' + (a.tipo === "original" ? " disabled" : ro) + ">" +
+                '<label class="aprim-acum"><input type="checkbox" class="aprim-g-acum"' + (a.acumulativo ? " checked" : "") + ro + "> Acumulativo</label>" +
+            "</div>" +
+        "</div>";
+    }).join("");
+    document.getElementById("aprim-guardados-vazio").style.display = aprimGuardados.length ? "none" : "block";
+    document.getElementById("cont-aprim-guardados").textContent = aprimGuardados.length || "";
+    campoGuardados.value = JSON.stringify(aprimGuardados);
+}
+
+function aplicarGuardados(){
+    Aprimoramentos.definirGuardados(aprimGuardados);
+    tecnicas.forEach(t => Aprimoramentos.normalizarItem(t)); // ganha a chave dos novos, perde a dos apagados
+    renderizarGuardados();
+    renderizarTecnicas();
+    document.dispatchEvent(new Event("aprimoramentos-guardados"));
+    campoGuardados.dispatchEvent(new Event("input", { bubbles: true })); // salvamento automático
+}
+
+const btnGuardar = document.getElementById("aprim-novo-guardar");
+if(btnGuardar) btnGuardar.addEventListener("click", function(){
+    const nome = document.getElementById("aprim-novo-nome").value.trim();
+    if(nome === ""){ mostrarPopup("Dê um nome ao aprimoramento antes de guardar."); return; }
+    if(aprimGuardados.length >= 50){ mostrarPopup("Limite de 50 aprimoramentos guardados."); return; }
+    const tipo = document.getElementById("aprim-novo-tipo").value === "original" ? "original" : "fixo";
+    aprimGuardados.push({
+        id: (Date.now().toString(36) + Math.random().toString(36).slice(2, 5)).slice(0, 20),
+        nome: nome, tipo: tipo,
+        custo: tipo === "fixo" ? Math.max(0, parseInt(document.getElementById("aprim-novo-custo").value, 10) || 0) : 0,
+        acumulativo: document.getElementById("aprim-novo-acum").checked
+    });
+    document.getElementById("aprim-novo-nome").value = "";
+    document.getElementById("aprim-novo-custo").value = "";
+    aplicarGuardados();
+});
+const tipoNovo = document.getElementById("aprim-novo-tipo");
+if(tipoNovo) tipoNovo.addEventListener("change", function(){
+    document.getElementById("aprim-novo-custo").disabled = tipoNovo.value === "original";
+});
+
+listaGuardados.addEventListener("change", function(e){
+    const box = e.target.closest(".aprim-guardado");
+    const a = box && aprimGuardados.find(x => x.id === box.dataset.id);
+    if(!a) return;
+    if(e.target.classList.contains("aprim-g-nome")){
+        const nome = e.target.value.trim();
+        if(nome) a.nome = nome; else e.target.value = a.nome;
+    }
+    if(e.target.classList.contains("aprim-g-tipo")) a.tipo = e.target.value === "original" ? "original" : "fixo";
+    if(e.target.classList.contains("aprim-g-custo")) a.custo = Math.max(0, parseInt(e.target.value, 10) || 0);
+    if(e.target.classList.contains("aprim-g-acum")) a.acumulativo = e.target.checked;
+    aplicarGuardados();
+});
+listaGuardados.addEventListener("click", function(e){
+    if(!e.target.classList.contains("aprim-guardado-apagar")) return;
+    const box = e.target.closest(".aprim-guardado");
+    const a = aprimGuardados.find(x => x.id === box.dataset.id);
+    if(!a || !confirm("Apagar “" + a.nome + "”? Ele sai de todas as técnicas.")) return;
+    aprimGuardados = aprimGuardados.filter(x => x !== a);
+    aplicarGuardados();
+});
+renderizarGuardados();
+
 // ---- eficiência ajustada direto no card ----
 listaTecnicas.addEventListener("input", function(e){
     if(!e.target.classList.contains("tec-eficiencia-card")) return;
@@ -6533,7 +6511,12 @@ listaTecnicas.addEventListener("click", function(e){
     const t = tecnicas.find(x => String(x.id) === card.dataset.id);
     if(!t) return;
 
+    if(e.target.classList.contains("botao-editar-tecnica")){
+        editarTecnica(t);
+        return;
+    }
     if(e.target.classList.contains("botao-remover-tecnica")){
+        if(t === tecnicaEditando) limparFormularioTecnica();
         tecnicas = tecnicas.filter(x => x !== t);
         renderizarTecnicas();
         return;

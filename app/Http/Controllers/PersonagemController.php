@@ -138,9 +138,15 @@ class PersonagemController extends Controller
 
         // Campos que só são gravados se vieram no formulário (o merge abaixo cria a chave, então a presença é lida antes)
         $veio = [];
-        foreach (['armaduras', 'artes_marciais', 'niveis_profissao', 'estudos_ama', 'habilidades_extras'] as $campo) {
+        foreach (['armaduras', 'artes_marciais', 'niveis_profissao', 'estudos_ama', 'habilidades_extras', 'aprimoramentos', 'carreira_ama'] as $campo) {
             $veio[$campo] = $request->has($campo);
         }
+        // Aprimoramentos guardados (usáveis em qualquer técnica) e carreira na AMA (patente, salário, exércitos):
+        // o mesmo cuidado das armaduras, só decodifica se veio no formulário
+        $request->merge([
+            'aprimoramentos' => $request->has('aprimoramentos') ? (json_decode($request->input('aprimoramentos') ?: '[]', true) ?: []) : null,
+            'carreira_ama' => $request->has('carreira_ama') ? (json_decode($request->input('carreira_ama') ?: 'null', true) ?: null) : null,
+        ]);
 
         // Armaduras, resistências e imunidades (aba Armaduras dos atributos vitais). Só decodifica se veio no formulário,
         // para não apagar o que está salvo quando outra tela grava a ficha sem esse campo.
@@ -260,7 +266,7 @@ class PersonagemController extends Controller
             'talentos.*.aprimoramentos.*.qtd' => 'nullable|integer|min:0|max:99',
             'talentos.*.aprimoramentos.*.gratis' => 'nullable|integer|min:0|max:99',
             // aprimoramentos gerais (dano, acao, alvos, alcance): {chave: {qtd, gratis}}
-            'talentos.*.gerais' => 'nullable|array|max:10',
+            'talentos.*.gerais' => 'nullable|array|max:60', // 4 gerais + os aprimoramentos guardados
             'talentos.*.gerais.*.qtd' => 'nullable|integer|min:0|max:99',
             'talentos.*.gerais.*.gratis' => 'nullable|integer|min:0|max:99',
             'talentos.*.gratis_disponiveis' => 'nullable|integer|min:0|max:99',
@@ -299,7 +305,7 @@ class PersonagemController extends Controller
             'tecnicas.*.aprimoramentos.*.qtd' => 'nullable|integer|min:0|max:99',
             'tecnicas.*.aprimoramentos.*.gratis' => 'nullable|integer|min:0|max:99',
             // aprimoramentos gerais (dano, acao, alvos, alcance): {chave: {qtd, gratis}}
-            'tecnicas.*.gerais' => 'nullable|array|max:10',
+            'tecnicas.*.gerais' => 'nullable|array|max:60', // 4 gerais + os aprimoramentos guardados
             'tecnicas.*.gerais.*.qtd' => 'nullable|integer|min:0|max:99',
             'tecnicas.*.gerais.*.gratis' => 'nullable|integer|min:0|max:99',
             'tecnicas.*.gratis_disponiveis' => 'nullable|integer|min:0|max:99',
@@ -307,6 +313,23 @@ class PersonagemController extends Controller
             // Propriedades fisiomantes salvas na ficha (do catálogo ou personalizadas)
             'propriedades_fisiomantes' => 'nullable|array|max:300',
             'estudos_ama' => 'nullable|array',
+            // Aprimoramentos guardados: id curto, nome, tipo (custo fixo ou o custo original da técnica), custo e se acumula
+            'aprimoramentos' => 'nullable|array|max:50',
+            'aprimoramentos.*.id' => 'required|string|max:20|regex:/^[a-z0-9]+$/',
+            'aprimoramentos.*.nome' => 'required|string|max:200',
+            'aprimoramentos.*.tipo' => 'nullable|string|in:fixo,original',
+            'aprimoramentos.*.custo' => 'nullable|integer|min:0|max:99999',
+            'aprimoramentos.*.acumulativo' => 'nullable|boolean',
+            // Carreira na AMA: patente (1 a 10), grau (1 a 5), salário livre e exércitos
+            'carreira_ama' => 'nullable|array',
+            'carreira_ama.patente' => 'nullable|integer|min:0|max:10',
+            'carreira_ama.grau' => 'nullable|integer|min:1|max:5',
+            'carreira_ama.salario' => 'nullable|numeric|min:0|max:99999999',
+            'carreira_ama.exercitos' => 'nullable|array|max:20',
+            'carreira_ama.exercitos.*.nome' => 'nullable|string|max:120',
+            'carreira_ama.exercitos.*.descricao' => 'nullable|string|max:5000',
+            'carreira_ama.exercitos.*.nivel' => 'nullable|integer|min:0|max:9999',
+            'carreira_ama.exercitos.*.aprimoramentos' => 'nullable|string|max:5000',
             'habilidades_extras' => 'nullable|array|max:60',
             'habilidades_extras.*' => 'array|max:30',
             'habilidades_extras.*.*.origem' => 'nullable|string|max:80',
@@ -433,6 +456,20 @@ class PersonagemController extends Controller
         // Estudos na AMA: só grava se a coluna existir (rode o SQL da migração 2026_11_02_000020) e se veio no formulário
         if (!Esquema::coluna('fichas', 'estudos_ama') || !$veio['estudos_ama']) {
             unset($dados['estudos_ama']);
+        }
+
+        // Aprimoramentos guardados e carreira na AMA: só gravam se a coluna existir (SQL da migração 2026_11_09_000031)
+        // e se vieram no formulário
+        foreach (['aprimoramentos', 'carreira_ama'] as $campo) {
+            if (!Esquema::coluna('fichas', $campo) || !$veio[$campo]) {
+                unset($dados[$campo]);
+            }
+        }
+        if (isset($dados['aprimoramentos'])) {
+            $dados['aprimoramentos'] = array_values(array_map(fn ($a) => [
+                'id' => $a['id'], 'nome' => trim($a['nome']), 'tipo' => ($a['tipo'] ?? '') === 'original' ? 'original' : 'fixo',
+                'custo' => (int) ($a['custo'] ?? 0), 'acumulativo' => (bool) ($a['acumulativo'] ?? true),
+            ], $dados['aprimoramentos']));
         }
 
         // Armaduras: só grava se a coluna existir e se o formulário enviou o campo

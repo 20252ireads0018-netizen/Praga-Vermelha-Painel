@@ -63,4 +63,19 @@ t("serializarGerais só leva chaves com qtd > 0", function(){
     assert.deepStrictEqual(Aprimoramentos.serializarGerais({ dano: { qtd: 0 }, alcance: { qtd: 2, gratis: 1 } }), { alcance: { qtd: 2, gratis: 1 } });
 });
 
+t("aprimoramentos guardados valem em qualquer técnica, com custo fixo ou original, e o não acumulativo vai até 1", function(){
+    Aprimoramentos.definirGuardados([
+        { id: "a1", nome: "Lâmina oculta", tipo: "fixo", custo: 7, acumulativo: true },
+        { id: "a2", nome: "Eco", tipo: "original", custo: 0, acumulativo: false },
+        { id: "", nome: "sem id é ignorado" },
+    ]);
+    assert.deepStrictEqual(Aprimoramentos.todos().map(d => d.chave), ["dano", "acao", "alvos", "alcance", "s_a1", "s_a2"]);
+    const item = Aprimoramentos.normalizarItem({ custo: 6, gerais: { s_a1: { qtd: 2, gratis: 0 }, s_a2: { qtd: 3 }, s_apagado: { qtd: 4 } } });
+    assert.deepStrictEqual(item.gerais.s_a2, { qtd: 1, gratis: 0 });
+    assert.strictEqual(Aprimoramentos.custoAprimoramentos(item), 2 * 7 + 6);
+    // o guardado apagado some do JSON
+    assert.deepStrictEqual(Aprimoramentos.serializarGerais(item.gerais), { s_a1: { qtd: 2, gratis: 0 }, s_a2: { qtd: 1, gratis: 0 } });
+    Aprimoramentos.definirGuardados([]);
+});
+
 console.log(ok + " testes passaram");

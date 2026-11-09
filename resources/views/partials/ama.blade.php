@@ -35,11 +35,82 @@
     .ama-tal-desc { font-size: .82rem; opacity: .8; margin: 2px 0 8px; }
     .ama-badge { font-size: .7rem; padding: 1px 5px; border-radius: 999px; background: rgba(99, 102, 241, .5); color: #fff; margin-left: 4px; white-space: nowrap; }
     #ama-card h3 { margin: 14px 0 6px; font-size: 1rem; }
+    .ama-carreira-linha { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .6fr) minmax(0, 1fr); gap: 10px; align-items: end; margin: 6px 0; }
+    .ama-carreira-linha label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; margin: 0; width: auto; }
+    .ama-carreira-linha select, .ama-carreira-linha input { width: 100%; box-sizing: border-box; }
+    .ama-patente-card { border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 10px 12px; background: rgba(0, 0, 0, .2); margin: 8px 0 12px; }
+    .ama-patente-card h4 { margin: 0 0 6px; }
+    .ama-patente-card dl { margin: 0; display: grid; gap: 8px; }
+    .ama-patente-card dt { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; opacity: .65; }
+    .ama-patente-card dd { margin: 2px 0 0; white-space: pre-line; line-height: 1.5; }
+    .ama-regras { margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, .1); padding-top: 8px; }
+    .ama-regras summary { cursor: pointer; font-weight: 600; }
+    .ama-regras h4 { margin: 12px 0 4px; font-size: .9rem; }
+    .ama-regras p { margin: 0; white-space: pre-line; font-size: .88rem; line-height: 1.55; opacity: .9; }
+    .ama-exercito { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; gap: 8px; align-items: end; border: 1px solid rgba(255, 255, 255, .12); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: rgba(0, 0, 0, .2); }
+    .ama-exercito label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; margin: 0; width: auto; min-width: 0; }
+    .ama-exercito label.largo { grid-column: 1 / -1; }
+    .ama-exercito input, .ama-exercito textarea { width: 100%; box-sizing: border-box; }
+    .ama-exercito textarea { min-height: 70px; resize: vertical; }
+    @media (max-width: 560px) {
+        .ama-carreira-linha { grid-template-columns: 1fr 1fr; }
+        .ama-carreira-linha label:last-child { grid-column: 1 / -1; }
+        .ama-exercito { grid-template-columns: minmax(0, 1fr) 90px; }
+        .ama-exercito .ama-x { grid-column: 1 / -1; width: 100%; }
+    }
 </style>
 
 <div class="card card-rolagem card-talentos" id="ama-card" style="max-height: 80%; overflow-y:auto;">
     <button type="button" class="botao-fechar" id="fechar-ama" title="Fechar (Esc)" aria-label="Fechar">✕</button>
-    <div class="botoes-grid" style="text-align:center"><h1>Estudos na AMA</h1></div>
+    <div class="botoes-grid" style="text-align:center"><h1>AMA</h1></div>
+    <div class="abas-painel" role="tablist">
+        <button type="button" class="aba-painel ativo" data-aba="estudos">Estudos</button>
+        <button type="button" class="aba-painel" data-aba="patente">Patente e salário</button>
+        <button type="button" class="aba-painel" data-aba="exercitos">Exércitos</button>
+    </div>
+
+    {{-- Patente, grau e salário (config/ama.php "patentes"): escolher a patente sugere o salário dela; o jogador muda à vontade --}}
+    <div class="aba-conteudo" data-aba="patente">
+        <div class="ama-carreira-linha">
+            <label>Patente
+                <select id="ama-patente">
+                    <option value="0">Sem patente</option>
+                    @foreach (config('ama.patentes', []) as $n => $pt)
+                        <option value="{{ $n }}">{{ $n }}. {{ $pt['nome'] }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>Grau
+                <select id="ama-grau">
+                    @foreach (config('ama.graus', []) as $i => $g)
+                        <option value="{{ $i + 1 }}">{{ $g }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>Salário mensal (R$)
+                <input type="number" id="ama-salario" min="0" step="0.01" placeholder="0,00">
+            </label>
+        </div>
+        <p class="ama-dica" id="ama-salario-dica"></p>
+        <div id="ama-patente-info"></div>
+        <details class="ama-regras">
+            <summary>Regras de patente (provas, notas de missão, investimentos e doação)</summary>
+            @foreach (config('ama.patente_regras', []) as $r)
+                <h4>{{ $r['titulo'] }}</h4>
+                <p>{{ $r['texto'] }}</p>
+            @endforeach
+        </details>
+    </div>
+
+    {{-- Exércitos: nome, descrição, nível e aprimoramentos de cada um --}}
+    <div class="aba-conteudo" data-aba="exercitos">
+        <div id="ama-exercitos"></div>
+        <p class="ama-dica" id="ama-exercitos-vazio">Nenhum exército ainda.</p>
+        <button type="button" class="button" id="ama-novo-exercito">+ Novo exército</button>
+    </div>
+    <input type="hidden" name="carreira_ama" id="carreira-ama" value="">
+
+    <div class="aba-conteudo ativo" data-aba="estudos">
     <p class="ama-dica">A cada período (6 meses), escolha até {{ config('ama.max_materias_periodo') }} matérias. Cada aula dá o bônus da matéria (no máximo {{ config('ama.max_por_habilidade') }} por matéria em cada habilidade). Ao passar na prova (média 7,00), escolha um Talento de Grade das matérias que fez. Os estudos terminam com no mínimo {{ config('ama.periodos_minimos') }} períodos. Os bônus de habilidade já entram nas rolagens.</p>
     <div id="ama-periodos"></div>
     <button type="button" class="button" id="ama-novo-periodo">+ Novo período</button>
@@ -47,6 +118,7 @@
     <div id="ama-curriculo"></div>
     <h3>Bônus dos estudos</h3>
     <div id="ama-bonus"></div>
+    </div>
     <input type="hidden" name="estudos_ama" id="estudos-ama" value="">
 </div>
 
@@ -221,5 +293,112 @@ document.addEventListener("DOMContentLoaded", function(){
         }
     });
     desenhar();
+});
+
+// ===== Carreira na AMA: patente, grau, salário e exércitos (campo carreira_ama) =====
+document.addEventListener("DOMContentLoaded", function(){
+    const campo = document.getElementById("carreira-ama");
+    if(!campo) return;
+    const PATENTES = @json(config('ama.patentes', []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+    const GRAUS = @json(config('ama.graus', []));
+    const somenteLeitura = !!document.querySelector("#form-ficha.somente-leitura");
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const reais = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    let salvo = @json(is_array($personagem->carreira_ama ?? null) ? $personagem->carreira_ama : null) || {};
+    const c = {
+        patente: Math.max(0, Math.min(10, parseInt(salvo.patente, 10) || 0)),
+        grau: Math.max(1, Math.min(5, parseInt(salvo.grau, 10) || 1)),
+        salario: salvo.salario === undefined || salvo.salario === null || salvo.salario === "" ? null : Math.max(0, Number(salvo.salario) || 0),
+        exercitos: (Array.isArray(salvo.exercitos) ? salvo.exercitos : []).map(x => ({
+            nome: String(x.nome || ""), descricao: String(x.descricao || ""), nivel: Math.max(0, parseInt(x.nivel, 10) || 0), aprimoramentos: String(x.aprimoramentos || "")
+        })),
+    };
+
+    const selPat = document.getElementById("ama-patente");
+    const selGrau = document.getElementById("ama-grau");
+    const inSal = document.getElementById("ama-salario");
+    const info = document.getElementById("ama-patente-info");
+    const dica = document.getElementById("ama-salario-dica");
+    const caixaEx = document.getElementById("ama-exercitos");
+
+    function gravar(avisar){
+        campo.value = JSON.stringify(c);
+        if(avisar) campo.dispatchEvent(new Event("input", { bubbles: true })); // salvamento automático
+    }
+
+    function desenharPatente(){
+        const p = PATENTES[c.patente];
+        selPat.value = String(c.patente);
+        selGrau.value = String(c.grau);
+        selGrau.disabled = somenteLeitura || !p || !!p.sem_grau;
+        inSal.value = c.salario === null ? "" : String(c.salario);
+        if(!p){
+            info.innerHTML = "";
+            dica.textContent = "Escolha a patente para ver a descrição, os benefícios e o salário dela.";
+            return;
+        }
+        const nome = p.nome + (p.sem_grau ? "" : " " + (GRAUS[c.grau - 1] || ""));
+        const linhas = [["Descrição", p.descricao], ["Salário mensal da patente", reais(p.salario)], ["Benefícios", p.beneficios], ["Bonificações", p.bonificacao]]
+            .filter(l => l[1]);
+        info.innerHTML = '<div class="ama-patente-card"><h4>' + esc(c.patente + ". " + nome) + "</h4><dl>" +
+            linhas.map(l => "<div><dt>" + esc(l[0]) + "</dt><dd>" + esc(l[1]) + "</dd></div>").join("") + "</dl></div>";
+        dica.textContent = c.salario !== null && Number(c.salario) !== Number(p.salario)
+            ? "Salário ajustado à mão (o da patente é " + reais(p.salario) + ")."
+            : "Salário da patente; mude à vontade (bônus, escalas, empresa...).";
+    }
+
+    function desenharExercitos(){
+        const ro = somenteLeitura ? " disabled" : "";
+        caixaEx.innerHTML = c.exercitos.map((x, i) =>
+            '<div class="ama-exercito" data-i="' + i + '">' +
+                '<label>Nome<input type="text" maxlength="120" data-campo="nome" value="' + esc(x.nome) + '"' + ro + "></label>" +
+                '<label>Nível<input type="number" min="0" data-campo="nivel" value="' + x.nivel + '"' + ro + "></label>" +
+                (somenteLeitura ? "<span></span>" : '<button type="button" class="ama-x" data-tirar-exercito="' + i + '" title="Apagar exército">✕</button>') +
+                '<label class="largo">Descrição<textarea data-campo="descricao" maxlength="5000"' + ro + ">" + esc(x.descricao) + "</textarea></label>" +
+                '<label class="largo">Aprimoramentos do exército<textarea data-campo="aprimoramentos" maxlength="5000"' + ro + ">" + esc(x.aprimoramentos) + "</textarea></label>" +
+            "</div>").join("");
+        document.getElementById("ama-exercitos-vazio").style.display = c.exercitos.length ? "none" : "block";
+    }
+
+    selPat.addEventListener("change", function(){
+        c.patente = parseInt(selPat.value, 10) || 0;
+        // a patente sugere o salário dela (o jogador muda depois, se quiser)
+        c.salario = PATENTES[c.patente] ? PATENTES[c.patente].salario : null;
+        desenharPatente(); gravar(true);
+    });
+    selGrau.addEventListener("change", function(){ c.grau = parseInt(selGrau.value, 10) || 1; desenharPatente(); gravar(true); });
+    inSal.addEventListener("input", function(){
+        c.salario = inSal.value === "" ? null : Math.max(0, Number(inSal.value) || 0);
+        gravar(false); // o próprio input já dispara o salvamento
+    });
+    inSal.addEventListener("change", desenharPatente);
+
+    document.getElementById("ama-novo-exercito").addEventListener("click", function(){
+        if(c.exercitos.length >= 20) return;
+        c.exercitos.push({ nome: "", descricao: "", nivel: 1, aprimoramentos: "" });
+        desenharExercitos(); gravar(true);
+        const ult = caixaEx.lastElementChild;
+        if(ult) ult.querySelector("input").focus();
+    });
+    caixaEx.addEventListener("input", function(e){
+        const box = e.target.closest(".ama-exercito");
+        const k = e.target.dataset.campo;
+        if(!box || !k) return;
+        const x = c.exercitos[+box.dataset.i];
+        x[k] = k === "nivel" ? Math.max(0, parseInt(e.target.value, 10) || 0) : e.target.value;
+        gravar(false);
+    });
+    caixaEx.addEventListener("click", function(e){
+        const b = e.target.closest("[data-tirar-exercito]");
+        if(!b || !confirm("Apagar este exército?")) return;
+        c.exercitos.splice(+b.dataset.tirarExercito, 1);
+        desenharExercitos(); gravar(true);
+    });
+    if(somenteLeitura){ selPat.disabled = true; inSal.disabled = true; document.getElementById("ama-novo-exercito").hidden = true; }
+
+    desenharPatente();
+    desenharExercitos();
+    gravar(false);
 });
 </script>

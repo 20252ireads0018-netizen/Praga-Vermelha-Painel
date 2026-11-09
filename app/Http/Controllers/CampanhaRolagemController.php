@@ -26,6 +26,9 @@ class CampanhaRolagemController extends Controller
 {
     private const MANTER = 100;        // rolagens guardadas por campanha (teto geral)
     private const LIMPAR_A_CADA = 20;  // a cada 20 rolagens o histórico do pote recomeça
+    // Vantagem/desvantagem (rolar habilidade com mais de um d100): o modo vai na frente do rótulo, sem coluna nova.
+    // Nos testes do sistema (d100 − habilidade) o menor é o melhor: vantagem fica com o menor dado, desvantagem com o maior.
+    private const MODOS = ['vantagem' => 'Vantagem', 'desvantagem' => 'Desvantagem'];
 
     /** Consulta base das rolagens de um pote (null = público). */
     private function doPote(Campanha $campanha, ?int $pote)
@@ -53,11 +56,19 @@ class CampanhaRolagemController extends Controller
 
     private function formatar(object $r): array
     {
+        $rotulo = $r->rotulo;
+        $modo = null;
+        if ($rotulo && preg_match('/^\[(vantagem|desvantagem)\] ?(.*)$/su', $rotulo, $m)) {
+            $modo = $m[1];
+            $rotulo = $m[2] !== '' ? $m[2] : null;
+        }
+
         return [
             'id'         => (int) $r->id,
             'user_id'    => (int) $r->user_id,
             'jogador'    => $r->jogador ?? '—',
-            'rotulo'     => $r->rotulo,
+            'rotulo'     => $rotulo,
+            'modo'       => $modo,
             'qtd'        => (int) $r->qtd,
             'lados'      => (int) $r->lados,
             'extras'     => $r->extras,
@@ -110,7 +121,12 @@ class CampanhaRolagemController extends Controller
             'extras' => 'nullable|string|max:60',
             'rotulo' => 'nullable|string|max:60',
             'pote_id' => 'nullable|integer',
+            'modo'    => 'nullable|in:normal,vantagem,desvantagem',
         ]);
+        $modo = isset(self::MODOS[$dados['modo'] ?? '']) ? $dados['modo'] : null;
+        if ($modo && $dados['qtd'] < 2) {
+            return response()->json(['erro' => 'Vantagem e desvantagem precisam de pelo menos 2 dados.'], 422);
+        }
 
         $pote = (int) ($dados['pote_id'] ?? 0) ?: null;
         $this->autorizarPote($campanha, $pote);
@@ -134,17 +150,25 @@ class CampanhaRolagemController extends Controller
             $resultados[] = random_int(1, (int) $dados['lados']);
         }
 
+        $rotulo = ($dados['rotulo'] ?? null) ?: null;
+        $soma = array_sum($resultados);
+        if ($modo) {
+            $soma = $modo === 'vantagem' ? min($resultados) : max($resultados);
+            $prefixo = '[' . $modo . '] ';
+            $rotulo = $prefixo . mb_substr($rotulo ?? '', 0, 60 - mb_strlen($prefixo)); // a coluna tem 60 caracteres
+        }
+
         $agora = now();
         $linha = [
             'campanha_id' => $campanha->id,
             'user_id'     => auth()->id(),
-            'rotulo'      => ($dados['rotulo'] ?? null) ?: null,
+            'rotulo'      => $rotulo,
             'qtd'         => $dados['qtd'],
             'lados'       => $dados['lados'],
             'extras'      => $extras,
             'bonus'       => $bonus,
             'resultados'  => json_encode($resultados),
-            'total'       => array_sum($resultados) + $bonus,
+            'total'       => $soma + $bonus,
             'created_at'  => $agora,
             'updated_at'  => $agora,
         ];

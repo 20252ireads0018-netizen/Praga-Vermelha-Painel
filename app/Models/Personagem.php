@@ -75,6 +75,7 @@ class Personagem extends Model
         // atributos vitais
         'vida_atual', 'vida_maxima', 'sanidade_atual', 'sanidade_maxima', 'aura_atual', 'aura_maxima', 'inspiracao',
         'vitais_extras', 'armaduras', 'artes_marciais', 'estudos_ama', 'habilidades_extras',
+        'aprimoramentos', 'carreira_ama',
 
         'anotacoes',
 
@@ -94,6 +95,8 @@ class Personagem extends Model
         'artes_marciais'   => 'array',
         'estudos_ama'      => 'array',
         'habilidades_extras' => 'array',
+        'aprimoramentos'   => 'array',
+        'carreira_ama'     => 'array',
         'anotacoes'        => 'array',
         'pastas'           => 'array',
         'mods_atributos'   => 'array',

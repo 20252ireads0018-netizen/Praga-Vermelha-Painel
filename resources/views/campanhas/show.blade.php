@@ -360,6 +360,20 @@
                         <label>Habilidade
                             <select class="js-hab-habilidade"></select>
                         </label>
+                        <label>Modo
+                            <select class="js-hab-modo">
+                                <option value="normal">Normal (1 dado)</option>
+                                <option value="vantagem">Vantagem (fica o menor)</option>
+                                <option value="desvantagem">Desvantagem (fica o maior)</option>
+                            </select>
+                        </label>
+                        <label class="js-hab-qtd-rotulo" hidden>Dados
+                            <span class="camp-dados-qtd">
+                                <button type="button" class="camp-btn js-hab-qtd-menos" aria-label="Menos um dado">−</button>
+                                <input type="number" class="js-hab-qtd" min="2" max="10" value="2">
+                                <button type="button" class="camp-btn js-hab-qtd-mais" aria-label="Mais um dado">+</button>
+                            </span>
+                        </label>
                         <button type="button" class="camp-btn camp-btn-pequeno js-hab-rolar">Rolar habilidade</button>
                     </div>
                     <div class="camp-dados-faces" role="group" aria-label="Tipo de dado">

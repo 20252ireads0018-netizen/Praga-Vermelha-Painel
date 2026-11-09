@@ -26,7 +26,12 @@
 .camp-dados-hab label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; color: var(--camp-texto-suave); min-width: 0; }
 .camp-dados-hab select { width: 100%; min-height: 1.9rem; padding: .25rem .4rem; font: inherit; font-size: .85rem; color: inherit; background: var(--camp-fundo-campo, transparent); border: 1px solid var(--camp-borda-forte); border-radius: 6px; }
 .camp-dados-hab select option { color: #000; }
-.camp-dados-hab .camp-btn { grid-column: 1 / -1; min-height: 2rem; }
+.camp-dados-hab > .camp-btn { grid-column: 1 / -1; min-height: 2rem; }
+.camp-dados-hab label[hidden] { display: none; }
+/* vantagem/desvantagem: o dado que vale fica em destaque e os outros apagados */
+.camp-rolagem-dado.camp-dado-fora { opacity: .4; text-decoration: line-through; }
+.camp-rolagem-dado.camp-dado-vale { border-color: var(--camp-acento); box-shadow: 0 0 0 1px var(--camp-acento); }
+.camp-rolagem-modo { font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--camp-acento); }
 .camp-dados-faces { display: flex; flex-wrap: wrap; gap: .3rem; }
 .camp-dados-faces .camp-btn { padding: .2rem .5rem; min-width: 2.6rem; min-height: 1.8rem; font-size: .8rem; }
 .camp-dado-ativo { background: var(--camp-acento); border-color: var(--camp-acento); color: #fff; font-weight: 700; }
@@ -173,15 +178,21 @@
         const ex = r.extras ? (/^[+-]/.test(r.extras) ? r.extras : '+' + r.extras) : '';
         topo.appendChild(el('span', 'camp-rolagem-formula', r.qtd + 'd' + r.lados + ex));
         item.appendChild(topo);
+        // vantagem fica com o menor dado, desvantagem com o maior (o total do servidor já é esse dado + extras)
+        const modo = r.modo === 'vantagem' || r.modo === 'desvantagem' ? r.modo : '';
+        const res = r.resultados || [];
+        const vale = modo ? res.indexOf(modo === 'vantagem' ? Math.min(...res) : Math.max(...res)) : -1;
+        if (modo) item.appendChild(el('div', 'camp-rolagem-modo', modo === 'vantagem' ? 'Vantagem · fica o menor' : 'Desvantagem · fica o maior'));
 
         if (r.rotulo) item.appendChild(el('div', 'camp-dica', r.rotulo));
 
         const dados = el('div', 'camp-rolagem-dados');
         const spans = [];
-        (r.resultados || []).forEach((v) => {
+        res.forEach((v, i) => {
             let c = 'camp-rolagem-dado';
             if (r.lados > 1 && v === r.lados) c += ' camp-dado-max';
             else if (v === 1) c += ' camp-dado-min';
+            if (modo) c += i === vale ? ' camp-dado-vale' : ' camp-dado-fora';
             const s = el('span', animar ? 'camp-rolagem-dado camp-dado-rolando' : c, animar ? '?' : String(v));
             if (animar) { s.dataset.final = c; s.dataset.valor = String(v); }
             dados.appendChild(s);
@@ -351,8 +362,12 @@
     }
 
     // ---------- rolar ----------
+    // modo da próxima rolagem: só o "Rolar habilidade" pede vantagem/desvantagem; o Rolar comum é sempre normal
+    let modoEnvio = 'normal';
     form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
+        const modoPedido = modoEnvio;
+        modoEnvio = 'normal';
         mostrarErro('');
         btnRolar.disabled = true;
 
@@ -371,6 +386,7 @@
                     extras: inExtras.value,
                     rotulo: inRotulo.value,
                     pote_id: poteAtual ? parseInt(poteAtual, 10) : null,
+                    modo: modoPedido,
                 }),
             });
             const d = await r.json().catch(() => ({}));
@@ -432,13 +448,29 @@
         selF.addEventListener('change', () => { preencherHabs(); guardar(); });
         selH.addEventListener('change', guardar);
 
+        // Modo: normal rola 1 d100; vantagem/desvantagem rola 2 ou mais e fica com o menor/maior (no servidor)
+        const selModo = box.querySelector('.js-hab-modo');
+        const rotQtd = box.querySelector('.js-hab-qtd-rotulo');
+        const inHabQtd = box.querySelector('.js-hab-qtd');
+        const qtdHab = () => Math.max(2, Math.min(10, parseInt(inHabQtd && inHabQtd.value, 10) || 2));
+        if (selModo && rotQtd && inHabQtd) {
+            const refletir = () => { rotQtd.hidden = selModo.value === 'normal'; };
+            selModo.addEventListener('change', refletir);
+            refletir();
+            box.querySelector('.js-hab-qtd-menos').addEventListener('click', () => { inHabQtd.value = Math.max(2, qtdHab() - 1); });
+            box.querySelector('.js-hab-qtd-mais').addEventListener('click', () => { inHabQtd.value = Math.min(10, qtdHab() + 1); });
+            inHabQtd.addEventListener('change', () => { inHabQtd.value = qtdHab(); });
+        }
+
         btnH.addEventListener('click', () => {
             const f = fichaAtual();
             const h = f.habilidades.find((x) => x.chave === selH.value);
             if (!h) return;
             guardar();
             const total = Math.trunc(Number(h.total)) || 0;
-            inQtd.value = 1;
+            const modo = selModo ? selModo.value : 'normal';
+            modoEnvio = modo;
+            inQtd.value = modo === 'normal' ? 1 : qtdHab();
             inLados.value = 100;
             inExtras.value = total > 0 ? '-' + total : (total < 0 ? '+' + Math.abs(total) : '');
             inRotulo.value = (h.nome + ' — ' + f.nome).slice(0, 60);
